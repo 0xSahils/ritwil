@@ -1,0 +1,280 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer utilities {
+  /* Fade In Animation */
+  .animate-fadeIn {
+    animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Fade In Up Animation */
+  .animate-fadeInUp {
+    animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Scale In Animation */
+  .animate-scaleIn {
+    animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Slide Down Animation */
+  .animate-slideDown {
+    animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Blob Animation (for background blobs) */
+  .animate-blob {
+    animation: blob 7s ease-in-out infinite;
+  }
+
+  @keyframes blob {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+  }
+
+  /* Animation delays */
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  /* Pulse Slow */
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Float Animation */
+  .animate-float {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float 10s ease-in-out infinite 2s;
+  }
+
+  .animate-float-slow {
+    animation: float 12s ease-in-out infinite 4s;
+  }
+
+  .animate-float-reverse {
+    animation: float-reverse 9s ease-in-out infinite 1s;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    25% {
+      transform: translate(30px, -30px) scale(1.05);
+    }
+    50% {
+      transform: translate(-20px, 40px) scale(0.95);
+    }
+    75% {
+      transform: translate(40px, 20px) scale(1.02);
+    }
+  }
+
+  @keyframes float-reverse {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    25% {
+      transform: translate(-40px, 30px) scale(1.05);
+    }
+    50% {
+      transform: translate(30px, -40px) scale(0.95);
+    }
+    75% {
+      transform: translate(-20px, -20px) scale(1.02);
+    }
+  }
+
+  /* Spin Slow */
+  .animate-spin-slow {
+    animation: spin-slow 20s linear infinite;
+  }
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Subtle Float Animations for Minimalistic Design */
+  .animate-float-subtle {
+    animation: float-subtle 15s ease-in-out infinite;
+  }
+
+  .animate-float-subtle-delayed {
+    animation: float-subtle 18s ease-in-out infinite 3s;
+  }
+
+  .animate-float-subtle-slow {
+    animation: float-subtle 20s ease-in-out infinite 6s;
+  }
+
+  @keyframes float-subtle {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+      opacity: 0.3;
+    }
+    25% {
+      transform: translate(15px, -15px) scale(1.02);
+      opacity: 0.25;
+    }
+    50% {
+      transform: translate(-10px, 20px) scale(0.98);
+      opacity: 0.35;
+    }
+    75% {
+      transform: translate(20px, 10px) scale(1.01);
+      opacity: 0.28;
+    }
+  }
+
+  /* Minimal Pulse */
+  .animate-pulse-minimal {
+    animation: pulse-minimal 4s ease-in-out infinite;
+  }
+
+  @keyframes pulse-minimal {
+    0%, 100% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.2);
+    }
+  }
+
+  /* Gentle Float Animations for Light Modern Background */
+  .animate-float-gentle {
+    animation: float-gentle 20s ease-in-out infinite;
+  }
+
+  .animate-float-gentle-delayed {
+    animation: float-gentle 25s ease-in-out infinite 5s;
+  }
+
+  .animate-float-gentle-slow {
+    animation: float-gentle 30s ease-in-out infinite 10s;
+  }
+
+  @keyframes float-gentle {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(20px, -20px) scale(1.05);
+    }
+    66% {
+      transform: translate(-15px, 15px) scale(0.98);
+    }
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+

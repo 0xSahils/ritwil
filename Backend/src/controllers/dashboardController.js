@@ -29,17 +29,17 @@ export async function getSuperAdminOverview() {
     },
     include: {
       employeeProfile: true,
-      dailyEntries: true,
+      placements: true,
     },
   });
 
   const revenueByEmployee = new Map();
   for (const emp of employeesWithRevenue) {
-    const total = emp.dailyEntries.reduce(
-      (sum, e) => sum + Number(e.revenue),
+    const total = emp.placements.reduce(
+      (sum, p) => sum + Number(p.revenue || 0),
       0
     );
-    revenueByEmployee.set(emp.id, total);
+    revenueByEmployee.set(emp.employeeProfile.id, total); // Note: Map key should be employeeProfile.id as used in team mapping
   }
 
   const responseTeams = teams.map((team) => {

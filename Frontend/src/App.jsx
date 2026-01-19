@@ -7,6 +7,7 @@ import TeamManagement from './components/TeamManagement'
 import EditProfile from './components/EditProfile'
 import AdminTeamManagement from './components/AdminTeamManagement'
 import AdminTeamDetails from './components/AdminTeamDetails'
+import AdminEmployeePlacements from './components/AdminEmployeePlacements'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -35,6 +36,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
               <AdminTeamDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/employee/:id/placements"
+          element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <AdminEmployeePlacements />
             </ProtectedRoute>
           }
         />

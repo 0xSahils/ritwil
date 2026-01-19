@@ -1,0 +1,13 @@
+{
+  "name": "ritwil-fullstack",
+  "version": "1.0.0",
+  "main": "Backend/src/server.js",
+  "scripts": {
+    "build": "npm install --prefix Backend && npm install --prefix Frontend && npm run build --prefix Frontend && npm run prisma:generate --prefix Backend && npm run prisma:migrate --prefix Backend",
+    "start": "npm run start --prefix Backend"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Fullstack deployment for Ritwil"
+}

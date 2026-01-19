@@ -193,7 +193,7 @@ export async function getTeamDetails(id) {
         include: {
           user: {
             include: {
-              dailyEntries: true,
+              placements: true,
             },
           },
           manager: true, // Manager is a User model, no need to include user again
@@ -221,7 +221,7 @@ export async function getTeamDetails(id) {
   );
 
   const aggregatedRevenue = members.reduce((total, member) => {
-    const memberRevenue = member.user.dailyEntries.reduce(
+    const memberRevenue = member.user.placements.reduce(
       (sum, entry) => sum + Number(entry.revenue || 0),
       0
     );
@@ -242,7 +242,7 @@ export async function getTeamDetails(id) {
       role: p.user.role,
       level: p.level,
       target: Number(p.yearlyTarget || 0),
-      revenue: p.user.dailyEntries.reduce(
+      revenue: p.user.placements.reduce(
         (sum, e) => sum + Number(e.revenue || 0),
         0
       ),
@@ -258,7 +258,7 @@ export async function getTeamDetails(id) {
       target: Number(p.yearlyTarget || 0),
       managerName: p.manager?.name || null,
       managerId: p.managerId,
-      revenue: p.user.dailyEntries.reduce(
+      revenue: p.user.placements.reduce(
         (sum, e) => sum + Number(e.revenue || 0),
         0
       ),

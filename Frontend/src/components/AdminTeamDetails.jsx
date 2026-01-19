@@ -189,7 +189,14 @@ const AdminTeamDetails = () => {
                 <tbody className="divide-y divide-slate-100">
                   {(activeTab === "leads" ? team.leads : team.members).map((user) => (
                     <tr key={user.id} className="group hover:bg-slate-50 transition-colors">
-                      <td className="py-4 pl-4 font-medium text-slate-800">{user.name}</td>
+                      <td className="py-4 pl-4">
+                        <div 
+                          className="font-medium text-slate-800 cursor-pointer hover:text-blue-600 hover:underline"
+                          onClick={() => navigate(`/admin/employee/${user.userId}/placements`)}
+                        >
+                          {user.name}
+                        </div>
+                      </td>
                       <td className="py-4 text-slate-600">{user.email}</td>
                       <td className="py-4">
                         <input

@@ -205,6 +205,75 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
   return createdPlacements;
 }
 
+export async function bulkCreateGlobalPlacements(placementsData, actorId) {
+  const createdPlacements = [];
+  const errors = [];
+
+  for (const data of placementsData) {
+    try {
+      const {
+        employeeId, // Must be provided
+        candidateName,
+        clientName,
+        doi,
+        doj,
+        placementType,
+        billedHours,
+        marginPercent,
+        revenue,
+        billingStatus,
+        incentivePayoutEta,
+        incentiveAmountInr,
+        incentivePaid,
+      } = data;
+
+      if (!employeeId) {
+        errors.push({ data, error: "Missing employeeId" });
+        continue;
+      }
+
+      const daysCompleted = calculateDaysCompleted(doj, billingStatus);
+      const qualifier = checkQualifier(daysCompleted);
+
+      const placement = await prisma.placement.create({
+        data: {
+          employeeId,
+          candidateName,
+          clientName,
+          doi: doi ? new Date(doi) : null,
+          doj: doj ? new Date(doj) : null,
+          daysCompleted,
+          placementType: placementType || "PERMANENT",
+          billedHours: billedHours ? Number(billedHours) : null,
+          marginPercent: Number(marginPercent || 0),
+          revenue: Number(revenue || 0),
+          billingStatus: billingStatus || "PENDING",
+          incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
+          incentiveAmountInr: Number(incentiveAmountInr || 0),
+          incentivePaid: String(incentivePaid).toLowerCase() === 'true',
+          qualifier,
+        },
+      });
+      createdPlacements.push(placement);
+    } catch (err) {
+      console.error("Error creating global placement:", err.message);
+      errors.push({ data, error: err.message });
+    }
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: "PLACEMENT_GLOBAL_BULK_CREATED",
+      entityType: "System",
+      entityId: "global",
+      changes: { count: createdPlacements.length, errors: errors.length },
+    },
+  });
+
+  return { created: createdPlacements, errors };
+}
+
 export async function deletePlacement(id, actorId) {
   const placement = await prisma.placement.delete({
     where: { id },

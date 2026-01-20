@@ -6,6 +6,7 @@ import {
   createPlacement,
   updatePlacement,
   bulkCreatePlacements,
+  bulkCreateGlobalPlacements,
   deletePlacement,
 } from "../controllers/placementController.js";
 
@@ -36,7 +37,7 @@ router.post("/user/:userId", requireRole(Role.SUPER_ADMIN), async (req, res, nex
   }
 });
 
-// Bulk create placements
+// Bulk create placements (single user)
 router.post("/user/:userId/bulk", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
   try {
     const { userId } = req.params;
@@ -46,6 +47,20 @@ router.post("/user/:userId/bulk", requireRole(Role.SUPER_ADMIN), async (req, res
     }
     const created = await bulkCreatePlacements(userId, placements, req.user.id);
     res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Bulk create placements (global / multi-user)
+router.post("/bulk-global", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    const { placements } = req.body; // Expecting { placements: [{ employeeId, ... }] }
+    if (!Array.isArray(placements)) {
+      return res.status(400).json({ error: "placements must be an array" });
+    }
+    const result = await bulkCreateGlobalPlacements(placements, req.user.id);
+    res.status(201).json(result);
   } catch (err) {
     next(err);
   }

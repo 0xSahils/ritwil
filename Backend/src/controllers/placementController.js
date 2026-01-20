@@ -3,6 +3,36 @@ import pkg from "@prisma/client";
 const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
+// Helper to safely parse numbers from strings with commas/symbols
+const parseCurrency = (val) => {
+  if (val === undefined || val === null || val === '') return 0;
+  if (typeof val === 'number') return val;
+  const clean = String(val).replace(/[^0-9.-]/g, '');
+  return Number(clean) || 0;
+};
+
+// Helper to normalize BillingStatus
+const mapBillingStatus = (status) => {
+  if (!status) return "PENDING";
+  const s = String(status).toUpperCase().trim();
+  if (["PENDING", "BILLED", "CANCELLED", "HOLD"].includes(s)) return s;
+  
+  // Map common variations
+  if (s === "DONE" || s === "ACTIVE" || s === "COMPLETED") return "BILLED";
+  if (s === "CANCELED") return "CANCELLED";
+  if (s === "ON HOLD") return "HOLD";
+  
+  return "PENDING"; // Default fallback
+};
+
+// Helper to normalize PlacementType
+const mapPlacementType = (type) => {
+  if (!type) return "PERMANENT";
+  const t = String(type).toUpperCase().trim();
+  if (t === "CONTRACT" || t === "TEMPORARY") return "CONTRACT";
+  return "PERMANENT";
+};
+
 function calculateDaysCompleted(doj, billingStatus) {
   if (!doj) return 0;
   // If status is CANCELLED or HOLD, maybe we shouldn't count? 
@@ -57,6 +87,8 @@ export async function createPlacement(userId, data, actorId) {
 
   const daysCompleted = calculateDaysCompleted(doj, billingStatus);
   const qualifier = checkQualifier(daysCompleted);
+  const normalizedBillingStatus = mapBillingStatus(billingStatus);
+  const normalizedPlacementType = mapPlacementType(placementType);
 
   const placement = await prisma.placement.create({
     data: {
@@ -66,13 +98,13 @@ export async function createPlacement(userId, data, actorId) {
       doi: new Date(doi),
       doj: new Date(doj),
       daysCompleted,
-      placementType,
+      placementType: normalizedPlacementType,
       billedHours: billedHours ? Number(billedHours) : null,
-      marginPercent: Number(marginPercent || 0),
-      revenue: Number(revenue || 0),
-      billingStatus,
+      marginPercent: parseCurrency(marginPercent),
+      revenue: parseCurrency(revenue),
+      billingStatus: normalizedBillingStatus,
       incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
-      incentiveAmountInr: Number(incentiveAmountInr || 0),
+      incentiveAmountInr: parseCurrency(incentiveAmountInr),
       incentivePaid: String(data.incentivePaid).toLowerCase() === 'true',
       qualifier,
     },
@@ -96,14 +128,17 @@ export async function updatePlacement(id, data, actorId) {
   let updates = { ...data };
   
   // Handle numeric conversions
-  if (updates.revenue) updates.revenue = Number(updates.revenue);
-  if (updates.marginPercent) updates.marginPercent = Number(updates.marginPercent);
+  if (updates.revenue) updates.revenue = parseCurrency(updates.revenue);
+  if (updates.marginPercent) updates.marginPercent = parseCurrency(updates.marginPercent);
   if (updates.billedHours) updates.billedHours = Number(updates.billedHours);
-  if (updates.incentiveAmountInr) updates.incentiveAmountInr = Number(updates.incentiveAmountInr);
+  if (updates.incentiveAmountInr) updates.incentiveAmountInr = parseCurrency(updates.incentiveAmountInr);
   if (updates.incentivePaid !== undefined) {
     updates.incentivePaid = String(updates.incentivePaid).toLowerCase() === 'true';
   }
   
+  if (updates.billingStatus) updates.billingStatus = mapBillingStatus(updates.billingStatus);
+  if (updates.placementType) updates.placementType = mapPlacementType(updates.placementType);
+
   // Handle dates
   if (updates.doi) updates.doi = new Date(updates.doi);
   if (updates.doj) updates.doj = new Date(updates.doj);
@@ -166,6 +201,8 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
 
       const daysCompleted = calculateDaysCompleted(doj, billingStatus);
       const qualifier = checkQualifier(daysCompleted);
+      const normalizedBillingStatus = mapBillingStatus(billingStatus);
+      const normalizedPlacementType = mapPlacementType(placementType);
 
       const placement = await prisma.placement.create({
         data: {
@@ -175,13 +212,13 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
           doi: new Date(doi),
           doj: new Date(doj),
           daysCompleted,
-          placementType: placementType || "PERMANENT",
+          placementType: normalizedPlacementType,
           billedHours: billedHours ? Number(billedHours) : null,
-          marginPercent: Number(marginPercent || 0),
-          revenue: Number(revenue || 0),
-          billingStatus: billingStatus || "PENDING",
+          marginPercent: parseCurrency(marginPercent),
+          revenue: parseCurrency(revenue),
+          billingStatus: normalizedBillingStatus,
           incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
-          incentiveAmountInr: Number(incentiveAmountInr || 0),
+          incentiveAmountInr: parseCurrency(incentiveAmountInr),
           incentivePaid: String(incentivePaid).toLowerCase() === 'true',
           qualifier,
         },
@@ -232,24 +269,35 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId) {
         continue;
       }
 
-      const daysCompleted = calculateDaysCompleted(doj, billingStatus);
+      // Validate Dates
+      const validDoj = doj ? new Date(doj) : new Date(); // Default to now if missing
+      const validDoi = doi ? new Date(doi) : validDoj;   // Default to DOJ if missing
+
+      if (isNaN(validDoj.getTime()) || isNaN(validDoi.getTime())) {
+        errors.push({ data, error: "Invalid Date format for DOJ or DOI" });
+        continue;
+      }
+
+      const daysCompleted = calculateDaysCompleted(validDoj, billingStatus);
       const qualifier = checkQualifier(daysCompleted);
+      const normalizedBillingStatus = mapBillingStatus(billingStatus);
+      const normalizedPlacementType = mapPlacementType(placementType);
 
       const placement = await prisma.placement.create({
         data: {
-          employeeId,
-          candidateName,
-          clientName,
-          doi: doi ? new Date(doi) : null,
-          doj: doj ? new Date(doj) : null,
+          employee: { connect: { id: employeeId } },
+          candidateName: candidateName || "Unknown Candidate",
+          clientName: clientName || "Unknown Client",
+          doi: validDoi,
+          doj: validDoj,
           daysCompleted,
-          placementType: placementType || "PERMANENT",
+          placementType: normalizedPlacementType,
           billedHours: billedHours ? Number(billedHours) : null,
-          marginPercent: Number(marginPercent || 0),
-          revenue: Number(revenue || 0),
-          billingStatus: billingStatus || "PENDING",
+          marginPercent: parseCurrency(marginPercent),
+          revenue: parseCurrency(revenue),
+          billingStatus: normalizedBillingStatus,
           incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
-          incentiveAmountInr: Number(incentiveAmountInr || 0),
+          incentiveAmountInr: parseCurrency(incentiveAmountInr),
           incentivePaid: String(incentivePaid).toLowerCase() === 'true',
           qualifier,
         },

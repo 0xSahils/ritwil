@@ -142,8 +142,8 @@ router.get(
       }
 
       const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
-      const revenueGenerated = employee.dailyEntries.reduce(
-        (sum, e) => sum + Number(e.revenue),
+      const revenueGenerated = employee.placements.reduce(
+        (sum, p) => sum + Number(p.revenue || 0),
         0
       );
       const percentage =
@@ -246,8 +246,8 @@ router.get(
       }
 
       const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
-      const revenueGenerated = employee.dailyEntries.reduce(
-        (sum, e) => sum + Number(e.revenue),
+      const revenueGenerated = employee.placements.reduce(
+        (sum, p) => sum + Number(p.revenue || 0),
         0
       );
       const percentage =

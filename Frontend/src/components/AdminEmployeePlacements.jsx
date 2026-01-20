@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
+import CalculationService, { QUALIFIER_DAYS } from "../utils/calculationService";
 
 const AdminEmployeePlacements = () => {
   const { id: userId } = useParams();
@@ -39,13 +40,10 @@ const AdminEmployeePlacements = () => {
   // Auto-calculate Days Completed in form
   useEffect(() => {
     if (formData.doj) {
-      const start = new Date(formData.doj);
-      const now = new Date();
-      const diffTime = Math.abs(now - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      const diffDays = CalculationService.calculateDaysDifference(formData.doj);
       
       // Auto-update qualifier
-      const isQualifier = diffDays >= 90;
+      const isQualifier = CalculationService.checkQualifierStatus(diffDays);
       
       setFormData(prev => ({
         ...prev,
@@ -75,6 +73,21 @@ const AdminEmployeePlacements = () => {
   useEffect(() => {
     fetchPlacements();
   }, [userId]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await apiRequest("/users?pageSize=1000");
+        if (response.ok) {
+          const data = await response.json();
+          setAllUsers(data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch users for bulk upload mapping", err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const handleEdit = (placement) => {
     setEditingId(placement.id);
@@ -129,6 +142,120 @@ const AdminEmployeePlacements = () => {
   };
 
   const handleBulkSubmit = async () => {
+    // 1. EXCEL HANDLING
+    if (csvFile && (csvFile.name.toLowerCase().endsWith('.xlsx') || csvFile.name.toLowerCase().endsWith('.xls'))) {
+       try {
+         const data = await csvFile.arrayBuffer();
+          const workbook = XLSX.read(data);
+          
+          const globalPlacements = [];
+          
+          // Loop through all sheets
+          for (const sheetName of workbook.SheetNames) {
+              const sheet = workbook.Sheets[sheetName];
+              const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+              
+              let currentRecruiterId = null; // Reset per sheet (safer assumption)
+     
+              // Iterate
+              for (let i = 0; i < jsonData.length; i++) {
+                 const row = jsonData[i];
+                 if (!row || row.length === 0) continue;
+                 
+                 const firstStr = String(row[0] || "").trim();
+                 
+                 // Recruiter Block Start
+                 if (firstStr.toLowerCase().startsWith("recruiter name")) {
+                     // Try to split by ':' or check next cell
+                     let name = "";
+                     if (firstStr.includes(":")) {
+                         name = firstStr.split(":")[1].trim();
+                     } 
+                     if (!name && row[1]) {
+                         name = String(row[1]).trim();
+                     }
+                     
+                     // Find ID
+                     const user = allUsers.find(u => u.name.toLowerCase() === name.toLowerCase());
+                     if (user) {
+                         currentRecruiterId = user.id;
+                     } else {
+                         currentRecruiterId = null; // Unknown recruiter
+                         console.warn("Unknown recruiter:", name);
+                     }
+                     continue;
+                 }
+     
+                 // Headers row - skip
+                 if (firstStr.toLowerCase() === "candidate name" || row.some(c => String(c).toLowerCase() === "candidate name")) {
+                     continue;
+                 }
+     
+                 // Data Row
+                 if (currentRecruiterId) {
+                     // Expecting: Candidate Name, Company Name, CTC, Role, Date
+                     const candidateName = row[0];
+                     const clientName = row[1];
+                     const ctc = row[2];
+                     const role = row[3];
+                     const dateVal = row[4];
+     
+                     if (!candidateName || !clientName) continue;
+     
+                     // Parse Date
+                     let doj = new Date();
+                     if (typeof dateVal === 'number') {
+                          // Excel date
+                          doj = new Date(Math.round((dateVal - 25569)*86400*1000));
+                     } else if (dateVal) {
+                          doj = new Date(dateVal);
+                     }
+     
+                     if (isNaN(doj.getTime())) doj = new Date();
+     
+                     globalPlacements.push({
+                         employeeId: currentRecruiterId,
+                         candidateName,
+                         clientName,
+                         doi: doj,
+                         doj: doj,
+                         revenue: ctc || 0,
+                         placementType: String(role).toLowerCase().includes("contract") ? "CONTRACT" : "PERMANENT",
+                         billingStatus: "PENDING",
+                         incentivePaid: false
+                     });
+                 }
+              }
+          }
+
+         if (globalPlacements.length === 0) {
+             alert("No placements found. Ensure 'Recruiter Name: [Name]' is correct and data follows 'Candidate, Client, CTC, Role, Date' format.");
+             return;
+         }
+
+         if (!window.confirm(`Found ${globalPlacements.length} placements. Upload?`)) return;
+
+         const response = await apiRequest("/placements/bulk-global", {
+             method: "POST",
+             body: JSON.stringify({ placements: globalPlacements })
+         });
+
+         if (!response.ok) throw new Error("Upload failed");
+         
+         setShowBulkModal(false);
+         setCsvFile(null);
+         fetchPlacements();
+         alert("Uploaded successfully!");
+         return;
+
+       } catch(e) {
+         console.error(e);
+         alert("Excel Error: " + e.message);
+         return;
+       }
+    }
+
+    // 2. CSV/Text HANDLING
     let parsedData = [];
     let processingText = bulkText;
     
@@ -248,7 +375,7 @@ const AdminEmployeePlacements = () => {
                     <th className="py-3 px-2 font-medium">Type</th>
                     <th className="py-3 px-2 font-medium">Hours</th>
                     <th className="py-3 px-2 font-medium">Margin %</th>
-                    <th className="py-3 px-2 font-medium">Revenue</th>
+                    <th className="py-3 px-2 font-medium">Revenue ($)</th>
                     <th className="py-3 px-2 font-medium">Status</th>
                     <th className="py-3 px-2 font-medium">Inc. ETA</th>
                     <th className="py-3 px-2 font-medium">Inc. (INR)</th>
@@ -273,8 +400,8 @@ const AdminEmployeePlacements = () => {
                         </span>
                       </td>
                       <td className="py-3 px-2 text-slate-600">{p.billedHours || '-'}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.marginPercent}%</td>
-                      <td className="py-3 px-2 text-emerald-600 font-medium">₹{Number(p.revenue).toLocaleString()}</td>
+                      <td className="py-3 px-2 text-slate-600">{p.marginPercent ? CalculationService.formatPercentage(p.marginPercent) : '-'}</td>
+                      <td className="py-3 px-2 text-emerald-600 font-medium">{CalculationService.formatCurrency(p.revenue)}</td>
                       <td className="py-3 px-2">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           p.billingStatus === 'BILLED' ? 'bg-green-100 text-green-700' : 
@@ -284,7 +411,7 @@ const AdminEmployeePlacements = () => {
                         </span>
                       </td>
                       <td className="py-3 px-2 text-slate-600">{p.incentivePayoutEta ? new Date(p.incentivePayoutEta).toLocaleDateString() : '-'}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.incentiveAmountInr ? `₹${Number(p.incentiveAmountInr).toLocaleString()}` : '-'}</td>
+                      <td className="py-3 px-2 text-slate-600">{p.incentiveAmountInr ? CalculationService.formatCurrency(p.incentiveAmountInr, 'INR') : '-'}</td>
                       <td className="py-3 px-2">
                         {p.incentivePaid ? <span className="text-green-600">✓</span> : <span className="text-slate-300">✗</span>}
                       </td>
@@ -357,7 +484,7 @@ const AdminEmployeePlacements = () => {
                   value={formData.marginPercent} onChange={e => setFormData({...formData, marginPercent: e.target.value})} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Revenue (₹)</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Revenue ($)</label>
                 <input required type="number" className="w-full px-3 py-2 border rounded-lg text-sm"
                   value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value})} />
               </div>
@@ -412,9 +539,10 @@ const AdminEmployeePlacements = () => {
             <h2 className="text-xl font-bold text-slate-800 mb-4">Bulk Upload Placements</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Upload CSV File</label>
-                <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files[0])} 
+                <label className="block text-sm font-medium text-slate-700 mb-1">Upload File (Excel or CSV)</label>
+                <input type="file" accept=".csv, .xlsx, .xls" onChange={e => setCsvFile(e.target.files[0])} 
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <p className="text-xs text-slate-500 mt-1">Excel Format: 'Recruiter Name: [Name]' followed by table (Candidate, Client, CTC, Role, Date)</p>
               </div>
               <div className="text-center text-slate-400 my-2">- OR -</div>
               <div>

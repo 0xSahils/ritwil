@@ -71,8 +71,8 @@ router.post(
   async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { userIds } = req.body;
-      await bulkAssignEmployeesToTeam(id, userIds || [], req.user.id);
+      const { userIds, managerId, yearlyTarget } = req.body;
+      await bulkAssignEmployeesToTeam(id, userIds || [], req.user.id, { managerId, yearlyTarget });
       res.status(204).send();
     } catch (err) {
       if (err.statusCode) {

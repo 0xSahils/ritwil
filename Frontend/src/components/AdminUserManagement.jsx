@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiRequest } from "../api/client";
+import CalculationService from '../utils/calculationService';
 
 const AdminUserManagement = ({ embedded = false }) => {
   const [users, setUsers] = useState([]);
@@ -206,7 +207,7 @@ const AdminUserManagement = ({ embedded = false }) => {
                   <td className="p-4 text-slate-600">{user.team?.name || "-"}</td>
                   <td className="p-4 text-slate-600">{user.level || "-"}</td>
                   <td className="p-4 text-slate-600">
-                    {user.yearlyTarget ? `₹${Number(user.yearlyTarget).toLocaleString()}` : "-"}
+                    {user.yearlyTarget ? CalculationService.formatCurrency(user.yearlyTarget) : "-"}
                   </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${

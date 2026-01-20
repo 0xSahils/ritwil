@@ -554,9 +554,7 @@ const CampaignDashboard = () => {
                     Total campaign target
                   </span>
                   <span className="text-lg font-semibold">
-                    {`$${totalCampaignTarget.toLocaleString("en-US", {
-                      maximumFractionDigits: 0,
-                    })}`}
+                    {CalculationService.formatCurrency(totalCampaignTarget)}
                   </span>
                 </div>
               </div>

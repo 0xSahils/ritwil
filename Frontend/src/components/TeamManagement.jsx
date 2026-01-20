@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiRequest } from "../api/client";
+import CalculationService from "../utils/calculationService";
 
 const TeamManagement = () => {
   const [members, setMembers] = useState([]);
@@ -128,8 +129,8 @@ const TeamManagement = () => {
                   <td className="p-4 text-slate-600">{member.email || "N/A"}</td>
                   <td className="p-4 text-slate-600">{member.level || "-"}</td>
                   <td className="p-4 text-slate-600">
-                    {member.target ? `₹${Number(member.target).toLocaleString()}` : "-"}
-                  </td>
+                  {member.target ? CalculationService.formatCurrency(member.target) : "-"}
+                </td>
                   <td className="p-4 space-x-2">
                     <button
                       onClick={() => openEditModal(member)}

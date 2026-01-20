@@ -2,6 +2,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import CalculationService from '../utils/calculationService'
 
 const EmployeeDetails = () => {
   const navigate = useNavigate()
@@ -258,12 +259,12 @@ const EmployeeDetails = () => {
           client: p.client,
           placementType: p.placementType === 'PERMANENT' ? 'Permanent' : 'Contract',
           billedHours: p.billedHours ? String(p.billedHours) : '',
-          margin: `${Number(p.marginPercent || 0)}%`,
-          revenueGenerated: `$${Number(p.revenue || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+          margin: CalculationService.formatPercentage(p.marginPercent),
+          revenueGenerated: CalculationService.formatCurrency(p.revenue),
           billingStatus: p.billingStatus === 'BILLED' ? 'Paid' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
           incentivePayoutETA: p.incentivePayoutEta ? p.incentivePayoutEta.slice(0, 10) : '',
           placementQualifier: p.qualifier ? 'Yes' : 'No',
-          incentiveAmountINR: `₹${Number(p.incentiveAmountInr || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+          incentiveAmountINR: CalculationService.formatCurrency(p.incentiveAmountInr, 'INR'),
           incentivePaid: p.incentivePaid ? 'Yes' : 'No',
           monthlyBilling: (p.monthlyBilling || []).map((mb) => ({
             month: mb.month,
@@ -281,16 +282,16 @@ const EmployeeDetails = () => {
           teamLead: data.teamLead || 'Team Lead Name',
           teamName: data.team || 'Team Name',
           individualSynopsis: 'Active Recruiter',
-          yearlyTarget: `$${yearlyTarget.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
-          targetAchieved: `${percentage}%`,
+          yearlyTarget: CalculationService.formatCurrency(yearlyTarget),
+          targetAchieved: CalculationService.formatPercentage(percentage),
           targetPlacements: String(placements.length || 0),
           placementsAchieved: String(placements.filter((p) => p.placementQualifier === 'Yes').length),
-          revenueGenerated: `$${revenueGenerated.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
-          revenueGeneratedPercentage: `${percentage}%`,
-          totalRevenue: `$${yearlyTarget.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+          revenueGenerated: CalculationService.formatCurrency(revenueGenerated),
+          revenueGeneratedPercentage: CalculationService.formatPercentage(percentage),
+          totalRevenue: CalculationService.formatCurrency(yearlyTarget),
           slabQualified: data.incentive?.slabName || 'Slab1',
-          incentiveUSD: `$${incentiveUsd.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
-          incentiveINR: `₹${incentiveInr.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+          incentiveUSD: CalculationService.formatCurrency(incentiveUsd),
+          incentiveINR: CalculationService.formatCurrency(incentiveInr, 'INR'),
           placements,
         }
 

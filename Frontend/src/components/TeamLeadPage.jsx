@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import CalculationService from '../utils/calculationService'
 
 const TeamLeadPage = () => {
   const navigate = useNavigate()
@@ -270,7 +271,7 @@ const TeamLeadPage = () => {
   const calculatedTeamTarget = teamData.teamLeads.reduce((sum, lead) => {
     return sum + Number(lead.target || 0)
   }, 0)
-  const formattedTeamTarget = `$${calculatedTeamTarget.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+  const formattedTeamTarget = CalculationService.formatCurrency(calculatedTeamTarget)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 p-4 md:p-8 relative overflow-hidden">
@@ -335,12 +336,9 @@ const TeamLeadPage = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-xs opacity-80">Target Achieved:</span>
                   <span className="font-semibold text-green-300">
-                    {(() => {
-                      const targetValue = calculatedTeamTarget
-                      const percentage = parseFloat(teamData.targetAchieved || '0')
-                      const achievedValue = (percentage / 100) * targetValue
-                      return `$${achievedValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-                    })()}
+                    {CalculationService.formatCurrency(
+                      CalculationService.calculateAchievedValue(calculatedTeamTarget, teamData.targetAchieved)
+                    )}
                   </span>
                   <span className="text-xs opacity-80">({teamData.targetAchieved || '0%'})</span>
                 </div>
@@ -409,16 +407,15 @@ const TeamLeadPage = () => {
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-600 font-medium">Total Target:</span>
                       <span className="font-semibold text-slate-700">
-                        {`$${memberTarget.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+                        {CalculationService.formatCurrency(memberTarget)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-600 font-medium">Achieved:</span>
                       <span className="font-semibold text-green-600">
-                        {(() => {
-                          const achievedValue = (memberAchieved / 100) * memberTarget
-                          return `$${achievedValue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-                        })()}
+                        {CalculationService.formatCurrency(
+                          CalculationService.calculateAchievedValue(memberTarget, memberAchieved)
+                        )}
                       </span>
                     </div>
                   </div>

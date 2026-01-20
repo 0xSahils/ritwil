@@ -143,7 +143,9 @@ export async function deleteTeam(id, actorId) {
   return team;
 }
 
-export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId) {
+export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId, options = {}) {
+  const { managerId, yearlyTarget } = options;
+
   const employees = await prisma.user.findMany({
     where: {
       id: { in: userIds },
@@ -159,13 +161,15 @@ export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId) {
         create: {
           id: user.id,
           teamId,
-          managerId: user.employeeProfile?.managerId || null,
+          managerId: managerId || user.employeeProfile?.managerId || null,
           level: user.employeeProfile?.level || null,
-          yearlyTarget: user.employeeProfile?.yearlyTarget || 0,
+          yearlyTarget: yearlyTarget !== undefined ? yearlyTarget : (user.employeeProfile?.yearlyTarget || 0),
           isActive: true,
         },
         update: {
           teamId,
+          ...(managerId !== undefined && { managerId }),
+          ...(yearlyTarget !== undefined && { yearlyTarget }),
         },
       })
     )
@@ -179,6 +183,8 @@ export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId) {
       entityId: teamId,
       changes: {
         userIds,
+        managerId,
+        yearlyTarget,
       },
     },
   });

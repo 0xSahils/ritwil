@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { apiRequest } from "../api/client";
 
-const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = [] }) => {
+const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = [], defaultRole = "EMPLOYEE" }) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "EMPLOYEE",
+    role: defaultRole,
     teamId: "",
     managerId: "",
     level: "",
@@ -14,6 +14,13 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
   });
 
   const [error, setError] = useState("");
+
+  // Helper to determine the UI role representation
+  const getUiRole = (role, level) => {
+    if (role === "TEAM_LEAD") return "TEAM_LEAD";
+    if (role === "EMPLOYEE" && level === "L3") return "SENIOR_EMPLOYEE";
+    return "EMPLOYEE"; // Default to L4 Employee
+  };
 
   useEffect(() => {
     if (editingUser) {
@@ -28,19 +35,49 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
         yearlyTarget: editingUser.employeeProfile?.yearlyTarget || "",
       });
     } else {
+      // Determine default level based on defaultRole
+      const defaultLevel = defaultRole === "TEAM_LEAD" ? "L2" : "L4";
+      
       setFormData({
         name: "",
         email: "",
         password: "",
-        role: "EMPLOYEE",
+        role: defaultRole,
         teamId: teams.length === 1 ? teams[0].id : "",
         managerId: "",
-        level: "",
+        level: defaultLevel,
         yearlyTarget: "",
       });
     }
     setError("");
-  }, [editingUser, isOpen, teams]);
+  }, [editingUser, isOpen, teams, defaultRole]);
+
+  const handleUiRoleChange = (uiRole) => {
+    let newRole = "EMPLOYEE";
+    let newLevel = "L4";
+
+    switch (uiRole) {
+      case "TEAM_LEAD":
+        newRole = "TEAM_LEAD";
+        newLevel = "L2";
+        break;
+      case "SENIOR_EMPLOYEE":
+        newRole = "EMPLOYEE";
+        newLevel = "L3";
+        break;
+      case "EMPLOYEE":
+      default:
+        newRole = "EMPLOYEE";
+        newLevel = "L4";
+        break;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      role: newRole,
+      level: newLevel
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -142,13 +179,13 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Role</label>
               <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                value={getUiRole(formData.role, formData.level)}
+                onChange={(e) => handleUiRoleChange(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
               >
                 <option value="EMPLOYEE">Employee</option>
+                <option value="SENIOR_EMPLOYEE">Senior Employee</option>
                 <option value="TEAM_LEAD">Team Lead</option>
-                <option value="SUPER_ADMIN">L1 (Super Admin)</option>
               </select>
             </div>
             <div>
@@ -186,17 +223,6 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
                 </select>
               </div>
             )}
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Level</label>
-              <input
-                type="text"
-                value={formData.level}
-                onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                placeholder="e.g. L4"
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              />
-            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Target</label>
               <input

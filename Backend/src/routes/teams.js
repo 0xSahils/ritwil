@@ -20,7 +20,7 @@ router.use(authenticate);
 
 router.get("/", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), cacheMiddleware(60), async (req, res, next) => {
   try {
-    const data = await listTeamsWithMembers();
+    const data = await listTeamsWithMembers(req.user);
     res.json(data);
   } catch (err) {
     next(err);

@@ -4,9 +4,43 @@ const { PrismaClient, Role } = pkg;
 
 const prisma = new PrismaClient();
 
-export async function listTeamsWithMembers() {
+export async function listTeamsWithMembers(currentUser) {
+  let whereClause = { isActive: true };
+
+  if (currentUser && currentUser.role === Role.SUPER_ADMIN) {
+    // Filter teams for L1 Super Admin
+    const subordinates = await prisma.user.findMany({
+      where: { managerId: currentUser.id },
+      select: { 
+        employeeProfile: { 
+          select: { teamId: true } 
+        } 
+      }
+    });
+    
+    const teamIds = subordinates
+      .map(s => s.employeeProfile?.teamId)
+      .filter(id => id); // Remove nulls/undefined
+    
+    if (teamIds.length > 0) {
+      whereClause = {
+        isActive: true,
+        id: { in: teamIds }
+      };
+    } else {
+        // If no teams found for this L1, ensure we don't show other L1's teams.
+        // Returning an empty list or a query that returns nothing.
+        // If we leave whereClause as isActive: true, it shows ALL teams.
+        // We must restrict it.
+        whereClause = {
+            isActive: true,
+            id: { in: [] } // Impossible condition to return empty list
+        };
+    }
+  }
+
   const teams = await prisma.team.findMany({
-    where: { isActive: true },
+    where: whereClause,
     include: {
       employees: {
         where: { isActive: true },

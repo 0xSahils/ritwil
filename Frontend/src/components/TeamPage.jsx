@@ -4,6 +4,8 @@ import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import AdminUserManagement from './AdminUserManagement'
 import CalculationService from '../utils/calculationService'
+import PieChart from './PieChart'
+import RecursiveMemberNode from './RecursiveMemberNode'
 
 const TeamPage = () => {
   const navigate = useNavigate()
@@ -44,6 +46,7 @@ const TeamPage = () => {
         if (isMounted) {
           setTeamData({
             superUser: data.superUser,
+            summary: data.summary,
             teams: mappedTeams,
           })
         }
@@ -95,135 +98,6 @@ const TeamPage = () => {
         employeeId: member.id,
       },
     })
-  }
-
-  // Pie Chart Component
-  const PieChart = ({ percentage, size = 50, colorClass }) => {
-    const radius = size / 2 - 4
-    const center = size / 2
-    const innerRadius = radius * 0.65 // For donut effect
-    const circumference = 2 * Math.PI * radius
-    
-    // Calculate the angle for the pie slice
-    const angle = (percentage / 100) * 360
-    const largeArcFlag = angle > 180 ? 1 : 0
-    
-    // Calculate end point of the arc
-    const endAngle = (angle * Math.PI) / 180
-    const endX = center + radius * Math.sin(endAngle)
-    const endY = center - radius * Math.cos(endAngle)
-    
-    // Start from top (12 o'clock position)
-    const startX = center
-    const startY = center - radius
-    
-    // Inner circle points for donut effect
-    const innerEndX = center + innerRadius * Math.sin(endAngle)
-    const innerEndY = center - innerRadius * Math.cos(endAngle)
-    const innerStartX = center
-    const innerStartY = center - innerRadius
-    
-    // Get gradient colors based on percentage
-    const getGradientColors = (percentage) => {
-      if (percentage <= 30) {
-        // Red for 0-30%
-        return { start: '#ef4444', end: '#dc2626', stop1: '#f87171' }
-      } else if (percentage <= 80) {
-        // Yellow for 30-80%
-        return { start: '#eab308', end: '#ca8a04', stop1: '#facc15' }
-      } else {
-        // Green for above 80%
-        return { start: '#22c55e', end: '#16a34a', stop1: '#4ade80' }
-      }
-    }
-    
-    const gradientColors = getGradientColors(percentage)
-    const gradientId = `pie-gradient-${Math.random().toString(36).substr(2, 9)}`
-    
-    return (
-      <div className="relative flex-shrink-0 group" style={{ width: size, height: size }}>
-        {/* Glow effect */}
-        <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 blur-md"
-             style={{
-               background: `radial-gradient(circle, ${gradientColors.start} 0%, transparent 70%)`,
-               transform: 'scale(1.2)'
-             }}
-        />
-        
-        <svg width={size} height={size} className="transform -rotate-90 relative z-10 drop-shadow-lg">
-          <defs>
-            {/* Gradient definition */}
-            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={gradientColors.start} stopOpacity="1" />
-              <stop offset="50%" stopColor={gradientColors.stop1} stopOpacity="1" />
-              <stop offset="100%" stopColor={gradientColors.end} stopOpacity="1" />
-            </linearGradient>
-            
-            {/* Shadow filter */}
-            <filter id={`shadow-${gradientId}`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
-              <feOffset dx="0" dy="1" result="offsetblur"/>
-              <feComponentTransfer>
-                <feFuncA type="linear" slope="0.3"/>
-              </feComponentTransfer>
-              <feMerge>
-                <feMergeNode/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          
-          {/* Background circle with subtle shadow */}
-          <circle
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="4"
-            className="text-slate-200/60"
-            opacity="0.8"
-          />
-          
-          {/* Inner background circle for donut effect */}
-          <circle
-            cx={center}
-            cy={center}
-            r={innerRadius}
-            fill="white"
-            className="drop-shadow-sm"
-          />
-          
-          {/* Progress pie slice with gradient */}
-          {percentage > 0 && (
-            <path
-              d={`M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} L ${innerEndX} ${innerEndY} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY} Z`}
-              fill={`url(#${gradientId})`}
-              filter={`url(#shadow-${gradientId})`}
-              className="transition-all duration-500 ease-out animate-scaleIn"
-              style={{
-                transformOrigin: `${center}px ${center}px`
-              }}
-            />
-          )}
-        </svg>
-        
-        {/* Percentage text in center with enhanced styling */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
-          <span className="text-[11px] font-extrabold text-slate-800 leading-none drop-shadow-sm" style={{
-            textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
-          }}>
-            {Math.round(percentage)}
-          </span>
-          <span className="text-[8px] font-semibold text-slate-500 leading-none mt-0.5">%</span>
-        </div>
-        
-        {/* Animated ring effect */}
-        {percentage > 80 && (
-          <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping" style={{ animationDuration: '2s' }} />
-        )}
-      </div>
-    )
   }
 
   const getTeamColorClasses = (color) => {
@@ -413,9 +287,15 @@ const TeamPage = () => {
                 <div>
                   <div className="text-3xl font-extrabold text-white tracking-tight mb-2 flex items-center gap-3">
                     <span className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]"></span>
-                    {teamData.superUser.role === 'SUPER_ADMIN' ? 'L1' : teamData.superUser.role}
+                    {teamData.superUser?.name || 'Super Admin'}
                   </div>
-                  <div className="text-lg font-medium text-blue-100/80 tracking-wide">{teamData.superUser.name}</div>
+                  <div className="text-lg font-medium text-blue-100/80 tracking-wide">
+                    {teamData.superUser?.role === 'Super User' 
+                      ? (teamData.superUser?.name?.includes('Alok') ? 'Super User 1' 
+                        : teamData.superUser?.name?.includes('Bhanu') ? 'Super User 2' 
+                        : 'Super User 3')
+                      : (teamData.superUser?.role || 'Super User')}
+                  </div>
                 </div>
               </div>
               <div className="relative z-10 flex gap-3">
@@ -455,6 +335,9 @@ const TeamPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Summary Stats Section - REMOVED */}
+
 
           {/* Connector Line */}
           <div className="flex justify-center mb-10 relative">
@@ -505,16 +388,12 @@ const TeamPage = () => {
                             {team.teamLeads.length} Lead{team.teamLeads.length > 1 ? 's' : ''}
                           </div>
                           <div className="flex items-center gap-3 mt-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-slate-600 font-medium">Total Target:</span>
+                            <div className="flex items-center gap-2" title="Total Target">
                               <span className="text-xs font-semibold text-slate-700">{formattedTeamTarget}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-slate-600 font-medium">Achieved:</span>
+                            <div className="flex items-center gap-2" title="Achieved">
                               <span className="text-xs font-semibold text-green-600">
-                                {CalculationService.formatCurrency(
-                                  CalculationService.calculateAchievedValue(calculatedTeamTarget, team.targetAchieved)
-                                )}
+                                {CalculationService.formatCurrency(team.totalRevenue || 0)}
                               </span>
                             </div>
                           </div>
@@ -560,11 +439,10 @@ const TeamPage = () => {
                             
                             {/* Team Lead */}
                             <div
-                              className={`${levelBgLight} backdrop-blur-md border ${levelBorder} p-4 rounded-2xl cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-200 group`}
-                              onClick={() => toggleMember(lead.id)}
+                              className={`${levelBgLight} backdrop-blur-md border ${levelBorder} p-4 rounded-2xl hover:shadow-md hover:scale-[1.02] transition-all duration-200 group`}
                             >
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleMemberClick(lead, lead, team)}>
                                   <div className={`relative ${levelBg} text-white w-9 h-9 rounded-xl flex items-center justify-center text-xs font-semibold shadow-md group-hover:scale-110 transition-transform duration-300`}>
                                     <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -572,32 +450,21 @@ const TeamPage = () => {
                                     </svg>
                                   </div>
                                   <div>
-                                    <div className={`font-bold ${levelText} text-sm flex items-center gap-1.5`}>
+                                    <div className={`font-bold ${levelText} text-sm flex items-center gap-1.5 group-hover:text-blue-700 transition-colors`}>
                                       {lead.name}
                                       <svg className="w-3 h-3 opacity-60" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                       </svg>
                                     </div>
-                                    <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                                      <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                                      {lead.level === 'L2' ? 'Team Lead' : lead.level === 'L3' ? 'Senior Lead' : 'Member'}
-                                    </div>
                                     {lead.target && (
-                                      <div className="flex items-center gap-3 mt-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-slate-600 font-medium">Total Target:</span>
-                                          <span className="text-xs font-semibold text-slate-700">
-                                            {CalculationService.formatCurrency(lead.target)}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-slate-600 font-medium">Achieved:</span>
-                                          <span className="text-xs font-semibold text-green-600">
-                                            {CalculationService.formatCurrency(
-                                              CalculationService.calculateAchievedValue(lead.target, lead.targetAchieved)
-                                            )}
-                                          </span>
-                                        </div>
+                                      <div className="text-xs text-slate-500 mt-1 flex items-center">
+                                        <span className="font-medium text-slate-600">
+                                          Total Target: <span className="text-slate-900">{CalculationService.formatCurrency(lead.target)}</span>
+                                        </span>
+                                        <span className="mx-2 text-slate-300">|</span>
+                                        <span className="font-medium text-slate-600">
+                                          Achieved: <span className="text-green-600">{CalculationService.formatCurrency(lead.totalRevenue || 0)}</span>
+                                        </span>
                                       </div>
                                     )}
                                   </div>
@@ -615,70 +482,45 @@ const TeamPage = () => {
                                       <span className={`text-xs ${levelBadge} ${levelText} px-2.5 py-1 rounded-lg font-medium shadow-sm`}>
                                         {lead.members.length}
                                       </span>
-                                      <svg
-                                        className={`w-4 h-4 text-slate-400 transition-all duration-300 group-hover:text-slate-600 ${
-                                          expandedMembers[lead.id] ? 'transform rotate-180' : ''
-                                        }`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
+                                      <div 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleMember(lead.id);
+                                        }}
+                                        className="p-1 cursor-pointer hover:bg-black/5 rounded-full transition-colors"
                                       >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                      </svg>
+                                        <svg
+                                          className={`w-4 h-4 text-slate-400 transition-all duration-300 group-hover:text-slate-600 ${
+                                            expandedMembers[lead.id] ? 'transform rotate-180' : ''
+                                          }`}
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                      </div>
                                     </>
                                   )}
                                 </div>
                               </div>
                             </div>
 
-                            {/* Team Members */}
+                            {/* Nested Members Hierarchy */}
                             {expandedMembers[lead.id] && lead.members.length > 0 && (
-                              <div className="mt-3 ml-4 grid grid-cols-1 gap-2.5 animate-fadeIn">
-                                {lead.members.map((member, idx) => (
-                                  <div
-                                    key={idx}
-                                    onClick={() => handleMemberClick(member, lead, team)}
-                                    className="bg-white/70 backdrop-blur-md border border-slate-200/50 p-4 rounded-xl hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md transition-all duration-200 group animate-scaleIn cursor-pointer"
-                                    style={{animationDelay: `${idx * 30}ms`}}
-                                  >
-                                    <div className="flex items-center justify-between mb-3">
-                                      <div className="flex items-center space-x-2.5">
-                                        <div className="relative bg-gradient-to-br from-slate-600 to-slate-700 text-white w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold shadow-sm group-hover:scale-110 transition-transform duration-200">
-                                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                          </svg>
-                                        </div>
-                                        <div className="text-xs text-slate-700 font-medium flex items-center gap-1.5">
-                                          {member.name}
-                                        </div>
-                                      </div>
-                                      {member.targetAchieved && (
-                                        <PieChart 
-                                          percentage={Number(member.targetAchieved || 0)} 
-                                          size={40}
-                                          colorClass={colorClasses.text}
-                                        />
-                                      )}
-                                    </div>
-                                  {member.target && (
-                                      <div className="space-y-1.5 pt-2 border-t border-slate-200/50">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-slate-600 font-medium">Target:</span>
-                                          <span className="font-semibold text-slate-700">
-                                            {CalculationService.formatCurrency(member.target)}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-slate-600 font-medium">Achieved:</span>
-                                          <span className="font-semibold text-green-600">
-                                            {CalculationService.formatCurrency(
-                                              CalculationService.calculateAchievedValue(member.target, member.targetAchieved)
-                                            )}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
+                              <div className="mt-3 ml-4 space-y-3 animate-fadeIn">
+                                {lead.members.map((member) => (
+                                  <RecursiveMemberNode 
+                                    key={member.id} 
+                                    member={member} 
+                                    expandedMembers={expandedMembers}
+                                    toggleMember={toggleMember}
+                                    handleMemberClick={handleMemberClick}
+                                    colorClasses={colorClasses}
+                                    lead={lead}
+                                    team={team}
+                                    depth={0}
+                                  />
                                 ))}
                               </div>
                             )}

@@ -303,9 +303,12 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
   for (const data of placementsData) {
     try {
       const {
-        employeeId, // Must be provided
+        employeeId: providedEmployeeId,
+        recruiterName,
         candidateName,
         clientName,
+        candidateId,
+        jpcId,
         doi,
         doj,
         placementType,
@@ -318,8 +321,25 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         incentivePaid,
       } = data;
 
+      let employeeId = providedEmployeeId;
+
+      // Lookup by name if ID is missing
+      if (!employeeId && recruiterName) {
+        const user = await prisma.user.findFirst({
+          where: {
+            name: { equals: recruiterName.trim(), mode: 'insensitive' }
+          }
+        });
+        if (user) {
+          employeeId = user.id;
+        } else {
+           errors.push({ data, error: `Recruiter not found: "${recruiterName}"` });
+           continue;
+        }
+      }
+
       if (!employeeId) {
-        errors.push({ data, error: "Missing employeeId" });
+        errors.push({ data, error: "Missing employeeId or valid Recruiter Name" });
         continue;
       }
 
@@ -420,6 +440,13 @@ export async function bulkDeletePlacements(placementIds, actorId) {
     throw new Error("No placement IDs provided");
   }
 
+  // Delete related records first (MonthlyBilling)
+  await prisma.monthlyBilling.deleteMany({
+    where: {
+      placementId: { in: placementIds }
+    }
+  });
+
   const result = await prisma.placement.deleteMany({
     where: {
       id: { in: placementIds }
@@ -440,6 +467,13 @@ export async function bulkDeletePlacements(placementIds, actorId) {
 }
 
 export async function deletePlacement(id, actorId) {
+  // Delete related records first (MonthlyBilling)
+  await prisma.monthlyBilling.deleteMany({
+    where: {
+      placementId: id
+    }
+  });
+
   const placement = await prisma.placement.delete({
     where: { id },
   });

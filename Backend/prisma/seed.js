@@ -322,9 +322,9 @@ async function main() {
   if (customData && customData.hierarchy) {
     console.log("Seeding from hierarchy_data.json...");
     
-    // Filter to only seed Alok Mishra for now
-    customData.hierarchy = customData.hierarchy.filter(h => h.name === "Alok Mishra");
-    console.log("Filtered hierarchy to only include Alok Mishra.");
+    // Filter to seed Alok Mishra, Bhanu Pratap Singh, and Mohammad Fakhrul
+    customData.hierarchy = customData.hierarchy.filter(h => h.name === "Alok Mishra" || h.name === "Bhanu Pratap Singh" || h.name === "Mohammad Fakhrul");
+    console.log("Filtered hierarchy to include Alok Mishra, Bhanu Pratap Singh, and Mohammad Fakhrul.");
 
     // Create S1 Admin
     await prisma.user.create({
@@ -419,7 +419,7 @@ async function main() {
                       email: l3.email,
                       name: l3.name,
                       passwordHash,
-                      role: Role.EMPLOYEE,
+                      role: Role.TEAM_LEAD,
                       managerId: l2User.id,
                       employeeProfile: {
                         create: {
@@ -499,100 +499,167 @@ async function main() {
         },
       });
 
-      for (const memberData of leadData.members) {
-        const memberUser = await prisma.user.create({
-          data: {
-            email: memberData.email,
-            name: memberData.name,
-            passwordHash,
-            role: Role.EMPLOYEE,
-          },
-        });
-
-        await prisma.employeeProfile.create({
-          data: {
-            id: memberUser.id,
-            teamId: team.id,
-            managerId: leadUser.id,
-            level: memberData.level,
-            yearlyTarget: memberData.target,
-          },
-        });
-
-        const revenue = (memberData.target * memberData.pct) / 100;
-
-        await prisma.dailyEntry.create({
-          data: {
-            employeeId: memberUser.id,
-            date: new Date(),
-            clientName: "Seed Client",
-            placementType: PlacementType.PERMANENT,
-            revenue,
-            marginPercent: 25,
-            billingStatus: BillingStatus.BILLED,
-            doi: new Date(),
-            doj: new Date(),
-            remarks: "Seed entry",
-          },
-        });
-
-        const incentiveAmountUsd = revenue * 0.1;
-        const incentiveAmountInr = incentiveAmountUsd * 80;
-
-        await prisma.incentive.create({
-          data: {
-            employeeId: memberUser.id,
-            periodStart: new Date(new Date().getFullYear(), 0, 1),
-            periodEnd: new Date(new Date().getFullYear(), 11, 31),
-            revenueTotal: revenue,
-            slabName: "Slab1",
-            amountUsd: incentiveAmountUsd,
-            amountInr: incentiveAmountInr,
-          },
-        });
-
-        const placement = await prisma.placement.create({
-          data: {
-            employeeId: memberUser.id,
-            candidateName: memberUser.name,
-            clientName: "Seed Client",
-            doi: new Date("2024-01-15"),
-            doj: new Date("2024-01-20"),
-            daysCompleted: 245,
-            placementType: PlacementType.PERMANENT,
-            billedHours: 160,
-            marginPercent: 25,
-            revenue,
-            billingStatus: BillingStatus.BILLED,
-            incentivePayoutEta: new Date("2024-02-15"),
-            incentiveAmountInr: incentiveAmountInr,
-            incentivePaid: true,
-            qualifier: true,
-          },
-        });
-
-        await prisma.monthlyBilling.createMany({
-          data: [
-            {
-              placementId: placement.id,
-              month: "February 2024",
-              hours: 40,
-              status: BillingStatus.BILLED,
+      if (leadData.members) {
+        for (const memberData of leadData.members) {
+          const memberUser = await prisma.user.create({
+            data: {
+              email: memberData.email,
+              name: memberData.name,
+              passwordHash,
+              role: Role.EMPLOYEE,
             },
-            {
-              placementId: placement.id,
-              month: "March 2024",
-              hours: 40,
-              status: BillingStatus.BILLED,
+          });
+
+          await prisma.employeeProfile.create({
+            data: {
+              id: memberUser.id,
+              teamId: team.id,
+              managerId: leadUser.id,
+              level: memberData.level,
+              yearlyTarget: memberData.target,
             },
-            {
-              placementId: placement.id,
-              month: "April 2024",
-              hours: 40,
-              status: BillingStatus.PENDING,
+          });
+
+          const revenue = (memberData.target * (memberData.pct || 70)) / 100;
+
+          await prisma.dailyEntry.create({
+            data: {
+              employeeId: memberUser.id,
+              date: new Date(),
+              clientName: "Seed Client",
+              placementType: PlacementType.PERMANENT,
+              revenue,
+              marginPercent: 25,
+              billingStatus: BillingStatus.BILLED,
+              doi: new Date(),
+              doj: new Date(),
+              remarks: "Seed entry",
             },
-          ],
-        });
+          });
+          
+          const incentiveAmountUsd = revenue * 0.1;
+          const incentiveAmountInr = incentiveAmountUsd * 80;
+
+          await prisma.incentive.create({
+            data: {
+              employeeId: memberUser.id,
+              periodStart: new Date(new Date().getFullYear(), 0, 1),
+              periodEnd: new Date(new Date().getFullYear(), 11, 31),
+              revenueTotal: revenue,
+              slabName: "Slab1",
+              amountUsd: incentiveAmountUsd,
+              amountInr: incentiveAmountInr,
+            },
+          });
+
+          const placement = await prisma.placement.create({
+            data: {
+              employeeId: memberUser.id,
+              candidateName: memberUser.name,
+              clientName: "Seed Client",
+              doi: new Date("2024-01-15"),
+              doj: new Date("2024-01-20"),
+              daysCompleted: 245,
+              placementType: PlacementType.PERMANENT,
+              billedHours: 160,
+              marginPercent: 25,
+              revenue,
+              billingStatus: BillingStatus.BILLED,
+              incentivePayoutEta: new Date("2024-02-15"),
+              incentiveAmountInr: incentiveAmountInr,
+              incentivePaid: true,
+              qualifier: true,
+            },
+          });
+
+          await prisma.monthlyBilling.createMany({
+            data: [
+              {
+                placementId: placement.id,
+                month: "February 2024",
+                hours: 40,
+                status: BillingStatus.BILLED,
+              },
+              {
+                placementId: placement.id,
+                month: "March 2024",
+                hours: 40,
+                status: BillingStatus.BILLED,
+              },
+              {
+                placementId: placement.id,
+                month: "April 2024",
+                hours: 40,
+                status: BillingStatus.PENDING,
+              },
+            ],
+          });
+        }
+      }
+
+      // Fallback: Handle SubLeads (L3)
+      if (leadData.subLeads) {
+        for (const l3 of leadData.subLeads) {
+          const l3User = await prisma.user.create({
+            data: {
+              email: l3.email,
+              name: l3.name,
+              passwordHash,
+              role: Role.TEAM_LEAD,
+            },
+          });
+
+          await prisma.employeeProfile.create({
+            data: {
+              id: l3User.id,
+              teamId: team.id,
+              managerId: leadUser.id,
+              level: l3.level || "L3",
+              yearlyTarget: l3.target || 50000,
+            },
+          });
+          
+          // Recursively create members for L3
+          if (l3.members) {
+            for (const memberData of l3.members) {
+                const memberUser = await prisma.user.create({
+                  data: {
+                    email: memberData.email,
+                    name: memberData.name,
+                    passwordHash,
+                    role: Role.EMPLOYEE,
+                  },
+                });
+
+                await prisma.employeeProfile.create({
+                  data: {
+                    id: memberUser.id,
+                    teamId: team.id,
+                    managerId: l3User.id,
+                    level: memberData.level,
+                    yearlyTarget: memberData.target,
+                  },
+                });
+                
+                // Add revenue data for L4s under L3... (Simplified for fallback)
+                const revenue = (memberData.target * (memberData.pct || 70)) / 100;
+                await prisma.dailyEntry.create({
+                    data: {
+                        employeeId: memberUser.id,
+                        date: new Date(),
+                        clientName: "Seed Client",
+                        placementType: PlacementType.PERMANENT,
+                        revenue,
+                        marginPercent: 25,
+                        billingStatus: BillingStatus.BILLED,
+                        doi: new Date(),
+                        doj: new Date(),
+                        remarks: "Seed entry",
+                    },
+                });
+            }
+          }
+        }
       }
     }
   }

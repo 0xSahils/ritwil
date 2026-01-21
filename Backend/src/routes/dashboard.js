@@ -2,7 +2,7 @@ import express from "express";
 import pkg from "@prisma/client";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { cacheMiddleware } from "../middleware/cache.js";
-import { getSuperAdminOverview } from "../controllers/dashboardController.js";
+import { getSuperAdminOverview, getTeamLeadOverview } from "../controllers/dashboardController.js";
 
 const { PrismaClient, Role } = pkg;
 const router = express.Router();
@@ -30,82 +30,8 @@ router.get(
   cacheMiddleware(60),
   async (req, res, next) => {
     try {
-      const userId = req.user.id;
-
-      const leadProfile = await prisma.employeeProfile.findUnique({
-        where: { id: userId },
-        include: { team: true, user: true },
-      });
-
-      if (!leadProfile || !leadProfile.team) {
-        return res.status(404).json({ error: "Team lead not configured" });
-      }
-
-      const team = await prisma.team.findUnique({
-        where: { id: leadProfile.teamId },
-        include: {
-          employees: {
-            where: { isActive: true },
-            include: { user: true },
-          },
-        },
-      });
-
-      const employees = await prisma.user.findMany({
-        where: {
-          role: Role.EMPLOYEE,
-          isActive: true,
-          employeeProfile: { managerId: userId },
-        },
-        include: {
-          employeeProfile: true,
-          dailyEntries: true,
-        },
-      });
-
-      const members = employees.map((emp) => {
-        const target = Number(emp.employeeProfile?.yearlyTarget || 0);
-        const revenue = emp.dailyEntries.reduce(
-          (sum, e) => sum + Number(e.revenue),
-          0
-        );
-        const pct =
-          target > 0 ? Math.round((revenue / target) * 100) : 0;
-
-        return {
-          id: emp.id,
-          name: emp.name,
-          level: emp.employeeProfile?.level || "L4",
-          target,
-          targetAchieved: pct,
-          revenue,
-        };
-      });
-
-      const leadTarget = Number(leadProfile.yearlyTarget || 0);
-      const leadRevenue = members.reduce((sum, m) => sum + m.revenue, 0);
-      const leadPct =
-        leadTarget > 0 ? Math.round((leadRevenue / leadTarget) * 100) : 0;
-
-      res.json({
-        team: {
-          id: team.id,
-          name: team.name,
-          color: team.color || "blue",
-          teamTarget: team.employees.reduce(
-            (sum, p) => sum + Number(p.yearlyTarget || 0),
-            0
-          ),
-        },
-        lead: {
-          id: leadProfile.id,
-          name: leadProfile.user.name,
-          level: leadProfile.level || "L2",
-          target: leadTarget,
-          targetAchieved: leadPct,
-        },
-        members,
-      });
+      const data = await getTeamLeadOverview(req.user);
+      res.json(data);
     } catch (err) {
       next(err);
     }

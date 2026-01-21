@@ -144,7 +144,6 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
                 <th className="p-4 font-semibold text-slate-600">Email</th>
                 <th className="p-4 font-semibold text-slate-600">Role</th>
                 <th className="p-4 font-semibold text-slate-600">Team</th>
-                <th className="p-4 font-semibold text-slate-600">Level</th>
                 <th className="p-4 font-semibold text-slate-600">Target</th>
                 <th className="p-4 font-semibold text-slate-600">Status</th>
                 <th className="p-4 font-semibold text-slate-600">Actions</th>
@@ -170,7 +169,6 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
                     </span>
                   </td>
                   <td className="p-4 text-slate-600">{user.team?.name || "-"}</td>
-                  <td className="p-4 text-slate-600">{user.level || "-"}</td>
                   <td className="p-4 text-slate-600">
                     {user.yearlyTarget ? CalculationService.formatCurrency(user.yearlyTarget) : "-"}
                   </td>

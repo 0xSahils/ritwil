@@ -262,7 +262,7 @@ const EmployeeDetails = () => {
           billedHours: p.billedHours ? String(p.billedHours) : '',
           margin: CalculationService.formatPercentage(p.marginPercent),
           revenueGenerated: CalculationService.formatCurrency(p.revenue),
-          billingStatus: p.billingStatus === 'BILLED' ? 'Paid' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
+          billingStatus: p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
           incentivePayoutETA: p.incentivePayoutEta ? p.incentivePayoutEta.slice(0, 10) : '',
           placementQualifier: p.qualifier ? 'Yes' : 'No',
           incentiveAmountINR: CalculationService.formatCurrency(p.incentiveAmountInr, 'INR'),
@@ -600,7 +600,9 @@ const EmployeeDetails = () => {
                       <td className="px-4 py-4 text-sm text-slate-600">
                         <div className="relative inline-block">
                           {placement.placementType === 'Permanent' ? (
-                            <span className="text-slate-400">-</span>
+                            <span className="text-slate-600 font-medium">
+                              {placement.billedHours || '-'}
+                            </span>
                           ) : (
                             <>
                               <InfoIcon
@@ -624,7 +626,12 @@ const EmployeeDetails = () => {
                       <td className="px-4 py-4 text-sm text-slate-600">
                         <div className="relative inline-block">
                           {placement.placementType === 'Permanent' ? (
-                            <span className="text-slate-400">-</span>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                              placement.billingStatus === 'Completed' ? 'bg-green-100 text-green-700' : 
+                              placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {placement.billingStatus}
+                            </span>
                           ) : (
                             <>
                               <InfoIcon

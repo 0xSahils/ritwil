@@ -24,12 +24,25 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
   const where = { role: { in: targetRoles } };
 
   if (actor && actor.role === Role.SUPER_ADMIN) {
-    // Restrict to hierarchy: L2 (Direct), L3 (Sub-1), L4 (Sub-2)
-    where.OR = [
-      { managerId: actor.id },
-      { manager: { managerId: actor.id } },
-      { manager: { manager: { managerId: actor.id } } }
-    ];
+    // 1. Fetch full actor details to get teamId
+    const fullActor = await prisma.user.findUnique({
+      where: { id: actor.id },
+      include: { employeeProfile: true }
+    });
+
+    const teamId = fullActor?.employeeProfile?.teamId;
+
+    if (teamId) {
+       // Scope to users in the same team
+       where.employeeProfile = { teamId };
+    } else {
+       // Fallback: Restrict to hierarchy if no team found
+       where.OR = [
+        { managerId: actor.id },
+        { manager: { managerId: actor.id } },
+        { manager: { manager: { managerId: actor.id } } }
+      ];
+    }
   }
 
   const [total, users] = await Promise.all([
@@ -168,20 +181,25 @@ export async function updateUserWithProfile(id, body, actor) {
     name,
     role,
     password,
-    teamId,
-    managerId,
-    level,
-    yearlyTarget,
+    teamId: rawTeamId,
+    managerId: rawManagerId,
+    level: rawLevel,
+    yearlyTarget: rawYearlyTarget,
     isActive,
   } = body;
+
+  const teamId = rawTeamId === "" ? null : rawTeamId;
+  const managerId = rawManagerId === "" ? null : rawManagerId;
+  const level = rawLevel === "" ? null : rawLevel;
+  const yearlyTarget = (rawYearlyTarget === "" || rawYearlyTarget === null) ? 0 : rawYearlyTarget;
 
   if (actor.role !== Role.SUPER_ADMIN && actor.role !== Role.S1_ADMIN) {
     if (
       role ||
-      teamId ||
-      managerId ||
-      level ||
-      yearlyTarget ||
+      rawTeamId !== undefined ||
+      rawManagerId !== undefined ||
+      rawLevel !== undefined ||
+      rawYearlyTarget !== undefined ||
       typeof isActive === "boolean"
     ) {
       const error = new Error("Unauthorized to change sensitive fields");
@@ -249,12 +267,10 @@ export async function updateUserWithProfile(id, body, actor) {
                     : user.employeeProfile?.deletedAt || null,
               },
               update: {
-                teamId: teamId ?? user.employeeProfile?.teamId ?? null,
-                managerId:
-                  managerId ?? user.employeeProfile?.managerId ?? null,
-                level: level ?? user.employeeProfile?.level ?? null,
-                yearlyTarget:
-                  yearlyTarget ?? user.employeeProfile?.yearlyTarget ?? 0,
+                teamId: teamId !== undefined ? teamId : (user.employeeProfile?.teamId ?? null),
+                managerId: managerId !== undefined ? managerId : (user.employeeProfile?.managerId ?? null),
+                level: level !== undefined ? level : (user.employeeProfile?.level ?? null),
+                yearlyTarget: yearlyTarget !== undefined ? yearlyTarget : (user.employeeProfile?.yearlyTarget ?? 0),
                 isActive:
                   typeof isActive === "boolean"
                     ? isActive

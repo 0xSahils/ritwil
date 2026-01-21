@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
+import PieChart from './PieChart'
+import RecursiveMemberNode from './RecursiveMemberNode'
 
 const TeamLeadPage = () => {
   const navigate = useNavigate()
@@ -11,6 +13,7 @@ const TeamLeadPage = () => {
   const [teamData, setTeamData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [expandedMembers, setExpandedMembers] = useState({})
 
   useEffect(() => {
     let isMounted = true
@@ -25,13 +28,17 @@ const TeamLeadPage = () => {
 
         const data = await response.json()
 
-        const mappedMembers = (data.members || []).map((m) => ({
-          id: m.id,
-          name: m.name,
-          level: m.level || 'L4',
-          target: Number(m.target || 0),
-          targetAchieved: Number(m.targetAchieved || 0),
-        }))
+        // Recursive function to map members if needed, or just use data directly
+        // The backend buildHierarchy already returns the correct structure.
+        // We might want to ensure numbers are numbers.
+        const mapMember = (m) => ({
+            ...m,
+            target: Number(m.target || 0),
+            targetAchieved: Number(m.targetAchieved || 0),
+            members: (m.members || []).map(mapMember)
+        })
+
+        const mappedMembers = (data.members || []).map(mapMember)
 
         const lead = {
           id: data.lead.id,
@@ -73,109 +80,11 @@ const TeamLeadPage = () => {
     }
   }, [])
 
-  // Pie Chart Component (same as TeamPage)
-  const PieChart = ({ percentage, size = 50, colorClass }) => {
-    const radius = size / 2 - 4
-    const center = size / 2
-    const innerRadius = radius * 0.65
-    const angle = (percentage / 100) * 360
-    const largeArcFlag = angle > 180 ? 1 : 0
-    const endAngle = (angle * Math.PI) / 180
-    const endX = center + radius * Math.sin(endAngle)
-    const endY = center - radius * Math.cos(endAngle)
-    const startX = center
-    const startY = center - radius
-    const innerEndX = center + innerRadius * Math.sin(endAngle)
-    const innerEndY = center - innerRadius * Math.cos(endAngle)
-    const innerStartX = center
-    const innerStartY = center - innerRadius
-
-    // Get gradient colors based on percentage
-    const getGradientColors = (percentage) => {
-      if (percentage <= 30) {
-        // Red for 0-30%
-        return { start: '#ef4444', end: '#dc2626', stop1: '#f87171' }
-      } else if (percentage <= 80) {
-        // Yellow for 30-80%
-        return { start: '#eab308', end: '#ca8a04', stop1: '#facc15' }
-      } else {
-        // Green for above 80%
-        return { start: '#22c55e', end: '#16a34a', stop1: '#4ade80' }
-      }
-    }
-
-    const gradientColors = getGradientColors(percentage)
-    const gradientId = `pie-gradient-${Math.random().toString(36).substr(2, 9)}`
-
-    return (
-      <div className="relative flex-shrink-0 group" style={{ width: size, height: size }}>
-        <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 blur-md"
-             style={{
-               background: `radial-gradient(circle, ${gradientColors.start} 0%, transparent 70%)`,
-               transform: 'scale(1.2)'
-             }}
-        />
-        <svg width={size} height={size} className="transform -rotate-90 relative z-10 drop-shadow-lg">
-          <defs>
-            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={gradientColors.start} stopOpacity="1" />
-              <stop offset="50%" stopColor={gradientColors.stop1} stopOpacity="1" />
-              <stop offset="100%" stopColor={gradientColors.end} stopOpacity="1" />
-            </linearGradient>
-            <filter id={`shadow-${gradientId}`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
-              <feOffset dx="0" dy="1" result="offsetblur"/>
-              <feComponentTransfer>
-                <feFuncA type="linear" slope="0.3"/>
-              </feComponentTransfer>
-              <feMerge>
-                <feMergeNode/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          <circle
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="4"
-            className="text-slate-200/60"
-            opacity="0.8"
-          />
-          <circle
-            cx={center}
-            cy={center}
-            r={innerRadius}
-            fill="white"
-            className="drop-shadow-sm"
-          />
-          {percentage > 0 && (
-            <path
-              d={`M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} L ${innerEndX} ${innerEndY} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY} Z`}
-              fill={`url(#${gradientId})`}
-              filter={`url(#shadow-${gradientId})`}
-              className="transition-all duration-500 ease-out animate-scaleIn"
-              style={{
-                transformOrigin: `${center}px ${center}px`
-              }}
-            />
-          )}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
-          <span className="text-[11px] font-extrabold text-slate-800 leading-none drop-shadow-sm" style={{
-            textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
-          }}>
-            {Math.round(percentage)}
-          </span>
-          <span className="text-[8px] font-semibold text-slate-500 leading-none mt-0.5">%</span>
-        </div>
-        {percentage > 80 && (
-          <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping" style={{ animationDuration: '2s' }} />
-        )}
-      </div>
-    )
+  const toggleMember = (memberId) => {
+    setExpandedMembers(prev => ({
+      ...prev,
+      [memberId]: !prev[memberId]
+    }))
   }
 
   const getTeamColorClasses = (color) => {
@@ -308,10 +217,6 @@ const TeamLeadPage = () => {
               </div>
             </div>
             <div>
-              <div className="text-xs font-medium opacity-70 tracking-wide mb-1.5 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                {teamLeadData.level} · Team Lead
-              </div>
               <div className="text-2xl font-bold tracking-tight">{teamLeadData.name}</div>
               <div className="text-sm opacity-80 mt-1">{teamData.name}</div>
             </div>
@@ -323,7 +228,8 @@ const TeamLeadPage = () => {
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                   </svg>
-                  {members.filter(m => m.name !== 'pass through').length} Members
+                  {/* Count all descendants? For now just direct members count for display */}
+                  {members.filter(m => m.name !== 'pass through').length} Direct Reports
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/20 hover:bg-white/20 transition-colors duration-200">
@@ -336,9 +242,7 @@ const TeamLeadPage = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-xs opacity-80">Target Achieved:</span>
                   <span className="font-semibold text-green-300">
-                    {CalculationService.formatCurrency(
-                      CalculationService.calculateAchievedValue(calculatedTeamTarget, teamData.targetAchieved)
-                    )}
+                    {CalculationService.formatCurrency(teamLeadData.totalRevenue || 0)}
                   </span>
                   <span className="text-xs opacity-80">({teamData.targetAchieved || '0%'})</span>
                 </div>
@@ -375,53 +279,19 @@ const TeamLeadPage = () => {
             </svg>
             Team Members
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {members.filter(m => m.name !== 'pass through').map((member, idx) => {
-              const memberTarget = Number(member.target || 0)
-              const memberAchieved = Number(member.targetAchieved || 0)
-              return (
-                <div
-                  key={idx}
-                  onClick={() => handleMemberClick(member, teamLeadData, teamData)}
-                  className="bg-gradient-to-r from-white to-slate-50/50 backdrop-blur-md border border-slate-200/50 p-5 rounded-2xl hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-lg transition-all duration-200 group cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="relative bg-gradient-to-br from-slate-600 to-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center text-sm font-semibold shadow-md group-hover:scale-110 transition-transform duration-200">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-slate-700">{member.name}</div>
-                        <div className="text-xs text-slate-500">{member.level}</div>
-                      </div>
-                    </div>
-                    <PieChart 
-                      percentage={memberAchieved} 
-                      size={45}
-                      colorClass={colorClasses.text}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-600 font-medium">Total Target:</span>
-                      <span className="font-semibold text-slate-700">
-                        {CalculationService.formatCurrency(memberTarget)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-600 font-medium">Achieved:</span>
-                      <span className="font-semibold text-green-600">
-                        {CalculationService.formatCurrency(
-                          CalculationService.calculateAchievedValue(memberTarget, memberAchieved)
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+          <div className="space-y-4">
+            {members.filter(m => m.name !== 'pass through').map((member) => (
+              <RecursiveMemberNode
+                key={member.id}
+                member={member}
+                expandedMembers={expandedMembers}
+                toggleMember={toggleMember}
+                handleMemberClick={handleMemberClick}
+                colorClasses={colorClasses}
+                lead={teamLeadData}
+                team={teamData}
+              />
+            ))}
           </div>
         </div>
       </div>

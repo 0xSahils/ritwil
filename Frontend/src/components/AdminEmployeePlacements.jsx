@@ -40,6 +40,8 @@ const AdminEmployeePlacements = () => {
 
   const [formData, setFormData] = useState(initialFormState);
 
+  const [allUsers, setAllUsers] = useState([]);
+  
   // Auto-calculate Days Completed in form
   useEffect(() => {
     if (formData.doj) {
@@ -473,7 +475,7 @@ const AdminEmployeePlacements = () => {
                           p.billingStatus === 'BILLED' ? 'bg-green-100 text-green-700' : 
                           p.billingStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                         }`}>
-                          {p.billingStatus}
+                          {p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus}
                         </span>
                       </td>
                       <td className="py-3 px-2 text-slate-600">{p.incentivePayoutEta ? new Date(p.incentivePayoutEta).toLocaleDateString() : '-'}</td>

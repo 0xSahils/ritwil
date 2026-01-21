@@ -8,8 +8,10 @@ datasource db {
 }
 
 enum Role {
+  S1_ADMIN
   SUPER_ADMIN
   TEAM_LEAD
+  LIMITED_ACCESS
   EMPLOYEE
 }
 
@@ -41,8 +43,12 @@ model Team {
   employees    EmployeeProfile[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  
+  campaignId   String?
+  campaign     Campaign?         @relation(fields: [campaignId], references: [id])
 
   @@index([isActive])
+  @@index([campaignId])
 }
 
 model User {
@@ -67,6 +73,16 @@ model User {
   completedCampaignTasks CampaignTask[]  @relation("CampaignTaskCompletedBy")
 
   leadEmployees EmployeeProfile[] @relation("LeadEmployees")
+
+  // Security
+  mfaSecret    String?
+  mfaEnabled   Boolean           @default(false)
+  
+  // Hierarchy
+  managerId    String?
+  manager      User?             @relation("UserHierarchy", fields: [managerId], references: [id])
+  subordinates User[]            @relation("UserHierarchy")
+
   auditLogs     AuditLog[]
 
   @@index([role])
@@ -116,6 +132,8 @@ model Placement {
   employeeId         String
   employee           User           @relation(fields: [employeeId], references: [id])
   candidateName      String
+  candidateId        String?
+  jpcId              String?
   clientName         String
   doi                DateTime
   doj                DateTime
@@ -191,6 +209,7 @@ model Campaign {
   images       CampaignImage[]
   teamLeads    CampaignTeamLead[]
   assignments  CampaignAssignment[]
+  teams        Team[]
   tasks        CampaignTask[]
   activities   CampaignActivity[]
   createdAt    DateTime        @default(now())
@@ -288,6 +307,10 @@ model AuditLog {
   entityId   String
   changes    Json?
   createdAt  DateTime @default(now())
+  
+  // Security
+  isTampered Boolean  @default(false)
+  hash       String?
 
   @@index([actorId])
   @@index([entityType, entityId])

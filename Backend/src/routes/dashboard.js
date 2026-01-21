@@ -16,7 +16,7 @@ router.get(
   cacheMiddleware(60),
   async (req, res, next) => {
     try {
-      const data = await getSuperAdminOverview();
+      const data = await getSuperAdminOverview(req.user);
       res.json(data);
     } catch (err) {
       next(err);
@@ -177,6 +177,8 @@ router.get(
         placements: employee.placements.map((p) => ({
           id: p.id,
           candidateName: p.candidateName,
+          candidateId: p.candidateId,
+          jpcId: p.jpcId,
           doi: p.doi,
           doj: p.doj,
           daysCompleted: p.daysCompleted,
@@ -281,6 +283,8 @@ router.get(
         placements: employee.placements.map((p) => ({
           id: p.id,
           candidateName: p.candidateName,
+          candidateId: p.candidateId,
+          jpcId: p.jpcId,
           doi: p.doi,
           doj: p.doj,
           daysCompleted: p.daysCompleted,

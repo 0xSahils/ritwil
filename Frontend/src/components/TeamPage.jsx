@@ -80,6 +80,7 @@ const TeamPage = () => {
   }
 
   const [activeSection, setActiveSection] = useState('hierarchy')
+  const [autoOpenCreate, setAutoOpenCreate] = useState(false)
 
   const handleLogout = () => {
     logout().finally(() => {
@@ -330,7 +331,7 @@ const TeamPage = () => {
               </div>
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">
-                  Team Hierarchy
+                  VBeyond Corp
                 </h1>
                 <p className="text-slate-500 mt-1 text-sm flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -410,11 +411,11 @@ const TeamPage = () => {
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs font-medium opacity-70 tracking-wide mb-1.5 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                    {teamData.superUser.role}
+                  <div className="text-3xl font-extrabold text-white tracking-tight mb-2 flex items-center gap-3">
+                    <span className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]"></span>
+                    {teamData.superUser.role === 'SUPER_ADMIN' ? 'L1' : teamData.superUser.role}
                   </div>
-                  <div className="text-2xl font-bold tracking-tight">{teamData.superUser.name}</div>
+                  <div className="text-lg font-medium text-blue-100/80 tracking-wide">{teamData.superUser.name}</div>
                 </div>
               </div>
               <div className="relative z-10 flex gap-3">
@@ -694,7 +695,11 @@ const TeamPage = () => {
         )}
         {activeSection === 'users' && (
           <div className="mt-6">
-            <AdminUserManagement embedded />
+            <AdminUserManagement 
+              embedded 
+              autoOpenCreate={autoOpenCreate} 
+              onModalOpened={() => setAutoOpenCreate(false)} 
+            />
           </div>
         )}
       </div>

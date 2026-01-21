@@ -23,6 +23,9 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
     if (user.role === "SUPER_ADMIN") {
       return <Navigate to="/team" replace />;
     }
+    if (user.role === "S1_ADMIN") {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
     if (user.role === "TEAM_LEAD") {
       return <Navigate to="/teamlead" replace />;
     }

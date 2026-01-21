@@ -18,7 +18,9 @@ const LoginForm = () => {
 
     login(email, password)
       .then((user) => {
-        if (user.role === 'SUPER_ADMIN') {
+        if (user.role === 'S1_ADMIN') {
+          navigate('/admin/dashboard')
+        } else if (user.role === 'SUPER_ADMIN') {
           navigate('/team')
         } else if (user.role === 'TEAM_LEAD') {
           navigate('/teamlead')

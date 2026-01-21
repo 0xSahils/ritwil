@@ -1,11 +1,14 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import pkg from "@prisma/client";
+import speakeasy from "speakeasy";
+import QRCode from "qrcode";
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt.js";
+import { authenticate } from "../middleware/auth.js";
 
 const { PrismaClient } = pkg;
 const router = express.Router();
@@ -63,6 +66,24 @@ router.post("/login", async (req, res, next) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    // MFA Check
+    if (user.mfaEnabled) {
+      const { mfaCode } = req.body;
+      if (!mfaCode) {
+        return res.status(403).json({ mfaRequired: true, userId: user.id });
+      }
+
+      const verified = speakeasy.totp.verify({
+        secret: user.mfaSecret,
+        encoding: "base32",
+        token: mfaCode,
+      });
+
+      if (!verified) {
+        return res.status(401).json({ error: "Invalid MFA code" });
+      }
+    }
+
     const accessToken = signAccessToken(user);
     const refreshToken = await createRefreshToken(user.id);
 
@@ -100,9 +121,11 @@ router.post("/login", async (req, res, next) => {
             ? {
                 id: profile.manager.id,
                 name: profile.manager.name,
+                email: profile.manager.email,
               }
             : null,
-          level: profile?.level || null,
+          level: profile?.level,
+          yearlyTarget: profile?.yearlyTarget,
         },
       });
   } catch (err) {
@@ -110,65 +133,121 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
+router.post("/logout", (req, res) => {
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/api/auth",
+  });
+  res.json({ message: "Logged out" });
+});
+
 router.post("/refresh", async (req, res, next) => {
   try {
-    const token =
-      req.cookies.refreshToken || req.body.refreshToken || req.query.token;
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) return res.status(401).json({ error: "No refresh token" });
 
-    if (!token) {
-      return res.status(401).json({ error: "Missing refresh token" });
-    }
+    const payload = verifyRefreshToken(refreshToken);
+    if (!payload) return res.status(401).json({ error: "Invalid refresh token" });
 
-    let payload;
-    try {
-      payload = verifyRefreshToken(token);
-    } catch {
-      return res.status(401).json({ error: "Invalid refresh token" });
-    }
-
-    const stored = await prisma.refreshToken.findUnique({
-      where: { token },
-      include: { user: true },
+    const tokenRecord = await prisma.refreshToken.findUnique({
+      where: { id: payload.tokenId },
     });
 
-    if (!stored || stored.isRevoked || stored.userId !== payload.sub) {
+    if (!tokenRecord || tokenRecord.token !== refreshToken) {
       return res.status(401).json({ error: "Invalid refresh token" });
     }
 
-    if (stored.expiresAt.getTime() < Date.now()) {
-      return res.status(401).json({ error: "Refresh token expired" });
-    }
+    // Check if revoked? (Optional, if we had revokedAt)
+    
+    const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+    });
 
-    const user = stored.user;
-    if (!user.isActive) {
-      return res.status(403).json({ error: "User deactivated" });
+    if (!user || !user.isActive) {
+        return res.status(401).json({ error: "User inactive or not found" });
     }
 
     const accessToken = signAccessToken(user);
-
+    // Optionally rotate refresh token here
     res.json({ accessToken });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/logout", async (req, res, next) => {
+// Generate MFA Secret
+router.post("/mfa/setup", authenticate, async (req, res, next) => {
   try {
-    const token =
-      req.cookies.refreshToken || req.body.refreshToken || req.query.token;
+    const secret = speakeasy.generateSecret({
+      name: `Ritwil (${req.user.email})`,
+    });
 
-    if (token) {
-      await prisma.refreshToken.updateMany({
-        where: { token },
-        data: { isRevoked: true },
-      });
+    // Save temporary secret? Or just return it and save only when verified?
+    // Better: Save it but don't enable it yet.
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { mfaSecret: secret.base32 },
+    });
+
+    QRCode.toDataURL(secret.otpauth_url, (err, data_url) => {
+      if (err) return next(err);
+      res.json({ secret: secret.base32, qrCode: data_url });
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Verify and Enable MFA
+router.post("/mfa/verify", authenticate, async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+
+    if (!user.mfaSecret) {
+      return res.status(400).json({ error: "MFA setup not initiated" });
     }
 
-    res
-      .clearCookie("refreshToken", {
-        path: "/api/auth",
-      })
-      .json({ success: true });
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: "base32",
+      token,
+    });
+
+    if (verified) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { mfaEnabled: true },
+      });
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Invalid token" });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Disable MFA
+router.post("/mfa/disable", authenticate, async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    
+    // Require password to disable
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { mfaEnabled: false, mfaSecret: null },
+    });
+
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

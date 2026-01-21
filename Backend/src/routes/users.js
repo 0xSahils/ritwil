@@ -14,11 +14,12 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get("/", requireRole(Role.SUPER_ADMIN), cacheMiddleware(60), async (req, res, next) => {
+router.get("/", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), cacheMiddleware(60), async (req, res, next) => {
   try {
     const page = Number(req.query.page || 1);
     const pageSize = Number(req.query.pageSize || 25);
-    const result = await listUsersWithRelations({ page, pageSize });
+    const { role } = req.query;
+    const result = await listUsersWithRelations({ page, pageSize, actor: req.user, role });
     res.json(result);
   } catch (err) {
     next(err);
@@ -68,7 +69,7 @@ router.put("/:id", async (req, res, next) => {
 
 router.patch(
   "/:id/deactivate",
-  requireRole(Role.SUPER_ADMIN),
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
       const { id } = req.params;

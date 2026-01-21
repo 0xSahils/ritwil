@@ -22,7 +22,16 @@ export function authenticate(req, res, next) {
 
 export function requireRole(...roles) {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    // S1_ADMIN has universal access (Supreme Privileges)
+    if (req.user.role === 'S1_ADMIN') {
+      return next();
+    }
+
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Forbidden" });
     }
     next();

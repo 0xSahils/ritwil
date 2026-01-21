@@ -4,14 +4,38 @@ import bcrypt from "bcryptjs";
 const { PrismaClient, Role } = pkg;
 const prisma = new PrismaClient();
 
-export async function listUsersWithRelations({ page = 1, pageSize = 25 }) {
+export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, role }) {
   const skip = (page - 1) * pageSize;
+  
+  let targetRoles = [Role.TEAM_LEAD, Role.EMPLOYEE, Role.LIMITED_ACCESS];
+  if (actor && actor.role === Role.S1_ADMIN) {
+    targetRoles.push(Role.SUPER_ADMIN);
+  }
+
+  if (role) {
+      if (targetRoles.includes(role)) {
+          targetRoles = [role];
+      } else {
+          // If requested role is not allowed, return empty
+          targetRoles = [];
+      }
+  }
+  
+  const where = { role: { in: targetRoles } };
+
+  if (actor && actor.role === Role.SUPER_ADMIN) {
+    // Restrict to hierarchy: L2 (Direct), L3 (Sub-1), L4 (Sub-2)
+    where.OR = [
+      { managerId: actor.id },
+      { manager: { managerId: actor.id } },
+      { manager: { manager: { managerId: actor.id } } }
+    ];
+  }
+
   const [total, users] = await Promise.all([
-    prisma.user.count({
-      where: { role: { in: [Role.TEAM_LEAD, Role.EMPLOYEE] } },
-    }),
+    prisma.user.count({ where }),
     prisma.user.findMany({
-      where: { role: { in: [Role.TEAM_LEAD, Role.EMPLOYEE] } },
+      where,
       include: {
         employeeProfile: {
           include: { team: true, manager: true },
@@ -74,7 +98,7 @@ export async function createUserWithProfile(payload, actorId) {
     throw error;
   }
 
-  if (![Role.SUPER_ADMIN, Role.TEAM_LEAD, Role.EMPLOYEE].includes(role)) {
+  if (![Role.S1_ADMIN, Role.SUPER_ADMIN, Role.TEAM_LEAD, Role.LIMITED_ACCESS, Role.EMPLOYEE].includes(role)) {
     const error = new Error("Invalid role");
     error.statusCode = 400;
     throw error;
@@ -89,8 +113,9 @@ export async function createUserWithProfile(payload, actorId) {
         passwordHash,
         name,
         role,
+        managerId: managerId || null,
         employeeProfile:
-          role === Role.SUPER_ADMIN
+          role === Role.S1_ADMIN || role === Role.SUPER_ADMIN
             ? undefined
             : {
                 create: {
@@ -150,7 +175,7 @@ export async function updateUserWithProfile(id, body, actor) {
     isActive,
   } = body;
 
-  if (actor.role !== Role.SUPER_ADMIN) {
+  if (actor.role !== Role.SUPER_ADMIN && actor.role !== Role.S1_ADMIN) {
     if (
       role ||
       teamId ||

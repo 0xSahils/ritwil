@@ -17,9 +17,12 @@ const AdminEmployeePlacements = () => {
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [csvFile, setCsvFile] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const initialFormState = {
     candidateName: "",
+    candidateId: "",
+    jpcId: "",
     clientName: "",
     doi: "",
     doj: "",
@@ -242,10 +245,11 @@ const AdminEmployeePlacements = () => {
 
          if (!response.ok) throw new Error("Upload failed");
          
+         const result = await response.json();
          setShowBulkModal(false);
          setCsvFile(null);
          fetchPlacements();
-         alert("Uploaded successfully!");
+         alert(`Upload processed!\nCreated: ${result.created?.length || 0}\nUpdated: ${result.updated?.length || 0}\nErrors: ${result.errors?.length || 0}`);
          return;
 
        } catch(e) {
@@ -272,7 +276,7 @@ const AdminEmployeePlacements = () => {
 
         // Check if first line looks like headers. If not, use default headers and start from index 0
         if (!headers.includes("candidateName")) {
-           headers = ["candidateName", "clientName", "doi", "doj", "revenue", "placementType", "billedHours", "marginPercent", "billingStatus", "incentivePayoutEta", "incentiveAmountInr", "incentivePaid"];
+           headers = ["candidateName", "candidateId", "jpcId", "clientName", "doj", "revenue", "placementType", "billedHours", "marginPercent", "billingStatus", "incentivePayoutEta", "incentiveAmountInr", "incentivePaid"];
            startIndex = 0;
         }
 
@@ -300,11 +304,30 @@ const AdminEmployeePlacements = () => {
         body: JSON.stringify({ placements: parsedData }),
       });
       if (!response.ok) throw new Error("Failed to upload bulk placements");
+      const result = await response.json();
       setShowBulkModal(false);
       setBulkText("");
       setCsvFile(null);
       fetchPlacements();
-      alert("Uploaded successfully!");
+      alert(`Upload processed!\nCreated: ${result.created?.length || 0}\nUpdated: ${result.updated?.length || 0}`);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} placements?`)) return;
+
+    try {
+      const response = await apiRequest("/placements/bulk", {
+        method: "DELETE",
+        body: JSON.stringify({ placementIds: selectedIds }),
+      });
+      if (!response.ok) throw new Error("Failed to delete placements");
+      
+      setSelectedIds([]);
+      fetchPlacements();
     } catch (err) {
       alert(err.message);
     }
@@ -318,6 +341,20 @@ const AdminEmployeePlacements = () => {
     } catch (err) {
       alert(err.message);
     }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(placements.map(p => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -336,6 +373,17 @@ const AdminEmployeePlacements = () => {
             <h1 className="text-3xl font-bold text-slate-900">Placement Management</h1>
           </div>
           <div className="flex gap-3">
+            {selectedIds.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-2 animate-fadeIn"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete Selected ({selectedIds.length})
+              </button>
+            )}
             <button
               onClick={() => setShowBulkModal(true)}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-2"
@@ -367,9 +415,18 @@ const AdminEmployeePlacements = () => {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                    <th className="py-3 px-2">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        checked={placements.length > 0 && selectedIds.length === placements.length}
+                        onChange={handleSelectAll}
+                      />
+                    </th>
                     <th className="py-3 px-2 font-medium">Candidate</th>
-                    <th className="py-3 px-2 font-medium">DOI</th>
-                    <th className="py-3 px-2 font-medium">DOQ (DOJ)</th>
+                    <th className="py-3 px-2 font-medium">Candidate ID</th>
+                    <th className="py-3 px-2 font-medium">JPC ID</th>
+                    <th className="py-3 px-2 font-medium">DOJ</th>
                     <th className="py-3 px-2 font-medium">Days</th>
                     <th className="py-3 px-2 font-medium">Client</th>
                     <th className="py-3 px-2 font-medium">Type</th>
@@ -386,9 +443,18 @@ const AdminEmployeePlacements = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {placements.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50">
+                    <tr key={p.id} className={`hover:bg-slate-50 ${selectedIds.includes(p.id) ? 'bg-blue-50/50' : ''}`}>
+                      <td className="py-3 px-2">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          checked={selectedIds.includes(p.id)}
+                          onChange={() => handleSelectOne(p.id)}
+                        />
+                      </td>
                       <td className="py-3 px-2 font-medium text-slate-800">{p.candidateName}</td>
-                      <td className="py-3 px-2 text-slate-600">{new Date(p.doi).toLocaleDateString()}</td>
+                      <td className="py-3 px-2 text-slate-600">{p.candidateId || "—"}</td>
+                      <td className="py-3 px-2 text-slate-600">{p.jpcId || "—"}</td>
                       <td className="py-3 px-2 text-slate-600">{new Date(p.doj).toLocaleDateString()}</td>
                       <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
                       <td className="py-3 px-2 text-slate-600">{p.clientName}</td>
@@ -441,6 +507,16 @@ const AdminEmployeePlacements = () => {
                 <label className="block text-xs font-medium text-slate-700 mb-1">Candidate Name</label>
                 <input required type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
                   value={formData.candidateName} onChange={e => setFormData({...formData, candidateName: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Candidate ID</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.candidateId} onChange={e => setFormData({...formData, candidateId: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">JPC ID</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.jpcId} onChange={e => setFormData({...formData, jpcId: e.target.value})} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Client Name</label>

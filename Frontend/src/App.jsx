@@ -8,6 +8,7 @@ import EditProfile from './components/EditProfile'
 import AdminTeamManagement from './components/AdminTeamManagement'
 import AdminTeamDetails from './components/AdminTeamDetails'
 import AdminEmployeePlacements from './components/AdminEmployeePlacements'
+import S1AdminDashboard from './components/S1AdminDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -15,6 +16,14 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LoginForm />} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['S1_ADMIN']}>
+              <S1AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/team"
           element={

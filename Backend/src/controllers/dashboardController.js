@@ -7,9 +7,51 @@ function toCurrency(value) {
   return Number(value || 0);
 }
 
-export async function getSuperAdminOverview() {
+export async function getSuperAdminOverview(currentUser) {
+  let whereClause = { isActive: true };
+
+  if (currentUser) {
+    if (currentUser.role === Role.SUPER_ADMIN) {
+      // Find teams managed by this L1 (User -> subordinates -> teamId)
+      const subordinates = await prisma.user.findMany({
+        where: { managerId: currentUser.id },
+        select: { 
+          employeeProfile: { 
+            select: { teamId: true } 
+          } 
+        }
+      });
+      
+      const teamIds = subordinates
+        .map(s => s.employeeProfile?.teamId)
+        .filter(id => id); // Remove nulls/undefined
+      
+      if (teamIds.length > 0) {
+        whereClause = {
+          isActive: true,
+          id: { in: teamIds }
+        };
+      } else {
+        // If no teams found for this L1, return empty (or handle as S1_ADMIN fallback?)
+        // If Alok has 3 teams, they should be found here.
+        // If S1_ADMIN logs in, they might have role S1_ADMIN.
+      }
+    } else if (currentUser.role === Role.S1_ADMIN) {
+        // S1 Admin sees all teams
+        whereClause = { isActive: true };
+    } else if (currentUser.role === Role.TEAM_LEAD) {
+         const userProfile = await prisma.employeeProfile.findUnique({
+            where: { id: currentUser.id },
+            select: { teamId: true }
+         });
+         if (userProfile?.teamId) {
+             whereClause = { isActive: true, id: userProfile.teamId };
+         }
+    }
+  }
+
   const teams = await prisma.team.findMany({
-    where: { isActive: true },
+    where: whereClause,
     include: {
       employees: {
         where: { isActive: true },
@@ -43,14 +85,40 @@ export async function getSuperAdminOverview() {
   }
 
   const responseTeams = teams.map((team) => {
+    // Build manager -> employees map for this team
+    const employeesByManager = new Map();
+    team.employees.forEach((emp) => {
+      if (emp.managerId) {
+        if (!employeesByManager.has(emp.managerId)) {
+          employeesByManager.set(emp.managerId, []);
+        }
+        employeesByManager.get(emp.managerId).push(emp);
+      }
+    });
+
+    // Recursive function to get all descendants
+    const getAllDescendants = (managerId) => {
+      let descendants = [];
+      const directReports = employeesByManager.get(managerId) || [];
+      
+      for (const report of directReports) {
+        if (report.user.role === Role.EMPLOYEE) {
+          descendants.push(report);
+        }
+        // Recursively find descendants of this report (e.g. L3's members)
+        // report.id is the User.id (which is also EmployeeProfile.id)
+        const subDescendants = getAllDescendants(report.id);
+        descendants = [...descendants, ...subDescendants];
+      }
+      return descendants;
+    };
+
     const leads = team.employees.filter(
       (p) => p.user.role === Role.TEAM_LEAD
     );
 
     const teamLeads = leads.map((lead) => {
-      const members = team.employees.filter(
-        (p) => p.managerId === lead.id && p.user.role === Role.EMPLOYEE
-      );
+      const members = getAllDescendants(lead.id);
 
       const leadTarget = lead.yearlyTarget;
       const leadRevenue = members.reduce((sum, m) => {
@@ -120,9 +188,9 @@ export async function getSuperAdminOverview() {
 
   return {
     superUser: {
-      name: "Alok Mishra",
-      level: "L1",
-      role: "Super User",
+      name: currentUser ? currentUser.name : "Alok Mishra",
+      level: currentUser?.role === Role.TEAM_LEAD ? "L2" : "L1",
+      role: currentUser?.role === Role.S1_ADMIN ? "Global Admin" : "Super User",
     },
     teams: responseTeams,
     stats: {

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { apiRequest } from "../api/client";
 import CalculationService from "../utils/calculationService";
+import UserCreationModal from "./UserCreationModal";
 
 const UserSearchDropdown = ({ users, selectedUserId, onSelect, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -202,6 +203,7 @@ const AdminTeamDetails = () => {
   
   // Modal states
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [addingType, setAddingType] = useState("member"); // 'lead' or 'member'
@@ -332,9 +334,14 @@ const AdminTeamDetails = () => {
     }
   };
 
+  const handleCreateSuccess = () => {
+    fetchTeamDetails();
+    showNotification("success", "User created and added to team successfully");
+  };
+
   const handleTeamImport = async () => {
     if (!importFile) {
-      alert("Please select a file first.");
+      showNotification("error", "Please select a file first.");
       return;
     }
 
@@ -823,10 +830,30 @@ const AdminTeamDetails = () => {
                   Add User
                 </button>
               </div>
+              
+              <div className="text-center mt-4 pt-4 border-t border-slate-100">
+                <span className="text-sm text-slate-500">Can't find the user? </span>
+                <button
+                  onClick={() => {
+                    setShowAddMemberModal(false);
+                    setShowCreateModal(true);
+                  }}
+                  className="text-sm text-blue-600 font-medium hover:underline"
+                >
+                  Create New User
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      <UserCreationModal 
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleCreateSuccess}
+        teams={team ? [team] : []}
+      />
     </div>
   );
 };

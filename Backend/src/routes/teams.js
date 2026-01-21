@@ -18,7 +18,7 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.get("/", requireRole(Role.SUPER_ADMIN), cacheMiddleware(60), async (req, res, next) => {
+router.get("/", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), cacheMiddleware(60), async (req, res, next) => {
   try {
     const data = await listTeamsWithMembers();
     res.json(data);
@@ -52,7 +52,7 @@ router.post("/", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
   }
 });
 
-router.delete("/:id", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
+router.delete("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
   try {
     const { id } = req.params;
     await deleteTeam(id, req.user.id);
@@ -85,7 +85,7 @@ router.post(
 
 router.post(
   "/:id/assign-lead",
-  requireRole(Role.SUPER_ADMIN),
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
       const { id } = req.params;

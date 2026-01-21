@@ -253,8 +253,9 @@ const EmployeeDetails = () => {
 
         const placements = (data.placements || []).map((p) => ({
           candidateName: p.candidateName,
-          doi: p.doi?.slice(0, 10),
-          doq: p.doj?.slice(0, 10),
+          candidateId: p.candidateId || '',
+          jpcId: p.jpcId || '',
+          doj: p.doj?.slice(0, 10),
           daysCompleted: String(p.daysCompleted || ''),
           client: p.client,
           placementType: p.placementType === 'PERMANENT' ? 'Permanent' : 'Contract',
@@ -562,8 +563,9 @@ const EmployeeDetails = () => {
                 <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOI</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">JPC ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOJ</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days Completed</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Type</th>
@@ -581,8 +583,9 @@ const EmployeeDetails = () => {
                   {employeeData.placements.map((placement, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-4 text-sm text-slate-700 font-medium">{placement.candidateName}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{placement.doi}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{placement.candidateId}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{placement.jpcId}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
                       <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.daysCompleted}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">

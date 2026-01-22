@@ -153,6 +153,7 @@ model Placement {
 
   monthlyBillings MonthlyBilling[]
 
+  @@unique([employeeId, candidateName, clientName, doj])
   @@index([employeeId])
   @@index([billingStatus])
 }

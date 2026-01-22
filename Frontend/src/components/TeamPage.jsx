@@ -290,11 +290,7 @@ const TeamPage = () => {
                     {teamData.superUser?.name || 'Super Admin'}
                   </div>
                   <div className="text-lg font-medium text-blue-100/80 tracking-wide">
-                    {teamData.superUser?.role === 'Super User' 
-                      ? (teamData.superUser?.name?.includes('Alok') ? 'Super User 1' 
-                        : teamData.superUser?.name?.includes('Bhanu') ? 'Super User 2' 
-                        : 'Super User 3')
-                      : (teamData.superUser?.role || 'Super User')}
+                    Super User 2
                   </div>
                 </div>
               </div>

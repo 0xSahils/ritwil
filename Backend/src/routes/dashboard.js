@@ -13,7 +13,7 @@ router.use(authenticate);
 router.get(
   "/super-admin",
   requireRole(Role.SUPER_ADMIN),
-  cacheMiddleware(60),
+  // cacheMiddleware(60), // Disabled to ensure fresh data
   async (req, res, next) => {
     try {
       const data = await getSuperAdminOverview(req.user);
@@ -90,10 +90,11 @@ router.get(
         team: employee.employeeProfile.team?.name || null,
         teamLead: employee.employeeProfile.manager?.name || null,
         level: employee.employeeProfile.level || "L4",
+        vbid: employee.employeeProfile.vbid || null,
         yearlyTarget,
         revenueGenerated,
         percentage,
-        incentive: latestIncentive
+        incentive: (revenueGenerated > 0 && latestIncentive)
           ? {
               slabName: latestIncentive.slabName,
               amountUsd: Number(latestIncentive.amountUsd),
@@ -104,6 +105,7 @@ router.get(
           id: p.id,
           candidateName: p.candidateName,
           candidateId: p.candidateId,
+          clientId: p.clientId,
           jpcId: p.jpcId,
           doi: p.doi,
           doj: p.doj,
@@ -196,10 +198,11 @@ router.get(
         team: employee.employeeProfile.team?.name || null,
         teamLead: employee.employeeProfile.manager?.name || null,
         level: employee.employeeProfile.level || "L4",
+        vbid: employee.employeeProfile.vbid || null,
         yearlyTarget,
         revenueGenerated,
         percentage,
-        incentive: latestIncentive
+        incentive: (revenueGenerated > 0 && latestIncentive)
           ? {
               slabName: latestIncentive.slabName,
               amountUsd: Number(latestIncentive.amountUsd),

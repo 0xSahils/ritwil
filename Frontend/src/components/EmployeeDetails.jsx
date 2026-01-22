@@ -15,6 +15,9 @@ const EmployeeDetails = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const [isEditingVbid, setIsEditingVbid] = useState(false)
+  const [vbidValue, setVbidValue] = useState('')
+
   const [openTooltip, setOpenTooltip] = useState(null)
   const tooltipRef = useRef(null)
 
@@ -30,6 +33,7 @@ const EmployeeDetails = () => {
   };
 
   const isVantedgeTeam = employeeData?.teamName === 'Vantedge'
+  const showMargin = user?.role === 'S1_ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'TEAM_LEAD';
 
   const handleBack = () => {
     if (user?.role === 'SUPER_ADMIN') {
@@ -45,6 +49,22 @@ const EmployeeDetails = () => {
     e.stopPropagation()
     const tooltipId = `${columnType}-${placementIdx}`
     setOpenTooltip(openTooltip === tooltipId ? null : tooltipId)
+  }
+
+  const handleSaveVbid = async () => {
+    try {
+      const response = await apiRequest(`/users/${employeeData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vbid: vbidValue })
+      });
+      if (!response.ok) throw new Error('Failed to update VBID');
+      
+      setEmployeeData(prev => ({ ...prev, loginVBCode: vbidValue }));
+      setIsEditingVbid(false);
+    } catch (err) {
+      alert(err.message);
+    }
   }
 
   // Get current month's billing hours (or most recent if current month not found)
@@ -254,15 +274,17 @@ const EmployeeDetails = () => {
         const placements = (data.placements || []).map((p) => ({
           candidateName: p.candidateName,
           candidateId: p.candidateId || '',
+          clientId: p.clientId || '',
           jpcId: p.jpcId || '',
           doj: p.doj?.slice(0, 10),
-          daysCompleted: String(p.daysCompleted || ''),
-          client: p.client,
-          placementType: p.placementType === 'PERMANENT' ? 'Permanent' : 'Contract',
+          doq: p.doi?.slice(0, 10) || '-',
+          daysCompleted: (p.daysCompleted !== undefined && p.daysCompleted !== null) ? String(p.daysCompleted) : '',
+          client: p.clientName || p.client, // Fallback if clientName used
+          placementType: p.placementType === 'PERMANENT' ? 'FTE' : 'Contract',
           billedHours: p.billedHours ? String(p.billedHours) : '',
           margin: CalculationService.formatPercentage(p.marginPercent),
           revenueGenerated: CalculationService.formatCurrency(p.revenue),
-          billingStatus: p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
+          billingStatus: p.billingStatus === 'BILLED' ? 'Done' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
           incentivePayoutETA: p.incentivePayoutEta ? p.incentivePayoutEta.slice(0, 10) : '',
           placementQualifier: p.qualifier ? 'Yes' : 'No',
           incentiveAmountINR: CalculationService.formatCurrency(p.incentiveAmountInr, 'INR'),
@@ -278,7 +300,8 @@ const EmployeeDetails = () => {
         const incentiveInr = data.incentive ? Number(data.incentive.amountInr || 0) : 0
 
         const mapped = {
-          loginVBCode: 'VB' + String(data.id).slice(-3),
+          id: data.id,
+          loginVBCode: data.vbid || 'VB' + String(data.id).slice(-3),
           recruiterName: data.name || 'Employee Name',
           teamLead: data.teamLead || 'Team Lead Name',
           teamName: data.team || 'Team Name',
@@ -468,11 +491,34 @@ const EmployeeDetails = () => {
             <div className="overflow-hidden rounded-2xl border border-slate-200">
               <table className="w-full">
                 <tbody className="bg-white divide-y divide-slate-200">
-                  <tr className="hover:bg-slate-50 transition-colors">
+                  <tr className="group hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
                       Login - VB Code
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{employeeData.loginVBCode}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {isEditingVbid ? (
+                        <div className="flex items-center gap-2">
+                           <input 
+                             type="text" 
+                             value={vbidValue} 
+                             onChange={(e) => setVbidValue(e.target.value)}
+                             className="border rounded px-2 py-1 text-sm w-32 focus:ring-2 focus:ring-blue-500 outline-none"
+                           />
+                           <button onClick={handleSaveVbid} className="text-green-600 hover:text-green-800 font-medium text-xs">Save</button>
+                           <button onClick={() => setIsEditingVbid(false)} className="text-red-600 hover:text-red-800 font-medium text-xs">Cancel</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span>{employeeData.loginVBCode}</span>
+                          {(user?.id === employeeData.id || user?.role === 'SUPER_ADMIN' || user?.role === 'TEAM_LEAD') && (
+                             <button onClick={() => {
+                               setVbidValue(employeeData.loginVBCode);
+                               setIsEditingVbid(true);
+                             }} className="text-blue-600 hover:text-blue-800 text-xs font-medium ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+                          )}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                   <tr className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
@@ -563,47 +609,54 @@ const EmployeeDetails = () => {
                 <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">JPC ID</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOJ</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days Completed</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">JPC ID</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue Generated</th>
+                    {showMargin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Margin</th>}
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billed Hours</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Margin</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billing Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Payout Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Amount (INR)</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Paid</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Qualifier</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days Completed</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">qualifier</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive amount (INR)</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Paid (INR)</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
                   {employeeData.placements.map((placement, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-4 text-sm text-slate-700 font-medium">{placement.candidateName}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{placement.candidateId}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{placement.jpcId}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.daysCompleted}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{placement.clientId}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{placement.jpcId}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          placement.placementType === 'Permanent' 
+                          placement.placementType === 'FTE' 
                             ? 'bg-blue-100 text-blue-700' 
                             : 'bg-purple-100 text-purple-700'
                         }`}>
                           {placement.placementType}
                         </span>
                       </td>
+                      <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.revenueGenerated}</td>
+                      {showMargin && (
+                        <td className="px-4 py-4 text-sm text-slate-600 font-semibold">
+                          {placement.placementType === 'Contract' ? placement.margin : '-'}
+                        </td>
+                      )}
                       <td className="px-4 py-4 text-sm text-slate-600">
                         <div className="relative inline-block">
-                          {placement.placementType === 'Permanent' ? (
+                          {placement.placementType === 'FTE' ? (
                             <span className="text-slate-600 font-medium">
-                              {placement.billedHours || '-'}
+                              -
                             </span>
                           ) : (
+                            placement.monthlyBilling && placement.monthlyBilling.length > 0 ? (
                             <>
                               <InfoIcon
                                 onClick={handleInfoIconClick}
@@ -618,16 +671,19 @@ const EmployeeDetails = () => {
                                 onClose={() => setOpenTooltip(null)}
                               />
                             </>
+                            ) : (
+                                <span className="text-slate-600 font-medium">
+                                  {placement.billedHours || ''}
+                                </span>
+                            )
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600 font-semibold">{placement.margin}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.revenueGenerated}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">
                         <div className="relative inline-block">
-                          {placement.placementType === 'Permanent' ? (
+                          {placement.placementType === 'FTE' ? (
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              placement.billingStatus === 'Completed' ? 'bg-green-100 text-green-700' : 
+                              placement.billingStatus === 'Done' ? 'bg-green-100 text-green-700' : 
                               placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                             }`}>
                               {placement.billingStatus}
@@ -651,18 +707,7 @@ const EmployeeDetails = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{placement.incentivePayoutETA}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.incentiveAmountINR}</td>
-                      <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">
-                        {(() => {
-                          // Extract numeric value from INR string (e.g., "₹1,04,167" -> 104167)
-                          const incentiveAmountStr = placement.incentiveAmountINR.replace(/[₹,]/g, '')
-                          const incentiveAmount = parseFloat(incentiveAmountStr)
-                          const incentivePaid = incentiveAmount * 0.5
-                          // Format back to INR with commas
-                          return `₹${incentivePaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-                        })()}
-                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.daysCompleted}</td>
                       <td className="px-4 py-4 text-sm text-slate-600">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                           placement.placementQualifier === 'Yes' 
@@ -671,6 +716,15 @@ const EmployeeDetails = () => {
                         }`}>
                           {placement.placementQualifier}
                         </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.incentiveAmountINR}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">
+                        {(() => {
+                          const incentiveAmountStr = placement.incentiveAmountINR.replace(/[₹,]/g, '')
+                          const incentiveAmount = parseFloat(incentiveAmountStr)
+                          const incentivePaid = incentiveAmount * 0.5
+                          return `₹${incentivePaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+                        })()}
                       </td>
                     </tr>
                   ))}

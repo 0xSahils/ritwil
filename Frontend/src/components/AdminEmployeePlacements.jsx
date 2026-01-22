@@ -22,6 +22,7 @@ const AdminEmployeePlacements = () => {
   const initialFormState = {
     candidateName: "",
     candidateId: "",
+    clientId: "",
     jpcId: "",
     clientName: "",
     doi: "",
@@ -98,6 +99,9 @@ const AdminEmployeePlacements = () => {
     setEditingId(placement.id);
     setFormData({
       candidateName: placement.candidateName,
+      candidateId: placement.candidateId || "",
+      clientId: placement.clientId || "",
+      jpcId: placement.jpcId || "",
       clientName: placement.clientName,
       doi: placement.doi ? placement.doi.split('T')[0] : "",
       doj: placement.doj ? placement.doj.split('T')[0] : "",
@@ -426,7 +430,7 @@ const AdminEmployeePlacements = () => {
                       />
                     </th>
                     <th className="py-3 px-2 font-medium">Candidate</th>
-                    <th className="py-3 px-2 font-medium">Candidate ID</th>
+                    <th className="py-3 px-2 font-medium">Client ID</th>
                     <th className="py-3 px-2 font-medium">JPC ID</th>
                     <th className="py-3 px-2 font-medium">DOJ</th>
                     <th className="py-3 px-2 font-medium">Days</th>
@@ -455,7 +459,7 @@ const AdminEmployeePlacements = () => {
                         />
                       </td>
                       <td className="py-3 px-2 font-medium text-slate-800">{p.candidateName}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.candidateId || "—"}</td>
+                      <td className="py-3 px-2 text-slate-600">{p.clientId || "—"}</td>
                       <td className="py-3 px-2 text-slate-600">{p.jpcId || "—"}</td>
                       <td className="py-3 px-2 text-slate-600">{new Date(p.doj).toLocaleDateString()}</td>
                       <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
@@ -464,7 +468,7 @@ const AdminEmployeePlacements = () => {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           p.placementType === 'PERMANENT' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
                         }`}>
-                          {p.placementType === 'PERMANENT' ? 'Perm' : 'Cont'}
+                          {p.placementType === 'PERMANENT' ? 'FTE' : 'Contract'}
                         </span>
                       </td>
                       <td className="py-3 px-2 text-slate-600">{p.billedHours || '-'}</td>
@@ -511,9 +515,9 @@ const AdminEmployeePlacements = () => {
                   value={formData.candidateName} onChange={e => setFormData({...formData, candidateName: e.target.value})} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Candidate ID</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Client ID</label>
                 <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={formData.candidateId} onChange={e => setFormData({...formData, candidateId: e.target.value})} />
+                  value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">JPC ID</label>
@@ -529,7 +533,7 @@ const AdminEmployeePlacements = () => {
                 <label className="block text-xs font-medium text-slate-700 mb-1">Placement Type</label>
                 <select className="w-full px-3 py-2 border rounded-lg text-sm"
                   value={formData.placementType} onChange={e => setFormData({...formData, placementType: e.target.value})}>
-                  <option value="PERMANENT">Permanent</option>
+                  <option value="PERMANENT">FTE</option>
                   <option value="CONTRACT">Contract</option>
                 </select>
               </div>

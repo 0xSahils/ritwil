@@ -151,14 +151,22 @@ const AdminTeamDetails = () => {
              
              row.forEach((cell, idx) => {
                const val = String(cell).trim().toLowerCase();
-               if (val.includes("candidate")) cols.candidateName = idx;
+               if (val.includes("candidate name")) cols.candidateName = idx;
+               else if (val.includes("candidate id")) cols.candidateId = idx;
+               else if (val.includes("candidate")) cols.candidateName = cols.candidateName ?? idx; // Fallback
+               
+               else if (val.includes("client name")) cols.clientName = idx;
+               else if (val.includes("client id")) cols.clientId = idx;
+               else if (val.includes("client")) cols.clientName = cols.clientName ?? idx; // Fallback
+               
+               else if (val.includes("jpc")) cols.jpcId = idx;
                else if (val.includes("doj")) cols.doj = idx;
-               else if (val.includes("client")) cols.client = idx;
                else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) cols.revenue = idx;
                else if (val.includes("billing")) cols.billingStatus = idx;
                else if (val.includes("days")) cols.daysCompleted = idx;
-               else if (val.includes("incentive amount") || val.includes("inr")) cols.incentiveAmountInr = idx;
+               else if (val.includes("incentive")) cols.incentiveAmountInr = idx; // Broader match for incentive
                else if (val.includes("paid")) cols.incentivePaid = idx;
+               else if (val.includes("type")) cols.placementType = idx; // Try to find type
              });
              console.log("Columns Mapped:", cols);
              continue;
@@ -184,18 +192,28 @@ const AdminTeamDetails = () => {
             continue;
           }
 
+          // SKIP HEADER ROWS disguised as data
+          const rNameUpper = String(recruiterName).trim().toUpperCase();
+          if (rNameUpper === "VB CODE" || rNameUpper === "RECRUITER NAME" || rNameUpper === "TEAM") {
+             console.log(`Row ${i}: Skipping repeated header row.`);
+             continue;
+          }
+
           placementsToUpload.push({
-            employeeId: null, // Let backend resolve by name
+            employeeId: null, 
             recruiterName: String(recruiterName).trim(),
             candidateName: candidateName,
-            clientName: row[cols.client],
+            candidateId: cols.candidateId !== undefined ? String(row[cols.candidateId] || "") : null,
+            clientName: String(row[cols.clientName] || row[cols.client] || ""), // Use clientName col, fallback to generic client
+            clientId: cols.clientId !== undefined ? String(row[cols.clientId] || "") : null,
+            jpcId: cols.jpcId !== undefined ? String(row[cols.jpcId] || "") : null,
             doj: CalculationService.parseExcelDate(row[cols.doj]),
-            doi: CalculationService.parseExcelDate(row[cols.doj]), // Fallback to DOJ if DOI not present
+            doi: CalculationService.parseExcelDate(row[cols.doj]), 
             revenue: row[cols.revenue],
             billingStatus: row[cols.billingStatus],
             incentiveAmountInr: row[cols.incentiveAmountInr],
             incentivePaid: String(row[cols.incentivePaid]).toLowerCase() === 'yes',
-            placementType: "PERMANENT", 
+            placementType: cols.placementType !== undefined ? String(row[cols.placementType] || "PERMANENT").toUpperCase() : "PERMANENT", 
           });
         }
       }

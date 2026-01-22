@@ -25,7 +25,12 @@ const AdminTeamManagement = () => {
       const response = await apiRequest("/teams");
       if (!response.ok) throw new Error("Failed to fetch teams");
       const data = await response.json();
-      setTeams(data || []);
+      if (Array.isArray(data)) {
+        setTeams(data);
+      } else {
+        setTeams([]);
+        console.error("Expected array of teams but got:", data);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

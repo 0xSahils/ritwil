@@ -184,6 +184,7 @@ export async function updateUserWithProfile(id, body, actor) {
     teamId: rawTeamId,
     managerId: rawManagerId,
     level: rawLevel,
+    vbid,
     yearlyTarget: rawYearlyTarget,
     isActive,
   } = body;
@@ -256,6 +257,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 teamId: teamId || null,
                 managerId: managerId || null,
                 level: level || null,
+                vbid: vbid || null,
                 yearlyTarget: yearlyTarget || 0,
                 isActive:
                   typeof isActive === "boolean"
@@ -270,6 +272,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 teamId: teamId !== undefined ? teamId : (user.employeeProfile?.teamId ?? null),
                 managerId: managerId !== undefined ? managerId : (user.employeeProfile?.managerId ?? null),
                 level: level !== undefined ? level : (user.employeeProfile?.level ?? null),
+                vbid: vbid !== undefined ? vbid : (user.employeeProfile?.vbid ?? null),
                 yearlyTarget: yearlyTarget !== undefined ? yearlyTarget : (user.employeeProfile?.yearlyTarget ?? 0),
                 isActive:
                   typeof isActive === "boolean"

@@ -97,6 +97,7 @@ model EmployeeProfile {
   managerId    String?
   manager      User?   @relation("LeadEmployees", fields: [managerId], references: [id])
   level        String?
+  vbid         String?
   yearlyTarget Decimal @db.Decimal(14, 2)
   isActive     Boolean @default(true)
   deletedAt    DateTime?
@@ -133,6 +134,7 @@ model Placement {
   employee           User           @relation(fields: [employeeId], references: [id])
   candidateName      String
   candidateId        String?
+  clientId           String?
   jpcId              String?
   clientName         String
   doi                DateTime

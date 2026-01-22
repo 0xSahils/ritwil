@@ -8,6 +8,13 @@ function toCurrency(value) {
 }
 
 export async function getSuperAdminOverview(currentUser) {
+  // Fetch current user details to get the name (since req.user only has id/role)
+  const userDetails = await prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: { name: true }
+  });
+  const currentUserName = userDetails?.name || "Super Admin";
+
   let whereClause = { isActive: true };
 
   if (currentUser) {
@@ -56,7 +63,11 @@ export async function getSuperAdminOverview(currentUser) {
     where: whereClause,
     include: {
       employees: {
-        where: { isActive: true },
+        where: { 
+          user: {
+            isActive: true
+          }
+        },
         include: {
           user: true,
           manager: true,
@@ -79,11 +90,13 @@ export async function getSuperAdminOverview(currentUser) {
 
   const revenueByEmployee = new Map();
   for (const emp of employeesWithRevenue) {
-    const total = emp.placements.reduce(
-      (sum, p) => sum + Number(p.revenue || 0),
-      0
-    );
-    revenueByEmployee.set(emp.employeeProfile.id, total); // Note: Map key should be employeeProfile.id as used in team mapping
+    if (emp.employeeProfile) {
+      const total = emp.placements.reduce(
+        (sum, p) => sum + Number(p.revenue || 0),
+        0
+      );
+      revenueByEmployee.set(emp.employeeProfile.id, total); // Note: Map key should be employeeProfile.id as used in team mapping
+    }
   }
 
   const responseTeams = teams.map((team) => {
@@ -206,7 +219,7 @@ export async function getSuperAdminOverview(currentUser) {
 
   return {
     superUser: {
-      name: currentUser ? currentUser.name : "Alok Mishra",
+      name: currentUserName,
       level: currentUser?.role === Role.TEAM_LEAD ? "L2" : "L1",
       role: currentUser?.role === Role.S1_ADMIN ? "Global Admin" : "Super User",
     },

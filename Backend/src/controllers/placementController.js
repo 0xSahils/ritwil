@@ -182,6 +182,52 @@ export async function updatePlacement(id, data, actorId) {
   return placement;
 }
 
+export async function updatePlacementBilling(id, billingData, actorId) {
+  // billingData should be an array of { month, hours, status }
+  
+  // 1. Delete existing billings for this placement (simple replacement strategy)
+  // or Upsert if we want to keep history, but simple replacement is easier for "manual edit"
+  
+  // Let's use a transaction
+  const result = await prisma.$transaction(async (prisma) => {
+    // Delete existing
+    await prisma.monthlyBilling.deleteMany({
+      where: { placementId: id }
+    });
+
+    // Create new
+    if (billingData && billingData.length > 0) {
+      await prisma.monthlyBilling.createMany({
+        data: billingData.map(item => ({
+          placementId: id,
+          month: item.month,
+          hours: Number(item.hours),
+          status: mapBillingStatus(item.status)
+        }))
+      });
+    }
+
+    const updatedPlacement = await prisma.placement.findUnique({
+      where: { id },
+      include: { monthlyBillings: true }
+    });
+    
+    return updatedPlacement;
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: "PLACEMENT_BILLING_UPDATED",
+      entityType: "Placement",
+      entityId: id,
+      changes: { billingData },
+    },
+  });
+
+  return result;
+}
+
 export async function bulkCreatePlacements(userId, placementsData, actorId) {
   const createdPlacements = [];
 
@@ -440,13 +486,6 @@ export async function bulkDeletePlacements(placementIds, actorId) {
     throw new Error("No placement IDs provided");
   }
 
-  // Delete related records first (MonthlyBilling)
-  await prisma.monthlyBilling.deleteMany({
-    where: {
-      placementId: { in: placementIds }
-    }
-  });
-
   const result = await prisma.placement.deleteMany({
     where: {
       id: { in: placementIds }
@@ -467,13 +506,6 @@ export async function bulkDeletePlacements(placementIds, actorId) {
 }
 
 export async function deletePlacement(id, actorId) {
-  // Delete related records first (MonthlyBilling)
-  await prisma.monthlyBilling.deleteMany({
-    where: {
-      placementId: id
-    }
-  });
-
   const placement = await prisma.placement.delete({
     where: { id },
   });

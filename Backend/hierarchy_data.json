@@ -199,17 +199,23 @@
           "name": "Kashif Nabi",
           "email": "kashif.nabi@vbeyond.com",
           "level": "L2",
+          "members": [
+            { "name": "Ubaid Rahman", "email": "ubaid.rahman@vbeyond.com", "level": "L4" },
+            { "name": "Priyanka Sharma", "email": "priyanka.sharma@vbeyond.com", "level": "L4" },
+            { "name": "Harshita Mani Srivastava", "email": "harshita.srivastava@vbeyond.com", "level": "L4" },
+            { "name": "Satyajeet Singh", "email": "satyajeet.singh@vbeyond.com", "level": "L4" },
+            { "name": "Sakshi Tiwari", "email": "sakshi.tiwari@vbeyond.com", "level": "L4" }
+          ],
           "subLeads": [
             {
               "name": "Mohammad Tariq",
               "email": "mohammad.tariq@vbeyond.com",
               "level": "L3",
               "members": [
-                { "name": "Ubaid Rahman", "email": "ubaid.rahman@vbeyond.com", "level": "L4" },
-                { "name": "Priyanka Sharma", "email": "priyanka.sharma@vbeyond.com", "level": "L4" },
-                { "name": "Harshita Mani Srivastava", "email": "harshita.srivastava@vbeyond.com", "level": "L4" },
-                { "name": "Satyajeet Singh", "email": "satyajeet.singh@vbeyond.com", "level": "L4" },
-                { "name": "Sakshi Tiwari", "email": "sakshi.tiwari@vbeyond.com", "level": "L4" }
+                { "name": "Ritik Arya", "email": "ritik.arya@vbeyond.com", "level": "L4" },
+                { "name": "Arpit Gupta", "email": "arpit.gupta@vbeyond.com", "level": "L4" },
+                { "name": "Apurv Joshi", "email": "apurv.joshi@vbeyond.com", "level": "L4" },
+                { "name": "Ashish Kushwaha", "email": "ashish.kushwaha@vbeyond.com", "level": "L4" }
               ]
             },
             {
@@ -217,10 +223,7 @@
               "email": "khatib.rahman@vbeyond.com",
               "level": "L3",
               "members": [
-                { "name": "Ritik Arya", "email": "ritik.arya@vbeyond.com", "level": "L4" },
-                { "name": "Arpit Gupta", "email": "arpit.gupta@vbeyond.com", "level": "L4" },
-                { "name": "Apurv Joshi", "email": "apurv.joshi@vbeyond.com", "level": "L4" },
-                { "name": "Ashish Kushwaha", "email": "ashish.kushwaha@vbeyond.com", "level": "L4" }
+                { "name": "Vasudev Srivastava", "email": "vasudev.srivastava@vbeyond.com", "level": "L4" }
               ]
             }
           ]
@@ -229,17 +232,9 @@
           "name": "IC Team",
           "email": "ic.team@vbeyond.com",
           "level": "L2",
-          "subLeads": [
-            {
-              "name": "Khatib Rahman",
-              "email": "khatib.rahman@vbeyond.com",
-              "level": "L3",
-              "members": [
-                { "name": "Saurabh Mishra", "email": "saurabh.mishra@vbeyond.com", "level": "L4" },
-                { "name": "Vaibhav Kumar", "email": "vaibhav.kumar@vbeyond.com", "level": "L4" },
-                { "name": "Vasudev Srivastava", "email": "vasudev.srivastava@vbeyond.com", "level": "L4" }
-              ]
-            }
+          "members": [
+            { "name": "Saurabh Mishra", "email": "saurabh.mishra@vbeyond.com", "level": "L4" },
+            { "name": "Vaibhav Kumar", "email": "vaibhav.kumar@vbeyond.com", "level": "L4" }
           ]
         },
         {
@@ -247,7 +242,6 @@
           "email": "vikas.malik@vbeyond.com",
           "level": "L2",
           "members": [
-            { "name": "Vikas Malik", "email": "vikas.malik@vbeyond.com", "level": "L4" },
             { "name": "Durgesh Kumar Jha", "email": "durgesh.jha@vbeyond.com", "level": "L4" },
             { "name": "MD Rahmat Ali", "email": "rahmat.ali@vbeyond.com", "level": "L4" }
           ]
@@ -255,8 +249,7 @@
       ]
     }
   ]
-}
-,
+},
     {
        "name": "Sidhartha Khosla",
        "email": "sidhartha.khosla@vbeyond.com",

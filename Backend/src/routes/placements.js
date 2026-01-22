@@ -5,6 +5,7 @@ import {
   getPlacementsByUser,
   createPlacement,
   updatePlacement,
+  updatePlacementBilling,
   bulkCreatePlacements,
   bulkCreateGlobalPlacements,
   deletePlacement,
@@ -87,6 +88,18 @@ router.put("/:id", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
     const { id } = req.params;
     const placement = await updatePlacement(id, req.body, req.user.id);
     res.json(placement);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update placement billing (monthly)
+router.put("/:id/billing", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { billing } = req.body; // Expecting { billing: [{ month, hours, status }] }
+    const result = await updatePlacementBilling(id, billing, req.user.id);
+    res.json(result);
   } catch (err) {
     next(err);
   }

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../api/users';
 import { getAuditLogs } from '../api/auditLogs';
 import CalculationService from '../utils/calculationService';
+import RecursiveMemberNode from './RecursiveMemberNode';
 
 // Pie Chart Component
 const PieChart = ({ percentage, size = 50, colorClass }) => {
@@ -350,7 +351,7 @@ const HierarchyTab = ({ user }) => {
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <StatCard 
                     title="Total Super Admins" 
                     value={hierarchyData.superAdmins.length} 
@@ -366,19 +367,32 @@ const HierarchyTab = ({ user }) => {
                     icon={<svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}
                 />
                 <StatCard 
-                    title="System Target" 
-                    value={`$${(totalTarget / 1000000).toFixed(1)}M`}
-                    change="Yearly"
-                    trend="up"
-                    icon={<svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                    title="Total Members" 
+                    value={allTeams.reduce((acc, team) => acc + (team.teamLeads?.reduce((sum, lead) => sum + (lead.members?.length || 0) + (lead.subLeads?.reduce((s, sl) => s + (sl.members?.length || 0), 0) || 0), 0) || 0), 0)}
+                    change="Active"
+                    trend="neutral"
+                    icon={<svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
                 />
-                <StatCard 
-                    title="Avg Performance" 
-                    value={`${Math.round(avgPerformance)}%`}
-                    change="Overall"
-                    trend={avgPerformance >= 80 ? 'up' : 'neutral'}
-                    icon={<svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>}
-                />
+            </div>
+
+            {/* Team Management Section */}
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800">Team Management</h3>
+                        <p className="text-sm text-slate-500">Manage all teams across the organization</p>
+                    </div>
+                    <button 
+                        onClick={() => window.location.href = '/admin/teams'} 
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Manage Teams
+                    </button>
+                </div>
             </div>
 
             {/* Super Admins List (Accordion) */}
@@ -483,79 +497,28 @@ const HierarchyTab = ({ user }) => {
                                                     </div>
                                                 </div>
 
+import RecursiveMemberNode from './RecursiveMemberNode';
+
+// ... existing code ...
+
                                                 {/* Team Leads */}
                                                 {expandedTeams[team.id] && (
                                                     <div className="mt-4 ml-4 space-y-3 animate-fadeIn">
-                                                        {team.teamLeads?.map(lead => {
-                                                            const levelBg = lead.level === 'L2' ? 'bg-amber-500/90' : lead.level === 'L3' ? 'bg-teal-500/90' : 'bg-slate-500/90';
-                                                            const levelBgLight = lead.level === 'L2' ? 'bg-amber-50/50' : lead.level === 'L3' ? 'bg-teal-50/50' : 'bg-slate-50/50';
-                                                            const levelBorder = lead.level === 'L2' ? 'border-amber-200/50' : lead.level === 'L3' ? 'border-teal-200/50' : 'border-slate-200/50';
-                                                            const levelText = lead.level === 'L2' ? 'text-amber-700' : lead.level === 'L3' ? 'text-teal-700' : 'text-slate-700';
-                                                            
-                                                            return (
-                                                                <div key={lead.id} className="border-l border-slate-200 pl-4 relative">
-                                                                    <div className="absolute left-0 top-6 w-2 h-2 bg-slate-300 rounded-full -translate-x-[5px]"></div>
-                                                                    
-                                                                    <div 
-                                                                        className={`${levelBgLight} backdrop-blur-md border ${levelBorder} p-4 rounded-2xl cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-200 group`}
-                                                                        onClick={() => toggleLead(lead.id)}
-                                                                    >
-                                                                        <div className="flex items-center justify-between">
-                                                                            <div className="flex items-center space-x-3">
-                                                                                <div className={`relative ${levelBg} text-white w-9 h-9 rounded-xl flex items-center justify-center text-xs font-semibold shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                                                                                    <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                                                    TL
-                                                                                </div>
-                                                                                <div>
-                                                                                    <div className={`font-bold ${levelText} text-sm`}>{lead.name}</div>
-                                                                                    <div className="text-xs text-slate-500 mt-0.5">
-                                                                                        {lead.level === 'L2' ? 'Team Lead' : lead.level === 'L3' ? 'Senior Lead' : 'Member'}
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-2 mt-1">
-                                                                                        <span className="text-xs text-slate-500">Target: {CalculationService.formatCurrency(lead.target)}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-3">
-                                                                                <div className="text-right">
-                                                                                    <span className={`text-xs font-bold ${lead.targetAchieved >= 100 ? 'text-green-600' : 'text-slate-600'}`}>
-                                                                                        {Math.round(lead.targetAchieved)}%
-                                                                                    </span>
-                                                                                </div>
-                                                                                <svg className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${expandedLeads[lead.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                                                                </svg>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {/* Members */}
-                                                                        {expandedLeads[lead.id] && (
-                                                                            <div className="mt-3 space-y-2 pt-3 border-t border-slate-200/50">
-                                                                                {lead.members?.map(member => (
-                                                                                    <div key={member.id} className="flex items-center justify-between p-2.5 bg-white/60 rounded-xl border border-slate-100 hover:bg-white transition-colors">
-                                                                                        <div className="flex items-center gap-3">
-                                                                                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-500 font-medium">
-                                                                                                {member.name.charAt(0)}
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                <div className="text-sm font-medium text-slate-700">{member.name}</div>
-                                                                                                <div className="text-[10px] text-slate-500">
-                                                                                                    {CalculationService.formatCurrency(member.revenue)} / {CalculationService.formatCurrency(member.target)}
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                        <PieChart percentage={member.targetAchieved} size={28} />
-                                                                                    </div>
-                                                                                ))}
-                                                                                {(!lead.members || lead.members.length === 0) && (
-                                                                                    <div className="text-center text-xs text-slate-400 py-2">No members</div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
+                                                        {team.teamLeads?.map(lead => (
+                                                            <div key={lead.id} className="border-l border-slate-200 pl-4 relative">
+                                                                <div className="absolute left-0 top-6 w-2 h-2 bg-slate-300 rounded-full -translate-x-[5px]"></div>
+                                                                
+                                                                <RecursiveMemberNode
+                                                                    member={lead}
+                                                                    expandedMembers={expandedLeads}
+                                                                    toggleMember={toggleLead}
+                                                                    handleMemberClick={() => {}}
+                                                                    colorClasses={getTeamColorClasses(team.color || 'blue')}
+                                                                    lead={lead}
+                                                                    team={team}
+                                                                />
+                                                            </div>
+                                                        ))}
                                                         {(!team.teamLeads || team.teamLeads.length === 0) && (
                                                             <div className="text-center text-sm text-slate-500 py-2">No leads assigned</div>
                                                         )}

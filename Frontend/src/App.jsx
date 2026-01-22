@@ -35,7 +35,7 @@ function App() {
         <Route
           path="/admin/teams"
           element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'S1_ADMIN']}>
               <AdminTeamManagement />
             </ProtectedRoute>
           }
@@ -43,7 +43,7 @@ function App() {
         <Route
           path="/admin/teams/:id"
           element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'S1_ADMIN']}>
               <AdminTeamDetails />
             </ProtectedRoute>
           }

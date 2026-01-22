@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../api/client";
 import CalculationService from "../utils/calculationService";
 
 const AdminTeamManagement = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ const AdminTeamManagement = () => {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate("/team")}
+              onClick={() => navigate(user?.role === 'S1_ADMIN' ? '/admin/dashboard' : '/team')}
               className="text-slate-500 hover:text-slate-700 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

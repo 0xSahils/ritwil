@@ -201,6 +201,7 @@ const S1AdminDashboard = () => {
 };
 
 const HierarchyTab = ({ user }) => {
+    const navigate = useNavigate();
     const [hierarchyData, setHierarchyData] = useState({ superAdmins: [], unassignedTeams: [] });
     const [loading, setLoading] = useState(true);
     const [expandedAdmins, setExpandedAdmins] = useState({});
@@ -293,6 +294,10 @@ const HierarchyTab = ({ user }) => {
 
     const toggleLead = (leadId) => {
         setExpandedLeads(prev => ({ ...prev, [leadId]: !prev[leadId] }));
+    };
+
+    const handleMemberClick = (member) => {
+        navigate(`/employee/${member.id}`);
     };
 
     const getTeamColorClasses = (color) => {
@@ -512,7 +517,7 @@ import RecursiveMemberNode from './RecursiveMemberNode';
                                                                     member={lead}
                                                                     expandedMembers={expandedLeads}
                                                                     toggleMember={toggleLead}
-                                                                    handleMemberClick={() => {}}
+                                                                    handleMemberClick={handleMemberClick}
                                                                     colorClasses={getTeamColorClasses(team.color || 'blue')}
                                                                     lead={lead}
                                                                     team={team}

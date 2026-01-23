@@ -427,7 +427,7 @@ const EmployeeDetails = () => {
             </div>
             
             <div className="flex flex-col gap-3">
-              {user?.id === employeeData?.id && (
+              {user?.id === employeeData?.id && user?.role !== 'EMPLOYEE' && (
                 <button
                   onClick={navigateToProfileEdit}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-5 py-2.5 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 font-medium"

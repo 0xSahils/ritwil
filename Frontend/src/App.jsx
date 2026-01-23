@@ -83,7 +83,7 @@ function App() {
         <Route
           path="/employee/:id/edit"
           element={
-            <ProtectedRoute allowedRoles={['EMPLOYEE', 'SUPER_ADMIN', 'TEAM_LEAD']}>
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'TEAM_LEAD']}>
               <EditProfile />
             </ProtectedRoute>
           }

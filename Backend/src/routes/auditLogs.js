@@ -12,9 +12,9 @@ router.get("/", requireRole(Role.S1_ADMIN, Role.SUPER_ADMIN), async (req, res, n
   try {
     const page = Number(req.query.page || 1);
     const pageSize = Number(req.query.pageSize || 50);
-    const { entityType, actorId } = req.query;
+    const { entityType, actorId, module, action, startDate, endDate } = req.query;
     
-    const result = await getAuditLogs({ page, pageSize, entityType, actorId });
+    const result = await getAuditLogs({ page, pageSize, entityType, actorId, module, action, startDate, endDate });
     res.json(result);
   } catch (err) {
     next(err);

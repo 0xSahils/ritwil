@@ -8,6 +8,19 @@ const { PrismaClient, Role } = pkg;
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Helper to calculate days completed
+function calculateDaysCompleted(doj) {
+  if (!doj) return 0;
+  const start = new Date(doj);
+  const now = new Date();
+  // If future, return 0
+  if (start > now) return 0;
+  
+  const diffTime = now - start;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  return diffDays;
+}
+
 router.use(authenticate);
 
 router.get(
@@ -109,7 +122,7 @@ router.get(
           jpcId: p.jpcId,
           doi: p.doi,
           doj: p.doj,
-          daysCompleted: p.daysCompleted,
+          daysCompleted: calculateDaysCompleted(p.doj),
           client: p.clientName,
           placementType: p.placementType,
           billedHours: p.billedHours,
@@ -216,7 +229,7 @@ router.get(
           jpcId: p.jpcId,
           doi: p.doi,
           doj: p.doj,
-          daysCompleted: p.daysCompleted,
+          daysCompleted: calculateDaysCompleted(p.doj),
           client: p.clientName,
           placementType: p.placementType,
           billedHours: p.billedHours,

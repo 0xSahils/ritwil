@@ -19,6 +19,10 @@ const AdminEmployeePlacements = () => {
   const [csvFile, setCsvFile] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
 
+  // Result Modal State
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultData, setResultData] = useState(null);
+
   const initialFormState = {
     candidateName: "",
     candidateId: "",
@@ -255,7 +259,8 @@ const AdminEmployeePlacements = () => {
          setShowBulkModal(false);
          setCsvFile(null);
          fetchPlacements();
-         alert(`Upload processed!\nCreated: ${result.created?.length || 0}\nUpdated: ${result.updated?.length || 0}\nErrors: ${result.errors?.length || 0}`);
+         setResultData(result);
+         setShowResultModal(true);
          return;
 
        } catch(e) {
@@ -315,7 +320,8 @@ const AdminEmployeePlacements = () => {
       setBulkText("");
       setCsvFile(null);
       fetchPlacements();
-      alert(`Upload processed!\nCreated: ${result.created?.length || 0}\nUpdated: ${result.updated?.length || 0}`);
+      setResultData(result);
+      setShowResultModal(true);
     } catch (err) {
       alert(err.message);
     }
@@ -642,6 +648,100 @@ const AdminEmployeePlacements = () => {
                 <button onClick={() => setShowBulkModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
                 <button onClick={handleBulkSubmit} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Upload Data</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Result Modal */}
+      {showResultModal && resultData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full p-6 animate-fadeIn max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">Upload Summary</h2>
+            
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="bg-emerald-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-emerald-600">{resultData.created?.length || 0}</div>
+                <div className="text-xs text-emerald-800 font-medium uppercase">Created</div>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-blue-600">{resultData.updated?.length || 0}</div>
+                <div className="text-xs text-blue-800 font-medium uppercase">Updated</div>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-slate-600">{resultData.unchanged?.length || 0}</div>
+                <div className="text-xs text-slate-800 font-medium uppercase">Unchanged</div>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-red-600">{resultData.errors?.length || 0}</div>
+                <div className="text-xs text-red-800 font-medium uppercase">Errors</div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+               {resultData.created?.length > 0 && (
+                   <div className="border rounded-lg overflow-hidden">
+                       <div className="bg-emerald-100 px-4 py-2 font-medium text-emerald-800 text-sm">Created ({resultData.created.length})</div>
+                       <div className="max-h-40 overflow-y-auto p-2 bg-white text-xs space-y-1">
+                           {resultData.created.map((p, i) => (
+                               <div key={i} className="flex justify-between border-b border-slate-50 last:border-0 pb-1">
+                                   <span>{p.candidateName}</span>
+                                   <span className="text-slate-500">{p.clientName}</span>
+                               </div>
+                           ))}
+                       </div>
+                   </div>
+               )}
+               
+               {resultData.updated?.length > 0 && (
+                   <div className="border rounded-lg overflow-hidden">
+                       <div className="bg-blue-100 px-4 py-2 font-medium text-blue-800 text-sm">Updated ({resultData.updated.length})</div>
+                       <div className="max-h-40 overflow-y-auto p-2 bg-white text-xs space-y-1">
+                           {resultData.updated.map((p, i) => (
+                               <div key={i} className="flex justify-between border-b border-slate-50 last:border-0 pb-1">
+                                   <span>{p.candidateName}</span>
+                                   <span className="text-slate-500">{p.clientName}</span>
+                               </div>
+                           ))}
+                       </div>
+                   </div>
+               )}
+
+               {resultData.unchanged?.length > 0 && (
+                   <div className="border rounded-lg overflow-hidden">
+                       <div className="bg-slate-100 px-4 py-2 font-medium text-slate-800 text-sm">Unchanged ({resultData.unchanged.length})</div>
+                       <div className="max-h-40 overflow-y-auto p-2 bg-white text-xs space-y-1">
+                           {resultData.unchanged.map((p, i) => (
+                               <div key={i} className="flex justify-between border-b border-slate-50 last:border-0 pb-1">
+                                   <span>{p.candidateName}</span>
+                                   <span className="text-slate-500">{p.clientName}</span>
+                               </div>
+                           ))}
+                       </div>
+                   </div>
+               )}
+
+               {resultData.errors?.length > 0 && (
+                   <div className="border rounded-lg overflow-hidden">
+                       <div className="bg-red-100 px-4 py-2 font-medium text-red-800 text-sm">Errors ({resultData.errors.length})</div>
+                       <div className="max-h-40 overflow-y-auto p-2 bg-white text-xs space-y-1">
+                           {resultData.errors.map((e, i) => (
+                               <div key={i} className="text-red-600 border-b border-red-50 last:border-0 pb-1">
+                                   <span className="font-semibold block">{e.error}</span>
+                                   <span className="text-slate-500 block truncate">{JSON.stringify(e.data)}</span>
+                               </div>
+                           ))}
+                       </div>
+                   </div>
+               )}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button 
+                onClick={() => { setShowResultModal(false); setResultData(null); }} 
+                className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

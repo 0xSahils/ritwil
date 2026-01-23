@@ -108,6 +108,7 @@ const AdminTeamDetails = () => {
       // Parsing State
       let mode = 'SCANNING'; 
       let cols = {};
+      let recruiterNameIndex = 1;
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -121,16 +122,25 @@ const AdminTeamDetails = () => {
              console.log(`Row ${i} [Header Candidate]: "${firstCell}", "${secondCell}"`);
         }
 
-        if (firstCell === "Team" && secondCell === "Recruiter Name") {
-          console.log(`Row ${i}: Found Block Header -> Switching to EXPECT_RECRUITER_INFO`);
-          mode = 'EXPECT_RECRUITER_INFO';
-          continue;
+        if (firstCell === "Team") {
+           let foundIndex = -1;
+           row.forEach((cell, idx) => {
+               if (String(cell).trim() === "Recruiter Name") foundIndex = idx;
+           });
+           
+           if (foundIndex !== -1) {
+              console.log(`Row ${i}: Found Team Block. Recruiter Name at index ${foundIndex}`);
+              recruiterNameIndex = foundIndex;
+              mode = 'EXPECT_RECRUITER_INFO';
+              continue;
+           }
         }
 
         if (mode === 'EXPECT_RECRUITER_INFO') {
-          if (secondCell) {
-            currentRecruiterName = secondCell;
-            console.log(`Row ${i}: Found Recruiter Info: "${currentRecruiterName}" -> Switching to EXPECT_PLACEMENT_HEADER`);
+          const rName = row[recruiterNameIndex];
+          if (rName) {
+            currentRecruiterName = rName;
+            console.log(`Row ${i}: Found Recruiter Info: "${currentRecruiterName}"`);
             mode = 'EXPECT_PLACEMENT_HEADER';
           }
           continue;

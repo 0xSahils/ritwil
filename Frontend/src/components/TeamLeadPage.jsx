@@ -4,7 +4,6 @@ import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
 import PieChart from './PieChart'
-import RecursiveMemberNode from './RecursiveMemberNode'
 
 const TeamLeadPage = () => {
   const navigate = useNavigate()
@@ -181,117 +180,165 @@ const TeamLeadPage = () => {
     return sum + Number(lead.target || 0)
   }, 0)
   const formattedTeamTarget = CalculationService.formatCurrency(calculatedTeamTarget)
+  
+  // Calculate total achievement percentage
+   const totalRevenue = teamLeadData.totalRevenue || teamLeadData.targetAchieved || 0
+   const totalTarget = teamLeadData.target || 1
+   const achievementPercentage = Math.min(Math.round((totalRevenue / totalTarget) * 100), 100)
+ 
+   // Helper for Circular Progress
+  const CircularProgress = ({ percentage, color = "text-green-500" }) => {
+    const radius = 16
+    const circumference = 2 * Math.PI * radius
+    const strokeDashoffset = circumference - (percentage / 100) * circumference
+
+    return (
+      <div className="relative flex items-center justify-center w-12 h-12">
+        <svg className="transform -rotate-90 w-12 h-12">
+          <circle
+            cx="24"
+            cy="24"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="transparent"
+            className="text-slate-100"
+          />
+          <circle
+            cx="24"
+            cy="24"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="transparent"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            className={color}
+          />
+        </svg>
+        <span className="absolute text-[10px] font-bold text-slate-700">{percentage}%</span>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 p-4 md:p-8 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 via-transparent to-purple-50/30"></div>
-        <div className="absolute -top-32 -right-32 w-96 h-96 bg-gradient-to-br from-blue-100/30 to-indigo-100/20 rounded-full blur-3xl animate-float-gentle"></div>
-        <div className="absolute -bottom-32 -left-32 w-[30rem] h-[30rem] bg-gradient-to-br from-indigo-100/25 to-purple-100/20 rounded-full blur-3xl animate-float-gentle-delayed"></div>
-        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-gradient-to-br from-cyan-100/20 to-blue-100/15 rounded-full blur-3xl animate-float-gentle-slow"></div>
-        <div className="absolute inset-0 opacity-[0.02]" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, #3b82f6 1px, transparent 0)', backgroundSize: '80px 80px'}}></div>
-      </div>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Header Section */}
+        <div className="bg-[#1e293b] text-white rounded-[2rem] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between shadow-xl relative overflow-hidden">
+           {/* Decorative Background Elements */}
+           <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+           <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header - Similar to Alok Mishra */}
-        <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-400/20 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group hover:shadow-2xl hover:shadow-slate-500/30 transition-all duration-300">
-          <div className="absolute inset-0 opacity-10">
-            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <circle cx="20" cy="20" r="1" fill="white" opacity="0.3"/>
-              </pattern>
-              <rect width="100%" height="100%" fill="url(#grid)"/>
-            </svg>
-          </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-[0.03] rounded-full -mr-32 -mt-32 group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-[0.03] rounded-full -ml-24 -mb-24 group-hover:scale-110 transition-transform duration-700"></div>
-
-          <div className="relative z-10 flex items-center gap-4 mb-4 md:mb-0">
-            <div className="relative">
-              <div className="absolute inset-0 bg-white/20 rounded-2xl blur-md"></div>
-              <div className="relative bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/20">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+          {/* Left: Profile Info */}
+          <div className="flex items-center gap-6 relative z-10 w-full md:w-auto mb-6 md:mb-0">
+            <div className="w-20 h-20 bg-slate-600/50 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 shadow-inner">
+               <svg className="w-10 h-10 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                </svg>
-              </div>
+               </svg>
             </div>
             <div>
-              <div className="text-2xl font-bold tracking-tight">{teamLeadData.name}</div>
-              <div className="text-sm opacity-80 mt-1">{teamData.name}</div>
+               <div className="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
+                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                 {teamLeadData.level || 'L2'} • Team Lead
+               </div>
+               <h1 className="text-3xl font-bold tracking-tight mb-1">{teamLeadData.name}</h1>
+               <div className="text-slate-400 font-medium">{teamData.name}</div>
             </div>
           </div>
-          <div className="relative z-10 flex flex-col md:flex-row gap-3">
-            <div className="flex gap-3">
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/20 hover:bg-white/20 transition-colors duration-200">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                  </svg>
-                  {/* Count all descendants? For now just direct members count for display */}
-                  {members.filter(m => m.name !== 'pass through').length} Direct Reports
-                </div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/20 hover:bg-white/20 transition-colors duration-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs opacity-80">Total Target:</span>
-                  <span className="font-semibold">{formattedTeamTarget}</span>
-                </div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium border border-white/20 hover:bg-white/20 transition-colors duration-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs opacity-80">Target Achieved:</span>
-                  <span className="font-semibold text-green-300">
-                    {CalculationService.formatCurrency(teamLeadData.totalRevenue || 0)}
-                  </span>
-                  <span className="text-xs opacity-80">({teamData.targetAchieved || '0%'})</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/team-management')}
-                className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm font-medium border border-white/20 transition-all duration-300 flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+
+          {/* Right: Stats & Actions */}
+          <div className="flex flex-wrap items-center gap-3 relative z-10">
+             <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 flex items-center gap-2 backdrop-blur-md">
+                <svg className="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
-                Manage Team
-              </button>
-              <button
+                <span className="text-sm font-medium text-slate-200">{members.filter(m => m.name !== 'pass through').length} Members</span>
+             </div>
+
+             <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
+                <span className="text-xs text-slate-400 mr-2">Total Target:</span>
+                <span className="text-sm font-bold text-white">{formattedTeamTarget}</span>
+             </div>
+
+             <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
+                 <span className="text-xs text-slate-400 mr-2">Target Achieved:</span>
+                 <span className="text-sm font-bold text-green-400">
+                     {CalculationService.formatCurrency(totalRevenue)}
+                 </span>
+                 <span className="text-xs text-slate-400 ml-1">({achievementPercentage}%)</span>
+              </div>
+
+             <button 
                 onClick={handleLogout}
-                className="bg-red-500/20 hover:bg-red-500/30 text-red-100 px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 transition-all duration-300 flex items-center gap-2"
-              >
+                className="bg-transparent border border-slate-600 hover:bg-slate-700 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ml-2"
+             >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 Logout
-              </button>
-            </div>
+             </button>
           </div>
         </div>
 
         {/* Team Members Section */}
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-lg shadow-slate-200/50 p-6 md:p-8 border border-white/60">
-          <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <svg className="w-6 h-6 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+        <div className="bg-white rounded-[2rem] shadow-sm p-8 border border-slate-100">
+          <div className="flex items-center gap-3 mb-8">
+            <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+               <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
             </svg>
-            Team Members
-          </h2>
-          <div className="space-y-4">
-            {members.filter(m => m.name !== 'pass through').map((member) => (
-              <RecursiveMemberNode
-                key={member.id}
-                member={member}
-                expandedMembers={expandedMembers}
-                toggleMember={toggleMember}
-                handleMemberClick={handleMemberClick}
-                colorClasses={colorClasses}
-                lead={teamLeadData}
-                team={teamData}
-              />
-            ))}
+            <h2 className="text-xl font-bold text-slate-800">Team Members</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {members.filter(m => m.name !== 'pass through').map((member) => {
+                const memberTarget = member.target || 0;
+                const memberRevenue = member.revenue || member.targetAchieved || 0; 
+                const memberPercentage = memberTarget > 0 ? Math.min(Math.round((memberRevenue / memberTarget) * 100), 100) : 0;
+                
+                // Dynamic color based on percentage
+               let progressColor = "text-red-500";
+               if (memberPercentage >= 75) progressColor = "text-green-500";
+               else if (memberPercentage >= 50) progressColor = "text-yellow-500";
+
+               return (
+                <div 
+                  key={member.id}
+                  onClick={() => handleMemberClick(member, teamLeadData, teamData)}
+                  className="bg-white border border-slate-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                >
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-slate-800 group-hover:text-white transition-colors duration-300">
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-600 transition-colors">{member.name}</h3>
+                        <div className="text-slate-400 text-sm font-medium">{member.level || 'L4'}</div>
+                      </div>
+                    </div>
+                    <CircularProgress percentage={memberPercentage} color={progressColor} />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Total Target:</span>
+                      <span className="text-slate-700 font-bold">{CalculationService.formatCurrency(memberTarget)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Achieved:</span>
+                      <span className={`font-bold ${progressColor}`}>
+                        {CalculationService.formatCurrency(memberRevenue)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+               )
+            })}
           </div>
         </div>
       </div>

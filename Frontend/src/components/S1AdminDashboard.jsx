@@ -134,6 +134,7 @@ const S1AdminDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'hierarchy': return <HierarchyTab user={user} />;
+      case 'members': return <MembersTab />;
       case 'l1-admins': return <L1AdminsTab />;
       case 'audit-logs': return <AuditLogsTab />;
       case 'settings': return <SettingsTab />;
@@ -176,6 +177,7 @@ const S1AdminDashboard = () => {
              <div className="flex items-center gap-3">
                 <div className="inline-flex bg-slate-100 rounded-full p-1 text-xs md:text-sm">
                    <button onClick={() => setActiveTab('hierarchy')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'hierarchy' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Hierarchy</button>
+                   <button onClick={() => setActiveTab('members')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'members' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Manage Members</button>
                    <button onClick={() => setActiveTab('l1-admins')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'l1-admins' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Manage L1 Admins</button>
                    <button onClick={() => setActiveTab('audit-logs')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'audit-logs' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Audit Logs</button>
                    <button onClick={() => setActiveTab('settings')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'settings' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Settings</button>
@@ -502,9 +504,8 @@ const HierarchyTab = ({ user }) => {
                                                     </div>
                                                 </div>
 
-import RecursiveMemberNode from './RecursiveMemberNode';
 
-// ... existing code ...
+
 
                                                 {/* Team Leads */}
                                                 {expandedTeams[team.id] && (
@@ -897,58 +898,318 @@ const L1AdminsTab = () => {
   );
 };
 
+const MembersTab = () => {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [roleFilter, setRoleFilter] = useState('');
+
+  const fetchMembers = (pageToLoad = page) => {
+    setLoading(true);
+    const params = { page: pageToLoad, pageSize: 20 };
+    if (roleFilter) params.role = roleFilter;
+    
+    getUsers(params)
+      .then(res => {
+          // Filter out S1_ADMIN and SUPER_ADMIN if returned
+          const filtered = (res.data || []).filter(u => u.role !== 'S1_ADMIN' && u.role !== 'SUPER_ADMIN');
+          setMembers(filtered);
+          setPagination(res.pagination || null);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMembers(page);
+  }, [page, roleFilter]);
+
+  const handleDelete = async (id) => {
+      if(!window.confirm("Are you sure you want to delete this member?")) return;
+      try {
+          const response = await apiRequest(`/users/${id}`, { method: 'DELETE' });
+          if(!response.ok) throw new Error("Failed to delete");
+          fetchMembers(page);
+      } catch (err) {
+          alert(err.message);
+      }
+  };
+
+  return (
+    <div className="space-y-6 animate-fadeInUp">
+       <div className="flex justify-between items-center">
+          <div>
+             <h2 className="text-2xl font-bold text-slate-800">Team Members</h2>
+             <p className="text-slate-500 mt-1">Manage all employees and team leads.</p>
+          </div>
+          <select 
+            value={roleFilter} 
+            onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(1);
+            }}
+            className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Roles</option>
+            <option value="TEAM_LEAD">Team Leads</option>
+            <option value="EMPLOYEE">Employees</option>
+            <option value="LIMITED_ACCESS">Limited Access</option>
+          </select>
+       </div>
+  
+       <div className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 overflow-hidden">
+          <table className="w-full text-left">
+             <thead className="bg-white/50 border-b border-white/60">
+                <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                   <th className="py-4 pl-6">Member</th>
+                   <th className="py-4">Role</th>
+                   <th className="py-4">Team</th>
+                   <th className="py-4">Manager</th>
+                   <th className="py-4">Status</th>
+                   <th className="py-4 text-right pr-6">Actions</th>
+                </tr>
+             </thead>
+             <tbody className="divide-y divide-white/60">
+                {members.map(member => (
+                   <tr key={member.id} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="py-4 pl-6">
+                         <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
+                              {member.name.charAt(0)}
+                            </div>
+                            <div>
+                               <span className="font-medium text-slate-800 block">{member.name}</span>
+                               <span className="text-xs text-slate-400">{member.email}</span>
+                            </div>
+                         </div>
+                      </td>
+                      <td className="py-4 text-slate-600">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                            member.role === 'TEAM_LEAD' ? 'bg-amber-100 text-amber-700 border-amber-200' : 
+                            'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {member.role}
+                          </span>
+                      </td>
+                      <td className="py-4 text-slate-600 text-sm">
+                          {member.team?.name || '-'}
+                      </td>
+                      <td className="py-4 text-slate-600 text-sm">
+                          {member.manager?.name || '-'}
+                      </td>
+                      <td className="py-4">
+                        {member.isActive ? (
+                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium border border-green-200">Active</span>
+                        ) : (
+                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium border border-red-200">Inactive</span>
+                        )}
+                      </td>
+                      <td className="py-4 text-right pr-6">
+                         <button onClick={() => window.location.href=`/employee/${member.id}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">View</button>
+                         <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                      </td>
+                   </tr>
+                ))}
+                {members.length === 0 && (
+                    <tr><td colSpan="6" className="text-center py-8 text-slate-500">No members found</td></tr>
+                )}
+             </tbody>
+          </table>
+       </div>
+
+       {/* Pagination Controls */}
+       {pagination && (
+          <div className="flex items-center justify-between text-sm text-slate-600 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-white/60">
+            <div>
+              Page {pagination.page} of {pagination.totalPages}
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={pagination.page <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                className="px-3 py-1 rounded border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                disabled={pagination.page >= pagination.totalPages}
+                onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+                className="px-3 py-1 rounded border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+       )}
+    </div>
+  );
+};
+
 const AuditLogsTab = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [filters, setFilters] = useState({
+    module: '',
+    action: '',
+    startDate: '',
+    endDate: ''
+  });
 
-  useEffect(() => {
-    getAuditLogs({ pageSize: 20 })
-      .then(res => setLogs(res.data))
+  const fetchLogs = (pageToLoad = page) => {
+    setLoading(true);
+    // Convert filters to query params
+    const params = { page: pageToLoad, pageSize: 50 };
+    if (filters.module) params.module = filters.module;
+    if (filters.action) params.action = filters.action;
+    if (filters.startDate) params.startDate = filters.startDate;
+    if (filters.endDate) params.endDate = filters.endDate;
+
+    getAuditLogs(params)
+      .then(res => {
+          setLogs(res.data);
+          setPagination(res.pagination || null);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => {
+    fetchLogs(page);
+  }, [page]); 
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    fetchLogs(1);
+  };
 
   return (
    <div className="space-y-6 animate-fadeInUp">
       <div>
-         <h2 className="text-2xl font-bold text-slate-800">Security & Audit Logs</h2>
-         <p className="text-slate-500 mt-1">Immutable record of all system activities.</p>
+         <h2 className="text-2xl font-bold text-slate-800">Activity History / Audit Log</h2>
+         <p className="text-slate-500 mt-1">Complete history of system actions and changes.</p>
       </div>
 
       <div className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 p-6">
          {/* Filter controls */}
-         <div className="flex gap-4 mb-6">
-            <input type="text" placeholder="Search logs..." className="flex-1 px-4 py-2 bg-white/50 border border-white/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 backdrop-blur-sm transition-all" />
-            <select className="px-4 py-2 bg-white/50 border border-white/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 backdrop-blur-sm transition-all">
-               <option>All Events</option>
-               <option>Security</option>
-               <option>Data Access</option>
-            </select>
+         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 items-end">
+            <div className="md:col-span-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Module</label>
+                <select name="module" value={filters.module} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white/50 border border-white/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                   <option value="">All Modules</option>
+                   <option value="User Management">User Management</option>
+                   <option value="Team Management">Team Management</option>
+                   <option value="Placements">Placements</option>
+                   <option value="Revenue">Revenue</option>
+                </select>
+            </div>
+            <div className="md:col-span-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Action Type</label>
+                <select name="action" value={filters.action} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white/50 border border-white/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                   <option value="">All Actions</option>
+                   <option value="CREATE">Create</option>
+                   <option value="UPDATE">Update</option>
+                   <option value="DELETE">Delete</option>
+                   <option value="USER_CREATED">User Created</option>
+                   <option value="USER_UPDATED">User Updated</option>
+                </select>
+            </div>
+            <div className="md:col-span-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Start Date</label>
+                <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white/50 border border-white/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+            <div className="md:col-span-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">End Date</label>
+                <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white/50 border border-white/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+            <div className="md:col-span-1">
+                <button onClick={applyFilters} className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
+                    Apply Filters
+                </button>
+            </div>
          </div>
          
-         <div className="space-y-4">
-            {loading ? <div>Loading logs...</div> : logs.map(log => (
-               <div key={log.id} className="flex items-start gap-4 p-4 bg-white/40 rounded-lg border border-white/60 hover:border-blue-200 hover:bg-white/60 transition-colors">
-                  <div className={`mt-1 p-1.5 rounded-full bg-blue-100 text-blue-600`}>
-                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                  </div>
-                  <div className="flex-1">
-                     <div className="flex justify-between items-start">
-                        <p className="text-sm font-medium text-slate-800">{log.action}</p>
-                        <span className="text-xs text-slate-400 font-mono">ID: {log.id.substring(0,8)}</span>
-                     </div>
-                     <p className="text-xs text-slate-500 mt-1">
-                        Performed by <span className="font-semibold text-slate-700">{log.actor?.name || log.actorId}</span> 
-                        {log.details && ` • ${JSON.stringify(log.details)}`}
-                     </p>
-                  </div>
-                  <div className="text-xs text-slate-400 whitespace-nowrap">
-                     {new Date(log.createdAt).toLocaleString()}
-                  </div>
-               </div>
-            ))}
-            {!loading && logs.length === 0 && <div className="text-center text-slate-500">No logs found</div>}
+         <div className="overflow-x-auto">
+            <table className="w-full text-left">
+                <thead className="bg-slate-50/50 border-b border-slate-200">
+                    <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                        <th className="py-3 pl-4">Date & Time</th>
+                        <th className="py-3">User</th>
+                        <th className="py-3">Module</th>
+                        <th className="py-3">Action</th>
+                        <th className="py-3">Changes (Old → New)</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                        <tr><td colSpan="5" className="text-center py-8 text-slate-500">Loading logs...</td></tr>
+                    ) : logs.map(log => (
+                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-3 pl-4 text-xs text-slate-500 whitespace-nowrap">
+                                {new Date(log.createdAt).toLocaleString()}
+                            </td>
+                            <td className="py-3 text-sm font-medium text-slate-700">
+                                {log.actor?.name || log.actorId}
+                                <span className="block text-[10px] text-slate-400 font-normal">{log.actor?.role}</span>
+                            </td>
+                            <td className="py-3 text-sm text-slate-600">
+                                <span className="bg-slate-100 px-2 py-1 rounded text-xs border border-slate-200">
+                                    {log.module || log.entityType || 'System'}
+                                </span>
+                            </td>
+                            <td className="py-3 text-sm text-slate-600">
+                                {log.action}
+                            </td>
+                            <td className="py-3 text-xs text-slate-500 max-w-xs truncate">
+                                {log.changes ? (
+                                    <div className="group relative cursor-help">
+                                        <span className="truncate block">{JSON.stringify(log.changes)}</span>
+                                        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-slate-800 text-white p-2 rounded text-xs w-64 z-50 shadow-lg whitespace-pre-wrap">
+                                            {JSON.stringify(log.changes, null, 2)}
+                                        </div>
+                                    </div>
+                                ) : '-'}
+                            </td>
+                        </tr>
+                    ))}
+                    {!loading && logs.length === 0 && (
+                        <tr><td colSpan="5" className="text-center py-8 text-slate-500">No logs found matching criteria</td></tr>
+                    )}
+                </tbody>
+            </table>
          </div>
+
+         {/* Pagination Controls */}
+         {pagination && (
+            <div className="flex items-center justify-between text-sm text-slate-600 border-t border-slate-100 pt-4 mt-4">
+              <div>
+                Page {pagination.page} of {pagination.totalPages}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  disabled={pagination.page <= 1}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  className="px-3 py-1 rounded border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={pagination.page >= pagination.totalPages}
+                  onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+                  className="px-3 py-1 rounded border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+         )}
       </div>
    </div>
   );

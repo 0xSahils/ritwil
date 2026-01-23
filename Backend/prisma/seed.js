@@ -21,6 +21,13 @@ const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) +
 const getRandomDate = (start, end) => new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 
 const generateRandomDataForUser = async (userId, userName) => {
+    // CHECK IF DATA EXISTS
+    const existingPlacements = await prisma.placement.count({ where: { employeeId: userId } });
+    if (existingPlacements > 0) {
+        // console.log(`User ${userName} already has data. Skipping generation.`);
+        return;
+    }
+
     // 95% chance to have data
     if (Math.random() > 0.95) return;
 
@@ -205,7 +212,7 @@ async function main() {
     console.log("Seeding from hierarchy_data.json...");
     
     // TARGET HIERARCHIES TO UPDATE
-    const TARGET_NAMES = ["Mohammad Fakhrul", "Sidhartha Khosla", "Noor Beg"];
+    const TARGET_NAMES = ["Bhanu Pratap Singh"];
     
     // Filter the data
     const hierarchyToSeed = customData.hierarchy.filter(h => TARGET_NAMES.includes(h.name));
@@ -229,30 +236,48 @@ async function main() {
     }
 
     for (const l1 of hierarchyToSeed) {
-      // DELETE EXISTING HIERARCHY FIRST
-      const teamNames = l1.teams ? l1.teams.map(t => t.name) : [];
-      await deleteHierarchy(l1.email, teamNames);
+      // SKIP DELETION - User requested to append/update only
+      // const teamNames = l1.teams ? l1.teams.map(t => t.name) : [];
+      // await deleteHierarchy(l1.email, teamNames);
 
-      // CREATE NEW HIERARCHY
-      console.log(`Creating hierarchy for ${l1.name}...`);
-      const l1User = await prisma.user.create({
-        data: {
-          email: l1.email,
-          name: l1.name,
-          passwordHash,
-          role: Role.SUPER_ADMIN,
-          employeeProfile: {
-             create: {
-                 level: l1.level || "L1",
-                 yearlyTarget: 0
-             }
-          }
-        },
-      });
+      console.log(`Processing hierarchy for ${l1.name}...`);
+
+      // CHECK OR CREATE L1
+      let l1User = await prisma.user.findUnique({ where: { email: l1.email } });
+      if (!l1User) {
+        console.log(`Creating L1 ${l1.name}...`);
+        l1User = await prisma.user.create({
+          data: {
+            email: l1.email,
+            name: l1.name,
+            passwordHash,
+            role: Role.SUPER_ADMIN,
+            employeeProfile: {
+               create: {
+                   level: l1.level || "L1",
+                   yearlyTarget: 0
+               }
+            }
+          },
+        });
+      } else {
+        console.log(`L1 ${l1.name} already exists. Updating profile...`);
+        // Ensure profile exists or update it
+        const profile = await prisma.employeeProfile.findUnique({ where: { id: l1User.id } });
+        if (!profile) {
+            await prisma.employeeProfile.create({
+                data: {
+                    id: l1User.id,
+                    level: l1.level || "L1",
+                    yearlyTarget: 0
+                }
+            });
+        }
+      }
 
       if (l1.teams) {
         for (const teamData of l1.teams) {
-          // Check if team exists (it shouldn't if we deleted it, but maybe cross-linked?)
+          // Check if team exists
           let team = await prisma.team.findUnique({ where: { name: teamData.name } });
           if (!team) {
             team = await prisma.team.create({
@@ -266,43 +291,105 @@ async function main() {
 
           if (teamData.leads) {
             for (const l2 of teamData.leads) {
-              const l2User = await prisma.user.create({
-                data: {
-                  email: l2.email,
-                  name: l2.name,
-                  passwordHash,
-                  role: Role.TEAM_LEAD,
-                  managerId: l1User.id,
-                  employeeProfile: {
-                    create: {
-                      teamId: team.id,
-                      level: l2.level || "L2",
-                      yearlyTarget: l2.target || 100000,
-                      managerId: l1User.id,
+              let l2User = await prisma.user.findUnique({ where: { email: l2.email } });
+              if (!l2User) {
+                console.log(`Creating L2 ${l2.name}...`);
+                l2User = await prisma.user.create({
+                  data: {
+                    email: l2.email,
+                    name: l2.name,
+                    passwordHash,
+                    role: Role.TEAM_LEAD,
+                    managerId: l1User.id,
+                    employeeProfile: {
+                      create: {
+                        teamId: team.id,
+                        level: l2.level || "L2",
+                        yearlyTarget: l2.target || 100000,
+                        managerId: l1User.id,
+                      }
                     }
+                  },
+                });
+              } else {
+                  console.log(`L2 ${l2.name} exists. Updating profile/team link...`);
+                  // Update manager link if needed
+                  if (l2User.managerId !== l1User.id) {
+                      await prisma.user.update({ where: { id: l2User.id }, data: { managerId: l1User.id } });
                   }
-                },
-              });
+                  
+                  // Ensure profile and team link
+                  const profile = await prisma.employeeProfile.findUnique({ where: { id: l2User.id } });
+                  if (!profile) {
+                      await prisma.employeeProfile.create({
+                          data: {
+                              id: l2User.id,
+                              teamId: team.id,
+                              level: l2.level || "L2",
+                              yearlyTarget: l2.target || 100000,
+                              managerId: l1User.id,
+                          }
+                      });
+                  } else {
+                      // Update team if missing or different
+                      await prisma.employeeProfile.update({
+                          where: { id: l2User.id },
+                          data: { teamId: team.id, managerId: l1User.id }
+                      });
+                  }
+              }
+              // Wait for user to be available before generating data
+              if (l2User) {
+                  await generateRandomDataForUser(l2User.id, l2.name);
+              }
 
               const createMembers = async (members, managerId) => {
                 for (const member of members) {
-                  const memberUser = await prisma.user.create({
-                    data: {
-                      email: member.email,
-                      name: member.name,
-                      passwordHash,
-                      role: Role.EMPLOYEE,
-                      managerId: managerId,
-                      employeeProfile: {
-                        create: {
-                          teamId: team.id,
-                          level: member.level || "L4",
-                          yearlyTarget: member.target || 10000,
-                          managerId: managerId,
+                  let memberUser = await prisma.user.findUnique({ where: { email: member.email } });
+                  if (!memberUser) {
+                    console.log(`Creating Member ${member.name}...`);
+                    memberUser = await prisma.user.create({
+                      data: {
+                        email: member.email,
+                        name: member.name,
+                        passwordHash,
+                        role: Role.EMPLOYEE,
+                        managerId: managerId,
+                        employeeProfile: {
+                          create: {
+                            teamId: team.id,
+                            level: member.level || "L4",
+                            yearlyTarget: member.target || 10000,
+                            managerId: managerId,
+                          }
                         }
+                      },
+                    });
+                  } else {
+                      // Update existing member
+                      // console.log(`Member ${member.name} exists. Updating...`);
+                      if (memberUser.managerId !== managerId) {
+                          await prisma.user.update({ where: { id: memberUser.id }, data: { managerId: managerId } });
                       }
-                    },
-                  });
+                      
+                      const profile = await prisma.employeeProfile.findUnique({ where: { id: memberUser.id } });
+                      if (!profile) {
+                          await prisma.employeeProfile.create({
+                              data: {
+                                  id: memberUser.id,
+                                  teamId: team.id,
+                                  level: member.level || "L4",
+                                  yearlyTarget: member.target || 10000,
+                                  managerId: managerId,
+                              }
+                          });
+                      } else {
+                          await prisma.employeeProfile.update({
+                              where: { id: memberUser.id },
+                              data: { teamId: team.id, managerId: managerId }
+                          });
+                      }
+                  }
                   await generateRandomDataForUser(memberUser.id, member.name);
                 }
               };
@@ -313,23 +400,50 @@ async function main() {
 
               if (l2.subLeads) {
                 for (const l3 of l2.subLeads) {
-                  const l3User = await prisma.user.create({
-                    data: {
-                      email: l3.email,
-                      name: l3.name,
-                      passwordHash,
-                      role: Role.TEAM_LEAD,
-                      managerId: l2User.id,
-                      employeeProfile: {
-                        create: {
-                          teamId: team.id,
-                          level: l3.level || "L3",
-                          yearlyTarget: l3.target || 50000,
-                          managerId: l2User.id,
+                  let l3User = await prisma.user.findUnique({ where: { email: l3.email } });
+                  if (!l3User) {
+                    console.log(`Creating L3 ${l3.name}...`);
+                    l3User = await prisma.user.create({
+                      data: {
+                        email: l3.email,
+                        name: l3.name,
+                        passwordHash,
+                        role: Role.TEAM_LEAD,
+                        managerId: l2User.id,
+                        employeeProfile: {
+                          create: {
+                            teamId: team.id,
+                            level: l3.level || "L3",
+                            yearlyTarget: l3.target || 50000,
+                            managerId: l2User.id,
+                          }
                         }
-                      }
-                    },
-                  });
+                      },
+                    });
+                  } else {
+                      // Update L3
+                       console.log(`L3 ${l3.name} exists. Updating...`);
+                       if (l3User.managerId !== l2User.id) {
+                           await prisma.user.update({ where: { id: l3User.id }, data: { managerId: l2User.id } });
+                       }
+                       const profile = await prisma.employeeProfile.findUnique({ where: { id: l3User.id } });
+                       if (!profile) {
+                           await prisma.employeeProfile.create({
+                               data: {
+                                   id: l3User.id,
+                                   teamId: team.id,
+                                   level: l3.level || "L3",
+                                   yearlyTarget: l3.target || 50000,
+                                   managerId: l2User.id,
+                               }
+                           });
+                       } else {
+                           await prisma.employeeProfile.update({
+                               where: { id: l3User.id },
+                               data: { teamId: team.id, managerId: l2User.id }
+                           });
+                       }
+                  }
                   await generateRandomDataForUser(l3User.id, l3.name);
 
                   if (l3.members) {

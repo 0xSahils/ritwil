@@ -230,20 +230,23 @@ export async function updatePlacementBilling(id, billingData, actorId) {
 
 export async function bulkCreatePlacements(userId, placementsData, actorId) {
   const createdPlacements = [];
-
   const updatedPlacements = [];
+  const unchangedPlacements = [];
+  const errors = [];
   
   for (const data of placementsData) {
     try {
       const {
         candidateName,
+        candidateId,
+        jpcId,
         clientName,
         doi,
         doj,
+        revenue,
         placementType,
         billedHours,
         marginPercent,
-        revenue,
         billingStatus,
         incentivePayoutEta,
         incentiveAmountInr,
@@ -254,6 +257,10 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
       const qualifier = checkQualifier(daysCompleted);
       const normalizedBillingStatus = mapBillingStatus(billingStatus);
       const normalizedPlacementType = mapPlacementType(placementType);
+      const normalizedCandidateId = candidateId || null;
+      const normalizedJpcId = jpcId || null;
+      const normalizedBilledHours = billedHours ? Number(billedHours) : null;
+      const normalizedIncentivePaid = String(incentivePaid).toLowerCase() === 'true';
 
       // SMART UPLOAD: Check for duplicate
       const existingPlacement = await prisma.placement.findFirst({
@@ -265,21 +272,40 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
       });
 
       if (existingPlacement) {
+        // Check if anything changed
+        const isDifferent = 
+             (existingPlacement.placementType !== normalizedPlacementType) ||
+             (existingPlacement.billingStatus !== normalizedBillingStatus) ||
+             (Math.abs((Number(existingPlacement.revenue) || 0) - (Number(revenue) || 0)) > 0.01) ||
+             (Math.abs((Number(existingPlacement.marginPercent) || 0) - (Number(marginPercent) || 0)) > 0.01) ||
+             (Math.abs((Number(existingPlacement.incentiveAmountInr) || 0) - (Number(incentiveAmountInr) || 0)) > 0.01) ||
+             (existingPlacement.incentivePaid !== normalizedIncentivePaid) ||
+             (existingPlacement.candidateId !== normalizedCandidateId) ||
+             (existingPlacement.jpcId !== normalizedJpcId) ||
+             (existingPlacement.doj.getTime() !== new Date(doj).getTime()) ||
+             (existingPlacement.billedHours !== normalizedBilledHours);
+
+        if (!isDifferent) {
+            // UNCHANGED
+            unchangedPlacements.push(existingPlacement);
+            continue;
+        }
+
         // UPDATE existing
         const updated = await prisma.placement.update({
           where: { id: existingPlacement.id },
           data: {
-            doi: new Date(doi),
+            doi: doi ? new Date(doi) : new Date(doj),
             doj: new Date(doj),
             daysCompleted,
             placementType: normalizedPlacementType,
-            billedHours: billedHours ? Number(billedHours) : null,
+            billedHours: normalizedBilledHours,
             marginPercent: parseCurrency(marginPercent),
             revenue: parseCurrency(revenue),
             billingStatus: normalizedBillingStatus,
             incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
             incentiveAmountInr: parseCurrency(incentiveAmountInr),
-            incentivePaid: String(incentivePaid).toLowerCase() === 'true',
+            incentivePaid: normalizedIncentivePaid,
             qualifier,
           }
         });
@@ -311,6 +337,7 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
       }
     } catch (err) {
       console.error("Error processing placement in bulk:", err, data);
+      errors.push({ data, error: err.message });
     }
   }
 
@@ -320,16 +347,17 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
       action: "PLACEMENT_BULK_PROCESSED",
       entityType: "User",
       entityId: userId,
-      changes: { created: createdPlacements.length, updated: updatedPlacements.length },
+      changes: { created: createdPlacements.length, updated: updatedPlacements.length, unchanged: unchangedPlacements.length, errors: errors.length },
     },
   });
 
-  return { created: createdPlacements, updated: updatedPlacements };
+  return { created: createdPlacements, updated: updatedPlacements, unchanged: unchangedPlacements, errors };
 }
 
 export async function bulkCreateGlobalPlacements(placementsData, actorId, campaignId = null) {
   const createdPlacements = [];
   const updatedPlacements = [];
+  const unchangedPlacements = [];
   const errors = [];
 
   // If campaignId is provided, pre-fetch valid employees
@@ -419,6 +447,24 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
       });
 
       if (existingPlacement) {
+         // Check if anything changed
+         const isDifferent = 
+              (existingPlacement.placementType !== normalizedPlacementType) ||
+              (existingPlacement.billingStatus !== normalizedBillingStatus) ||
+              (Math.abs((Number(existingPlacement.revenue) || 0) - (Number(revenue) || 0)) > 0.01) ||
+              (Math.abs((Number(existingPlacement.marginPercent) || 0) - (Number(marginPercent) || 0)) > 0.01) ||
+              (Math.abs((Number(existingPlacement.incentiveAmountInr) || 0) - (Number(incentiveAmountInr) || 0)) > 0.01) ||
+              (existingPlacement.incentivePaid !== (String(incentivePaid).toLowerCase() === 'true')) ||
+              (existingPlacement.candidateId !== candidateId) ||
+              (existingPlacement.jpcId !== jpcId) ||
+              (existingPlacement.doj.getTime() !== validDoj.getTime()) ||
+              (existingPlacement.billedHours !== (billedHours ? Number(billedHours) : null));
+
+         if (!isDifferent) {
+             unchangedPlacements.push(existingPlacement);
+             continue;
+         }
+
         // UPDATE existing
         const updated = await prisma.placement.update({
           where: { id: existingPlacement.id },
@@ -474,11 +520,11 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
       action: "PLACEMENT_GLOBAL_BULK_PROCESSED",
       entityType: "System",
       entityId: campaignId || "global",
-      changes: { created: createdPlacements.length, updated: updatedPlacements.length, errors: errors.length, campaignId },
+      changes: { created: createdPlacements.length, updated: updatedPlacements.length, unchanged: unchangedPlacements.length, errors: errors.length, campaignId },
     },
   });
 
-  return { created: createdPlacements, updated: updatedPlacements, errors };
+  return { created: createdPlacements, updated: updatedPlacements, unchanged: unchangedPlacements, errors };
 }
 
 export async function bulkDeletePlacements(placementIds, actorId) {

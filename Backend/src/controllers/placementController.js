@@ -1,7 +1,8 @@
 import pkg from "@prisma/client";
+import prisma from "../prisma.js";
 
 const { PrismaClient } = pkg;
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 // Helper to safely parse numbers from strings with commas/symbols
 const parseCurrency = (val) => {
@@ -379,6 +380,7 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
       const {
         employeeId: providedEmployeeId,
         recruiterName,
+        vbid,
         candidateName,
         clientName,
         candidateId,
@@ -397,15 +399,67 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
 
       let employeeId = providedEmployeeId;
 
-      // Lookup by name if ID is missing
+      // Lookup or Create User if ID is missing
       if (!employeeId && recruiterName) {
-        const user = await prisma.user.findFirst({
+        let user = await prisma.user.findFirst({
           where: {
             name: { equals: recruiterName.trim(), mode: 'insensitive' }
           }
         });
+
+        // Try lookup by VBID
+        if (!user && vbid) {
+             const employeeProfile = await prisma.employeeProfile.findFirst({
+                 where: { vbid: String(vbid).trim() },
+                 include: { user: true }
+             });
+             if (employeeProfile && employeeProfile.user) {
+                 user = employeeProfile.user;
+             }
+        }
+
+        // Create User if not found
+        if (!user) {
+             const baseEmail = recruiterName.replace(/[^a-zA-Z0-9]/g, '.').toLowerCase() + '@vbeyond.com';
+             let email = baseEmail;
+             let counter = 1;
+             // Simple collision check loop (async inside loop is fine for low volume creation)
+             while (await prisma.user.findUnique({ where: { email } })) {
+                 email = baseEmail.replace('@', `${counter}@`);
+                 counter++;
+             }
+
+             try {
+                 user = await prisma.user.create({
+                     data: {
+                         name: recruiterName.trim(),
+                         email: email,
+                         passwordHash: '$2a$10$McDSEu7JWMAtZo0ykFIRx.U1Lf/qBQl/rF92qLxvM8VCRXdgsFSea', // Default password
+                         role: 'EMPLOYEE',
+                         employeeProfile: {
+                             create: {
+                                 vbid: vbid ? String(vbid).trim() : null
+                             }
+                         }
+                     }
+                 });
+             } catch (createErr) {
+                 console.error(`Failed to create user ${recruiterName}:`, createErr.message);
+             }
+        }
+
         if (user) {
           employeeId = user.id;
+          
+          // Update VBID if missing/different
+          if (vbid) {
+               const profile = await prisma.employeeProfile.findUnique({ where: { id: user.id } });
+               if (!profile) {
+                   await prisma.employeeProfile.create({ data: { id: user.id, vbid: String(vbid).trim() } });
+               } else if (!profile.vbid) {
+                   await prisma.employeeProfile.update({ where: { id: user.id }, data: { vbid: String(vbid).trim() } });
+               }
+          }
         } else {
            errors.push({ data, error: `Recruiter not found: "${recruiterName}"` });
            continue;

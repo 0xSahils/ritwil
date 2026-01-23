@@ -1,8 +1,9 @@
 import pkg from "@prisma/client";
+import prisma from "../prisma.js";
 
-const { PrismaClient, Role } = pkg;
+const { Role } = pkg;
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 export async function listTeamsWithMembers(currentUser) {
   let whereClause = { isActive: true };

@@ -1,12 +1,13 @@
 import express from "express";
 import pkg from "@prisma/client";
+import prisma from "../prisma.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { cacheMiddleware } from "../middleware/cache.js";
 import { getSuperAdminOverview, getTeamLeadOverview } from "../controllers/dashboardController.js";
 
-const { PrismaClient, Role } = pkg;
+const { Role } = pkg;
 const router = express.Router();
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 // Helper to calculate days completed
 function calculateDaysCompleted(doj) {

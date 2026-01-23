@@ -171,8 +171,11 @@ const AdminTeamDetails = () => {
                
                else if (val.includes("jpc")) cols.jpcId = idx;
                else if (val.includes("doj")) cols.doj = idx;
+               else if (val.includes("doi")) cols.doi = idx;
                else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) cols.revenue = idx;
-               else if (val.includes("billing")) cols.billingStatus = idx;
+              else if (val.includes("margin")) cols.marginPercent = idx;
+              else if (val.includes("billed hours") || val.includes("hours")) cols.billedHours = idx;
+              else if (val.includes("billing")) cols.billingStatus = idx;
                else if (val.includes("days")) cols.daysCompleted = idx;
                else if (val.includes("incentive")) cols.incentiveAmountInr = idx; // Broader match for incentive
                else if (val.includes("paid")) cols.incentivePaid = idx;
@@ -185,20 +188,53 @@ const AdminTeamDetails = () => {
 
         if (mode === 'READING_PLACEMENTS') {
           if (firstCell === "Team") {
-            console.log(`Row ${i}: Found New Team Block -> Switching to EXPECT_RECRUITER_INFO`);
-            mode = 'EXPECT_RECRUITER_INFO';
-            i--;
-            continue;
+             // Find Recruiter Name column
+             let foundIndex = -1;
+             row.forEach((cell, idx) => {
+                 if (String(cell).trim() === "Recruiter Name") {
+                     foundIndex = idx;
+                 }
+             });
+ 
+             if (foundIndex !== -1) {
+                 console.log(`Row ${i}: Found New Team Block. Recruiter Name at index ${foundIndex} -> Switching to EXPECT_RECRUITER_INFO`);
+                 recruiterNameIndex = foundIndex;
+                 mode = 'EXPECT_RECRUITER_INFO';
+                 // i--; // Re-process this row? No, we found the header, next row has data? 
+                 // Actually if this row is "Team | Recruiter Name", the NEXT row has the team name? No wait.
+                 // "Team" is usually a header row. 
+                 // If structure is:
+                 // Row X: Team | Recruiter Name
+                 // Row X+1: NULL | Some Recruiter
+                 // Then we switch to EXPECT_RECRUITER_INFO and continue loop so next iteration picks up Row X+1?
+                 // But wait, "Team" is firstCell. 
+                 continue;
+             }
           }
 
           const candidateName = row[cols.candidateName];
           if (!candidateName) continue;
 
-          let recruiterName = row[0];
-          if (!recruiterName) recruiterName = currentRecruiterName;
+          let rawRecruiterVal = row[recruiterNameIndex];
+          let recruiterName = currentRecruiterName;
+          let vbid = null;
+
+          if (rawRecruiterVal) {
+              const valStr = String(rawRecruiterVal).trim();
+              // Check if it's a number (VBID)
+              if (/^\d+$/.test(valStr)) {
+                  vbid = valStr;
+              } else {
+                  // It's a name? Or maybe "Recruiter Name" header repeated?
+                  const upper = valStr.toUpperCase();
+                  if (upper !== "VB CODE" && upper !== "RECRUITER NAME" && upper !== "TEAM") {
+                      recruiterName = valStr;
+                  }
+              }
+          }
 
           if (!recruiterName) {
-            console.warn(`Row ${i}: No recruiter name found (Candidate: ${candidateName})`);
+            // console.warn(`Row ${i}: No recruiter name found (Candidate: ${candidateName})`);
             continue;
           }
 
@@ -209,16 +245,23 @@ const AdminTeamDetails = () => {
              continue;
           }
 
+          // Clean JPC ID
+          let jpcId = cols.jpcId !== undefined ? String(row[cols.jpcId] || "") : null;
+          if (jpcId && jpcId.toUpperCase().startsWith("JPC - ")) {
+              jpcId = jpcId.substring(6).trim();
+          }
+
           placementsToUpload.push({
             employeeId: null, 
             recruiterName: String(recruiterName).trim(),
+            vbid: vbid,
             candidateName: candidateName,
             candidateId: cols.candidateId !== undefined ? String(row[cols.candidateId] || "") : null,
             clientName: String(row[cols.clientName] || row[cols.client] || ""), // Use clientName col, fallback to generic client
             clientId: cols.clientId !== undefined ? String(row[cols.clientId] || "") : null,
-            jpcId: cols.jpcId !== undefined ? String(row[cols.jpcId] || "") : null,
+            jpcId: jpcId,
             doj: CalculationService.parseExcelDate(row[cols.doj]),
-            doi: CalculationService.parseExcelDate(row[cols.doj]), 
+            doi: cols.doi !== undefined ? CalculationService.parseExcelDate(row[cols.doi]) : CalculationService.parseExcelDate(row[cols.doj]), 
             revenue: row[cols.revenue],
             billingStatus: row[cols.billingStatus],
             incentiveAmountInr: row[cols.incentiveAmountInr],

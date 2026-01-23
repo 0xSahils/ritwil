@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import pkg from "@prisma/client";
+import prisma from "./prisma.js";
 import authRouter from "./routes/auth.js";
 import userRouter from "./routes/users.js";
 import dashboardRouter from "./routes/dashboard.js";
@@ -23,7 +24,7 @@ const __dirname = path.dirname(__filename);
 
 const { PrismaClient } = pkg;
 const app = express();
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const PORT = process.env.PORT || 4000;

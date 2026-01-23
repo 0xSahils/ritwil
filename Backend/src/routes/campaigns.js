@@ -1,10 +1,11 @@
 import express from "express";
 import pkg from "@prisma/client";
+import prisma from "../prisma.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 
-const { PrismaClient, Role, CampaignStatus } = pkg;
+const { Role, CampaignStatus } = pkg;
 const router = express.Router();
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 async function recordActivity(campaignId, userId, action, metadata) {
   await prisma.campaignActivity.create({

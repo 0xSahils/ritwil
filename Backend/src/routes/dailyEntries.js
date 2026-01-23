@@ -1,10 +1,11 @@
 import express from "express";
 import pkg from "@prisma/client";
+import prisma from "../prisma.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 
-const { PrismaClient, Role, PlacementType, BillingStatus } = pkg;
+const { Role, PlacementType, BillingStatus } = pkg;
 const router = express.Router();
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 router.use(authenticate);
 

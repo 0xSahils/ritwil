@@ -1,7 +1,8 @@
 import pkg from "@prisma/client";
+import prisma from "../prisma.js";
 
-const { PrismaClient, Role } = pkg;
-const prisma = new PrismaClient();
+const { Role } = pkg;
+// const prisma = new PrismaClient();
 
 function toCurrency(value) {
   return Number(value || 0);

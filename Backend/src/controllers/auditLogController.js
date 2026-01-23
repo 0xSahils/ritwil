@@ -1,6 +1,7 @@
 import pkg from "@prisma/client";
-const { PrismaClient } = pkg;
-const prisma = new PrismaClient();
+import prisma from "../prisma.js";
+// const { PrismaClient } = pkg;
+// const prisma = new PrismaClient();
 
 export async function createAuditLog({ actorId, action, module, entityType, entityId, changes }) {
   try {

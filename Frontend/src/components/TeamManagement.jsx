@@ -8,6 +8,7 @@ const TeamManagement = () => {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [targetType, setTargetType] = useState("REVENUE");
   
   // Form state
   const [formData, setFormData] = useState({
@@ -30,6 +31,9 @@ const TeamManagement = () => {
       if (!response.ok) throw new Error("Failed to fetch team data");
       const data = await response.json();
       setMembers(data.members || []);
+      if (data.lead?.targetType) {
+        setTargetType(data.lead.targetType);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,7 +49,8 @@ const TeamManagement = () => {
       
       const payload = { 
         ...formData,
-        role: "EMPLOYEE" // Team leads can only create employees
+        role: "EMPLOYEE", // Team leads can only create employees
+        targetType // Pass current target type
       };
       if (editingMember && !payload.password) delete payload.password;
 
@@ -129,7 +134,9 @@ const TeamManagement = () => {
                   <td className="p-4 text-slate-600">{member.email || "N/A"}</td>
                   <td className="p-4 text-slate-600">{member.level || "-"}</td>
                   <td className="p-4 text-slate-600">
-                  {member.target ? CalculationService.formatCurrency(member.target) : "-"}
+                  {member.target 
+                    ? (targetType === "PLACEMENTS" ? `${member.target}` : CalculationService.formatCurrency(member.target))
+                    : "-"}
                 </td>
                   <td className="p-4 space-x-2">
                     <button
@@ -204,12 +211,15 @@ const TeamManagement = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Yearly Target</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      {targetType === "PLACEMENTS" ? "Placement Target" : "Revenue Target"}
+                    </label>
                     <input
                       type="number"
                       value={formData.yearlyTarget}
                       onChange={(e) => setFormData({ ...formData, yearlyTarget: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder={targetType === "PLACEMENTS" ? "e.g. 10" : "e.g. 100000"}
                     />
                   </div>
                 </div>

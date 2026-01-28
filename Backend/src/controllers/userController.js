@@ -81,6 +81,7 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
         }
       : null,
     yearlyTarget: u.employeeProfile?.yearlyTarget || null,
+    targetType: u.employeeProfile?.targetType || "REVENUE",
   }));
 
   return {
@@ -104,6 +105,7 @@ export async function createUserWithProfile(payload, actorId) {
     managerId,
     level,
     yearlyTarget,
+    targetType,
   } = payload;
 
   if (!email || !password || !name || !role) {
@@ -137,6 +139,7 @@ export async function createUserWithProfile(payload, actorId) {
                   managerId: managerId || null,
                   level: level || null,
                   yearlyTarget: yearlyTarget || 0,
+                  targetType: targetType || "REVENUE",
                 },
               },
       },
@@ -161,7 +164,8 @@ export async function createUserWithProfile(payload, actorId) {
           managerId: user.employeeProfile?.managerId || null,
           level: user.employeeProfile?.level || null,
           yearlyTarget: user.employeeProfile?.yearlyTarget || null,
-        },
+    targetType: user.employeeProfile?.targetType || null,
+  },
       },
     });
 
@@ -187,6 +191,7 @@ export async function updateUserWithProfile(id, body, actor) {
     level: rawLevel,
     vbid,
     yearlyTarget: rawYearlyTarget,
+    targetType,
     isActive,
   } = body;
 
@@ -202,6 +207,7 @@ export async function updateUserWithProfile(id, body, actor) {
       rawManagerId !== undefined ||
       rawLevel !== undefined ||
       rawYearlyTarget !== undefined ||
+      targetType !== undefined ||
       typeof isActive === "boolean"
     ) {
       const error = new Error("Unauthorized to change sensitive fields");
@@ -260,6 +266,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 level: level || null,
                 vbid: vbid || null,
                 yearlyTarget: yearlyTarget || 0,
+                targetType: targetType || "REVENUE",
                 isActive:
                   typeof isActive === "boolean"
                     ? isActive
@@ -275,6 +282,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 level: level !== undefined ? level : (user.employeeProfile?.level ?? null),
                 vbid: vbid !== undefined ? vbid : (user.employeeProfile?.vbid ?? null),
                 yearlyTarget: yearlyTarget !== undefined ? yearlyTarget : (user.employeeProfile?.yearlyTarget ?? 0),
+                targetType: targetType !== undefined ? targetType : (user.employeeProfile?.targetType ?? "REVENUE"),
                 isActive:
                   typeof isActive === "boolean"
                     ? isActive

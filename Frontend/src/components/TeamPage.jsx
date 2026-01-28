@@ -347,11 +347,14 @@ const TeamPage = () => {
           <div className="space-y-5">
             {teamData.teams.map((team, teamIndex) => {
               const colorClasses = getTeamColorClasses(team.color)
-              const calculatedTeamTarget = team.teamLeads.reduce((sum, lead) => {
+              const isPlacementTeam = team.isPlacementTeam
+              const calculatedTeamTarget = team.teamTarget || team.teamLeads.reduce((sum, lead) => {
                 const leadTarget = Number(lead.target || 0)
                 return sum + leadTarget
               }, 0)
-              const formattedTeamTarget = CalculationService.formatCurrency(calculatedTeamTarget)
+              const formattedTeamTarget = isPlacementTeam 
+                ? calculatedTeamTarget 
+                : CalculationService.formatCurrency(calculatedTeamTarget)
               return (
                 <div key={team.id} className={`border-l-2 ${colorClasses.border} pl-6 transition-all duration-200 animate-fadeInUp`} style={{animationDelay: `${teamIndex * 100}ms`}}>
                   {/* Team Header */}
@@ -389,7 +392,9 @@ const TeamPage = () => {
                             </div>
                             <div className="flex items-center gap-2" title="Achieved">
                               <span className="text-xs font-semibold text-green-600">
-                                {CalculationService.formatCurrency(team.totalRevenue || 0)}
+                                {isPlacementTeam 
+                                  ? (team.totalRevenue || 0) 
+                                  : CalculationService.formatCurrency(team.totalRevenue || 0)}
                               </span>
                             </div>
                           </div>
@@ -455,11 +460,17 @@ const TeamPage = () => {
                                     {lead.target && (
                                       <div className="text-xs text-slate-500 mt-1 flex items-center">
                                         <span className="font-medium text-slate-600">
-                                          Total Target: <span className="text-slate-900">{CalculationService.formatCurrency(lead.target)}</span>
+                                          Total Target: <span className="text-slate-900">
+                                            {isPlacementTeam ? lead.target : CalculationService.formatCurrency(lead.target)}
+                                          </span>
                                         </span>
                                         <span className="mx-2 text-slate-300">|</span>
                                         <span className="font-medium text-slate-600">
-                                          Achieved: <span className="text-green-600">{CalculationService.formatCurrency(lead.totalRevenue || 0)}</span>
+                                          Achieved: <span className="text-green-600">
+                                            {isPlacementTeam 
+                                              ? (lead.totalPlacements || lead.placements || 0) 
+                                              : CalculationService.formatCurrency(lead.totalRevenue || 0)}
+                                          </span>
                                         </span>
                                       </div>
                                     )}

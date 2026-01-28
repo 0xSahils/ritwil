@@ -1,6 +1,7 @@
 import express from "express";
 import pkg from "@prisma/client";
 import { authenticate, requireRole } from "../middleware/auth.js";
+import { clearCacheMiddleware } from "../middleware/cache.js";
 import {
   getPlacementsByUser,
   createPlacement,
@@ -16,6 +17,7 @@ const { Role } = pkg;
 const router = express.Router();
 
 router.use(authenticate);
+router.use(clearCacheMiddleware);
 
 // Bulk delete placements
 router.delete("/bulk", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {

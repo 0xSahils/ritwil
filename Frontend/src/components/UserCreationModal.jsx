@@ -11,6 +11,7 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
     managerId: "",
     level: "",
     yearlyTarget: "",
+    targetType: "REVENUE",
   });
 
   const [error, setError] = useState("");
@@ -29,10 +30,11 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
         email: editingUser.email,
         password: "", // Don't populate password
         role: editingUser.role,
-        teamId: editingUser.employeeProfile?.teamId || "",
-        managerId: editingUser.employeeProfile?.managerId || "",
-        level: editingUser.employeeProfile?.level || "",
-        yearlyTarget: editingUser.employeeProfile?.yearlyTarget || "",
+        teamId: editingUser.employeeProfile?.teamId || editingUser.team?.id || "",
+        managerId: editingUser.employeeProfile?.managerId || editingUser.manager?.id || "",
+        level: editingUser.employeeProfile?.level || editingUser.level || "",
+        yearlyTarget: editingUser.employeeProfile?.yearlyTarget || editingUser.yearlyTarget || "",
+        targetType: editingUser.employeeProfile?.targetType || editingUser.targetType || "REVENUE",
       });
     } else {
       // Determine default level based on defaultRole
@@ -47,6 +49,7 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
         managerId: "",
         level: defaultLevel,
         yearlyTarget: "",
+        targetType: teams.length === 1 ? (teams[0].targetType || "REVENUE") : "REVENUE",
       });
     }
     setError("");
@@ -192,7 +195,16 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
               <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Team</label>
               <select
                 value={formData.teamId}
-                onChange={(e) => setFormData({ ...formData, teamId: e.target.value, managerId: "" })}
+                onChange={(e) => {
+                  const newTeamId = e.target.value;
+                  const selectedTeam = teams.find(t => t.id === newTeamId);
+                  setFormData({ 
+                    ...formData, 
+                    teamId: newTeamId, 
+                    managerId: "",
+                    targetType: selectedTeam?.targetType || "REVENUE"
+                  });
+                }}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
               >
                 <option value="">No Team</option>
@@ -224,12 +236,14 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
               </div>
             )}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">Target</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">
+                Target ({formData.targetType === "PLACEMENTS" ? "Count" : "$"})
+              </label>
               <input
                 type="number"
                 value={formData.yearlyTarget}
                 onChange={(e) => setFormData({ ...formData, yearlyTarget: e.target.value })}
-                placeholder="0.00"
+                placeholder={formData.targetType === "PLACEMENTS" ? "e.g. 15" : "0.00"}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               />
             </div>

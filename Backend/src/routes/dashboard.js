@@ -82,14 +82,21 @@ router.get(
       }
 
       const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
+      const targetType = employee.employeeProfile.targetType || "REVENUE";
+      const slabQualified = employee.employeeProfile.slabQualified || false;
+      
       const revenueGenerated = employee.placements.reduce(
         (sum, p) => sum + Number(p.revenue || 0),
         0
       );
-      const percentage =
-        yearlyTarget > 0
-          ? Math.round((revenueGenerated / yearlyTarget) * 100)
-          : 0;
+      const placementsCount = employee.placements.length;
+
+      let percentage = 0;
+      if (targetType === "PLACEMENTS") {
+        percentage = yearlyTarget > 0 ? Math.round((placementsCount / yearlyTarget) * 100) : 0;
+      } else {
+        percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
+      }
 
       const latestIncentive =
         employee.incentives.length > 0
@@ -97,6 +104,11 @@ router.get(
               a.periodEnd > b.periodEnd ? a : b
             )
           : null;
+
+      const totalIncentiveInr = employee.placements.reduce(
+        (sum, p) => sum + Number(p.incentiveAmountInr || 0),
+        0
+      );
 
       res.json({
         id: employee.id,
@@ -106,15 +118,16 @@ router.get(
         level: employee.employeeProfile.level || "L4",
         vbid: employee.employeeProfile.vbid || null,
         yearlyTarget,
+        targetType,
+        slabQualified,
         revenueGenerated,
+        placementsCount,
         percentage,
-        incentive: (revenueGenerated > 0 && latestIncentive)
-          ? {
-              slabName: latestIncentive.slabName,
-              amountUsd: Number(latestIncentive.amountUsd),
-              amountInr: Number(latestIncentive.amountInr),
-            }
-          : null,
+        incentive: {
+          slabName: latestIncentive?.slabName || null,
+          amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
+          amountInr: totalIncentiveInr,
+        },
         placements: employee.placements.map((p) => ({
           id: p.id,
           candidateName: p.candidateName,
@@ -190,14 +203,20 @@ router.get(
       }
 
       const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
+      const targetType = employee.employeeProfile.targetType || "REVENUE";
+      
       const revenueGenerated = employee.placements.reduce(
         (sum, p) => sum + Number(p.revenue || 0),
         0
       );
-      const percentage =
-        yearlyTarget > 0
-          ? Math.round((revenueGenerated / yearlyTarget) * 100)
-          : 0;
+      const placementsCount = employee.placements.length;
+
+      let percentage = 0;
+      if (targetType === "PLACEMENTS") {
+        percentage = yearlyTarget > 0 ? Math.round((placementsCount / yearlyTarget) * 100) : 0;
+      } else {
+        percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
+      }
 
       const latestIncentive =
         employee.incentives.length > 0
@@ -205,6 +224,11 @@ router.get(
               a.periodEnd > b.periodEnd ? a : b
             )
           : null;
+
+      const totalIncentiveInr = employee.placements.reduce(
+        (sum, p) => sum + Number(p.incentiveAmountInr || 0),
+        0
+      );
 
       res.json({
         id: employee.id,
@@ -214,15 +238,16 @@ router.get(
         level: employee.employeeProfile.level || "L4",
         vbid: employee.employeeProfile.vbid || null,
         yearlyTarget,
+        targetType,
+        slabQualified: employee.employeeProfile.slabQualified,
         revenueGenerated,
+        placementsCount,
         percentage,
-        incentive: (revenueGenerated > 0 && latestIncentive)
-          ? {
-              slabName: latestIncentive.slabName,
-              amountUsd: Number(latestIncentive.amountUsd),
-              amountInr: Number(latestIncentive.amountInr),
-            }
-          : null,
+        incentive: {
+          slabName: latestIncentive?.slabName || null,
+          amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
+          amountInr: totalIncentiveInr,
+        },
         placements: employee.placements.map((p) => ({
           id: p.id,
           candidateName: p.candidateName,

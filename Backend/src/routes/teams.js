@@ -5,12 +5,14 @@ import { cacheMiddleware } from "../middleware/cache.js";
 import {
   listTeamsWithMembers,
   createTeam,
+  updateTeam,
   deleteTeam,
   bulkAssignEmployeesToTeam,
   assignTeamLead,
   getTeamDetails,
   removeMemberFromTeam,
   updateMemberTarget,
+  importTeamTargets,
 } from "../controllers/teamController.js";
 
 const { Role } = pkg;
@@ -44,6 +46,19 @@ router.post("/", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
   try {
     const team = await createTeam(req.body, req.user.id);
     res.status(201).json(team);
+  } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    next(err);
+  }
+});
+
+router.put("/:id", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const team = await updateTeam(id, req.body, req.user.id);
+    res.json(team);
   } catch (err) {
     if (err.statusCode) {
       return res.status(err.statusCode).json({ error: err.message });
@@ -129,9 +144,27 @@ router.patch(
   async (req, res, next) => {
     try {
       const { userId } = req.params;
-      const { target } = req.body;
-      const updated = await updateMemberTarget(userId, target, req.user.id);
+      const { target, targetType } = req.body;
+      const updated = await updateMemberTarget(userId, target, targetType, req.user.id);
       res.json(updated);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message });
+      }
+      next(err);
+    }
+  }
+);
+
+router.post(
+  "/:id/import-targets",
+  requireRole(Role.SUPER_ADMIN),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const { targets } = req.body;
+      const results = await importTeamTargets(id, targets, req.user.id);
+      res.json(results);
     } catch (err) {
       if (err.statusCode) {
         return res.status(err.statusCode).json({ error: err.message });

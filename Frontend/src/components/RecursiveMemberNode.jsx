@@ -6,6 +6,7 @@ const RecursiveMemberNode = ({ member, expandedMembers, toggleMember, handleMemb
   const hasChildren = member.members && member.members.length > 0
   const isExpanded = expandedMembers[member.id]
   const level = member.level || 'L4'
+  const isPlacementTeam = team?.isPlacementTeam || member.targetType === 'PLACEMENTS'
 
   const isL3 = level === 'L3'
   
@@ -29,9 +30,13 @@ const RecursiveMemberNode = ({ member, expandedMembers, toggleMember, handleMemb
               <div>
                 <div className="font-bold text-slate-700 text-sm group-hover:text-blue-700 transition-colors">{member.name}</div>
                 <div className="text-xs text-slate-500 mt-1 flex items-center">
-                   <span className="font-medium text-slate-600">Total Target: <span className="text-slate-900">{CalculationService.formatCurrency(member.target)}</span></span>
+                   <span className="font-medium text-slate-600">Total Target: <span className="text-slate-900">
+                      {isPlacementTeam ? member.target : CalculationService.formatCurrency(member.target)}
+                   </span></span>
                    <span className="mx-2 text-slate-300">|</span>
-                   <span className="font-medium text-slate-600">Achieved: <span className="text-green-600">{CalculationService.formatCurrency(member.totalRevenue || member.revenue || 0)}</span></span>
+                   <span className="font-medium text-slate-600">Achieved: <span className="text-green-600">
+                      {isPlacementTeam ? (member.totalPlacements || member.placements || 0) : CalculationService.formatCurrency(member.totalRevenue || member.revenue || 0)}
+                   </span></span>
                 </div>
               </div>
             </div>
@@ -108,12 +113,16 @@ const RecursiveMemberNode = ({ member, expandedMembers, toggleMember, handleMemb
           {member.target && (
              <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-500 font-medium">Target:</span>
-                <span className="font-semibold text-slate-700">{CalculationService.formatCurrency(member.target)}</span>
+                <span className="font-semibold text-slate-700">
+                  {isPlacementTeam ? member.target : CalculationService.formatCurrency(member.target)}
+                </span>
              </div>
           )}
           <div className="flex justify-between items-center text-xs">
              <span className="text-slate-500 font-medium">Achieved:</span>
-             <span className="font-semibold text-green-600">{CalculationService.formatCurrency(member.totalRevenue || member.revenue || 0)}</span>
+             <span className="font-semibold text-green-600">
+                {isPlacementTeam ? (member.totalPlacements || member.placements || 0) : CalculationService.formatCurrency(member.totalRevenue || member.revenue || 0)}
+             </span>
           </div>
         </div>
       </div>

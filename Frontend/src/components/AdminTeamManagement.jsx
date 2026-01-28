@@ -16,7 +16,6 @@ const AdminTeamManagement = () => {
   const [formData, setFormData] = useState({
     name: "",
     color: "blue",
-    yearlyTarget: "",
   });
 
   const fetchTeams = async () => {
@@ -56,7 +55,7 @@ const AdminTeamManagement = () => {
       }
 
       setShowModal(false);
-      setFormData({ name: "", color: "blue", yearlyTarget: "" });
+      setFormData({ name: "", color: "blue" });
       fetchTeams();
     } catch (err) {
       alert(err.message);
@@ -137,11 +136,19 @@ const AdminTeamManagement = () => {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Total Target</span>
-                    <span className="font-medium text-slate-700">{CalculationService.formatCurrency(team.yearlyTarget)}</span>
+                    <span className="font-medium text-slate-700">
+                      {team.targetType === 'PLACEMENTS' 
+                        ? `${team.yearlyTarget || 0} Placements` 
+                        : CalculationService.formatCurrency(team.yearlyTarget)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Achieved</span>
-                    <span className="font-medium text-emerald-600">{CalculationService.formatCurrency(team.totalRevenue)}</span>
+                    <span className="font-medium text-emerald-600">
+                      {team.targetType === 'PLACEMENTS'
+                        ? `${team.totalPlacements || 0} Placements`
+                        : CalculationService.formatCurrency(team.totalRevenue)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Leads</span>
@@ -209,17 +216,6 @@ const AdminTeamManagement = () => {
                     <option value="red">Red</option>
                     <option value="teal">Teal</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Yearly Target ($)</label>
-                  <input
-                    type="number"
-                    value={formData.yearlyTarget}
-                    onChange={(e) => setFormData({ ...formData, yearlyTarget: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. 1000000"
-                  />
                 </div>
 
                 <div className="flex justify-end gap-3 mt-6">

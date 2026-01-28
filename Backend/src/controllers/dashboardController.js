@@ -64,11 +64,7 @@ export async function getSuperAdminOverview(currentUser) {
     where: whereClause,
     include: {
       employees: {
-        where: { 
-          user: {
-            isActive: true
-          }
-        },
+        where: { isActive: true },
         include: {
           user: true,
           manager: true,
@@ -80,23 +76,36 @@ export async function getSuperAdminOverview(currentUser) {
 
   const employeesWithRevenue = await prisma.user.findMany({
     where: {
-      role: Role.EMPLOYEE,
+      role: { in: [Role.EMPLOYEE, Role.TEAM_LEAD, Role.LIMITED_ACCESS] },
       isActive: true,
     },
     include: {
       employeeProfile: true,
-      placements: true,
+      placements: {
+        select: {
+          revenue: true,
+        },
+      },
     },
   });
 
   const revenueByEmployee = new Map();
+  const placementsByEmployee = new Map();
+  
   for (const emp of employeesWithRevenue) {
     if (emp.employeeProfile) {
-      const total = emp.placements.reduce(
+      const totalRev = emp.placements.reduce(
         (sum, p) => sum + Number(p.revenue || 0),
         0
       );
-      revenueByEmployee.set(emp.employeeProfile.id, total); // Note: Map key should be employeeProfile.id as used in team mapping
+      // Count placements (assuming each entry in placements array is one placement)
+      // Filter out cancelled? The query doesn't filter status.
+      // Assuming all fetched placements count, or maybe filter by qualified?
+      // For now, count all.
+      const totalCount = emp.placements.length; 
+
+      revenueByEmployee.set(emp.employeeProfile.id, totalRev);
+      placementsByEmployee.set(emp.employeeProfile.id, totalCount);
     }
   }
 
@@ -132,22 +141,48 @@ export async function getSuperAdminOverview(currentUser) {
         const directReports = employeesByManager.get(managerId) || [];
         return directReports.map(report => {
             const children = buildHierarchy(report.id);
-            const target = Number(report.yearlyTarget || 0);
+            
+            let target = Number(report.yearlyTarget || 0);
+            const targetType = report.targetType || "REVENUE";
+
+            // If user has subordinates, their target is the sum of subordinates' targets + their own target
+            // ONLY if types match. If types mismatch, we can't sum.
+            if (children.length > 0) {
+               // Filter children with same target type
+               const matchingChildren = children.filter(c => c.targetType === targetType);
+               if (matchingChildren.length > 0) {
+                   target += matchingChildren.reduce((sum, child) => sum + child.target, 0);
+               }
+            }
             
             const ownRevenue = revenueByEmployee.get(report.id) || 0;
-            const childrenTotalRevenue = children.reduce((sum, child) => sum + (child.totalRevenue || 0), 0);
-            const totalRevenue = ownRevenue + childrenTotalRevenue;
+            const ownPlacements = placementsByEmployee.get(report.id) || 0;
 
-            const pct = target > 0 ? Math.round((totalRevenue / target) * 100) : 0;
+            const childrenTotalRevenue = children.reduce((sum, child) => sum + (child.totalRevenue || 0), 0);
+            const childrenTotalPlacements = children.reduce((sum, child) => sum + (child.totalPlacements || 0), 0);
+
+            const totalRevenue = ownRevenue + childrenTotalRevenue;
+            const totalPlacements = ownPlacements + childrenTotalPlacements;
+
+            // Calculate percentage based on target type
+            let pct = 0;
+            if (targetType === "PLACEMENTS") {
+                 pct = target > 0 ? Math.round((totalPlacements / target) * 100) : 0;
+            } else {
+                 pct = target > 0 ? Math.round((totalRevenue / target) * 100) : 0;
+            }
             
             return {
                 id: report.id,
                 name: report.user.name,
                 level: report.level || "L4",
                 target: target,
+                targetType: targetType,
                 targetAchieved: pct,
                 revenue: ownRevenue,
                 totalRevenue: totalRevenue,
+                placements: ownPlacements,
+                totalPlacements: totalPlacements,
                 members: children // Recursive nesting
             };
         });
@@ -160,42 +195,68 @@ export async function getSuperAdminOverview(currentUser) {
     const teamLeads = leads.map((lead) => {
       const hierarchyMembers = buildHierarchy(lead.id); // For UI display
 
-      const leadTarget = lead.yearlyTarget;
-      
       // Calculate total revenue for the lead (Own + Descendants)
-      // We can use the hierarchyMembers to sum up, but we need to include the lead's own revenue too.
-      // The hierarchyMembers array contains direct reports (L3/L4). Each of them has 'totalRevenue'.
       const ownRevenue = revenueByEmployee.get(lead.id) || 0;
-      const descendantsRevenue = hierarchyMembers.reduce((sum, m) => sum + (m.totalRevenue || 0), 0);
-      const leadTotalRevenue = ownRevenue + descendantsRevenue;
+      const ownPlacements = placementsByEmployee.get(lead.id) || 0;
 
-      const leadPercentage =
-        leadTarget && Number(leadTarget) > 0
-          ? Math.round((leadTotalRevenue / Number(leadTarget)) * 100)
-          : 0;
+      const descendantsRevenue = hierarchyMembers.reduce((sum, m) => sum + (m.totalRevenue || 0), 0);
+      const descendantsPlacements = hierarchyMembers.reduce((sum, m) => sum + (m.totalPlacements || 0), 0);
+
+      const leadTotalRevenue = ownRevenue + descendantsRevenue;
+      const leadTotalPlacements = ownPlacements + descendantsPlacements;
+
+      // Calculate Lead Target from hierarchy (Sum of direct reports' targets) + own target
+      // If no reports, fallback to own target
+      let leadTarget = Number(lead.yearlyTarget || 0);
+      const leadTargetType = lead.targetType || "REVENUE";
+      
+      if (hierarchyMembers.length > 0) {
+         const matchingMembers = hierarchyMembers.filter(m => m.targetType === leadTargetType);
+         if (matchingMembers.length > 0) {
+             leadTarget += matchingMembers.reduce((sum, m) => sum + m.target, 0);
+         }
+      }
+
+      let leadPercentage = 0;
+      if (leadTargetType === "PLACEMENTS") {
+          leadPercentage = leadTarget > 0 ? Math.round((leadTotalPlacements / leadTarget) * 100) : 0;
+      } else {
+          leadPercentage = leadTarget > 0 ? Math.round((leadTotalRevenue / leadTarget) * 100) : 0;
+      }
 
       return {
         id: lead.id,
         name: lead.user.name,
         level: lead.level || "L2",
-        target: Number(leadTarget || 0),
+        target: leadTarget,
+        targetType: leadTargetType,
         targetAchieved: leadPercentage,
         revenue: ownRevenue,
         totalRevenue: leadTotalRevenue,
+        placements: ownPlacements,
+        totalPlacements: leadTotalPlacements,
         members: hierarchyMembers, // Now nested
       };
     });
 
-    const teamTarget = teamLeads.reduce(
-      (sum, l) => sum + toCurrency(l.target),
+    const teamTarget = team.employees.reduce(
+      (sum, emp) => sum + Number(emp.yearlyTarget || 0),
       0
     );
-    const teamRevenue = teamLeads.reduce(
-      (sum, l) => sum + l.totalRevenue,
-      0
-    );
+
+    // Determine if team is placement based (if any member has PLACEMENTS)
+    const isPlacementTeam = team.employees.some(m => m.targetType === 'PLACEMENTS');
+
+    const teamAchievedValue = team.employees.reduce((sum, emp) => {
+        if (isPlacementTeam) {
+             return sum + (placementsByEmployee.get(emp.id) || 0);
+        } else {
+             return sum + (revenueByEmployee.get(emp.id) || 0);
+        }
+    }, 0);
+
     const teamPercentage =
-      teamTarget > 0 ? Math.round((teamRevenue / teamTarget) * 100) : 0;
+      teamTarget > 0 ? Math.round((teamAchievedValue / teamTarget) * 100) : 0;
 
     return {
       id: team.id,
@@ -203,7 +264,8 @@ export async function getSuperAdminOverview(currentUser) {
       color: team.color || "blue",
       teamTarget,
       targetAchieved: teamPercentage,
-      totalRevenue: teamRevenue, // Add this for frontend
+      totalRevenue: teamAchievedValue, // Contains revenue OR placements count depending on type
+      isPlacementTeam, // Flag for frontend
       teamLeads,
     };
   });
@@ -280,6 +342,7 @@ export async function getTeamLeadOverview(currentUser) {
 
   const employeesByManager = new Map();
   const revenueByEmployee = new Map();
+  const placementsByEmployee = new Map();
 
   allTeamMembers.forEach((emp) => {
     // Build Manager Map
@@ -291,11 +354,14 @@ export async function getTeamLeadOverview(currentUser) {
     }
 
     // Build Revenue Map
-    const total = (emp.placements || []).reduce(
+    const totalRev = (emp.placements || []).reduce(
         (sum, p) => sum + Number(p.revenue || 0),
         0
     );
-    revenueByEmployee.set(emp.id, total);
+    const totalCount = (emp.placements || []).length;
+
+    revenueByEmployee.set(emp.id, totalRev);
+    placementsByEmployee.set(emp.id, totalCount);
   });
 
   // Recursive hierarchy builder (Same as in Super Admin)
@@ -303,22 +369,45 @@ export async function getTeamLeadOverview(currentUser) {
     const directReports = employeesByManager.get(managerId) || [];
     return directReports.map(report => {
         const children = buildHierarchy(report.id);
-        const target = Number(report.employeeProfile?.yearlyTarget || 0);
+        
+        let target = Number(report.employeeProfile?.yearlyTarget || 0);
+        const targetType = report.employeeProfile?.targetType || "REVENUE";
+
+        // If user has subordinates, their target is the sum of subordinates' targets
+        if (children.length > 0) {
+            const matchingChildren = children.filter(c => c.targetType === targetType);
+            if (matchingChildren.length > 0) {
+                target = matchingChildren.reduce((sum, child) => sum + child.target, 0);
+            }
+        }
         
         const ownRevenue = revenueByEmployee.get(report.id) || 0;
-        const childrenTotalRevenue = children.reduce((sum, child) => sum + (child.totalRevenue || 0), 0);
-        const totalRevenue = ownRevenue + childrenTotalRevenue;
+        const ownPlacements = placementsByEmployee.get(report.id) || 0;
 
-        const pct = target > 0 ? Math.round((totalRevenue / target) * 100) : 0;
+        const childrenTotalRevenue = children.reduce((sum, child) => sum + (child.totalRevenue || 0), 0);
+        const childrenTotalPlacements = children.reduce((sum, child) => sum + (child.totalPlacements || 0), 0);
+
+        const totalRevenue = ownRevenue + childrenTotalRevenue;
+        const totalPlacements = ownPlacements + childrenTotalPlacements;
+
+        let pct = 0;
+        if (targetType === "PLACEMENTS") {
+            pct = target > 0 ? Math.round((totalPlacements / target) * 100) : 0;
+        } else {
+            pct = target > 0 ? Math.round((totalRevenue / target) * 100) : 0;
+        }
         
         return {
             id: report.id,
             name: report.name,
             level: report.employeeProfile?.level || "L4",
             target: target,
+            targetType: targetType,
             targetAchieved: pct,
             revenue: ownRevenue,
             totalRevenue: totalRevenue,
+            placements: ownPlacements,
+            totalPlacements: totalPlacements,
             members: children // Recursive nesting
         };
     });
@@ -328,27 +417,49 @@ export async function getTeamLeadOverview(currentUser) {
 
   // Calculate Lead Stats
   const ownRevenue = revenueByEmployee.get(userId) || 0;
+  const ownPlacements = placementsByEmployee.get(userId) || 0;
+
   const descendantsRevenue = members.reduce((sum, m) => sum + (m.totalRevenue || 0), 0);
+  const descendantsPlacements = members.reduce((sum, m) => sum + (m.totalPlacements || 0), 0);
+
   const leadTotalRevenue = ownRevenue + descendantsRevenue;
+  const leadTotalPlacements = ownPlacements + descendantsPlacements;
 
-  const leadTarget = Number(leadProfile.yearlyTarget || 0);
-  const leadPct = leadTarget > 0 ? Math.round((leadTotalRevenue / leadTarget) * 100) : 0;
+  let leadTarget = Number(leadProfile.yearlyTarget || 0);
+  const leadTargetType = leadProfile.targetType || "REVENUE";
 
+  if (members.length > 0) {
+      const matchingMembers = members.filter(m => m.targetType === leadTargetType);
+      if (matchingMembers.length > 0) {
+        leadTarget = matchingMembers.reduce((sum, m) => sum + m.target, 0);
+      }
+  }
+
+  let leadPct = 0;
+  if (leadTargetType === "PLACEMENTS") {
+      leadPct = leadTarget > 0 ? Math.round((leadTotalPlacements / leadTarget) * 100) : 0;
+  } else {
+      leadPct = leadTarget > 0 ? Math.round((leadTotalRevenue / leadTarget) * 100) : 0;
+  }
+  
   return {
     team: {
       id: leadProfile.team.id,
       name: leadProfile.team.name,
       color: leadProfile.team.color || "blue",
-      teamTarget: Number(leadProfile.team.yearlyTarget || 0),
+      teamTarget: leadTarget, // Use calculated lead target as team target for L2 view
     },
     lead: {
       id: leadProfile.id,
       name: leadProfile.user.name,
       level: leadProfile.level || "L2",
       target: leadTarget,
+      targetType: leadTargetType,
       targetAchieved: leadPct,
       revenue: ownRevenue,
       totalRevenue: leadTotalRevenue,
+      placements: ownPlacements,
+      totalPlacements: leadTotalPlacements,
     },
     members, // Hierarchical
   };

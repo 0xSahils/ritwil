@@ -15,6 +15,11 @@ enum Role {
   EMPLOYEE
 }
 
+enum TargetType {
+  REVENUE
+  PLACEMENTS
+}
+
 enum PlacementType {
   PERMANENT
   CONTRACT
@@ -98,8 +103,10 @@ model EmployeeProfile {
   manager      User?   @relation("LeadEmployees", fields: [managerId], references: [id])
   level        String?
   vbid         String?
-  yearlyTarget Decimal @db.Decimal(14, 2)
-  isActive     Boolean @default(true)
+  yearlyTarget  Decimal        @db.Decimal(14, 2)
+  slabQualified String?
+  targetType    TargetType     @default(REVENUE)
+  isActive      Boolean        @default(true)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -137,7 +144,7 @@ model Placement {
   clientId           String?
   jpcId              String?
   clientName         String
-  doi                DateTime
+  doi                DateTime?
   doj                DateTime
   daysCompleted      Int
   placementType      PlacementType

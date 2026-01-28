@@ -384,6 +384,7 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         candidateName,
         clientName,
         candidateId,
+        clientId,
         jpcId,
         doi,
         doj,
@@ -395,6 +396,10 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         incentivePayoutEta,
         incentiveAmountInr,
         incentivePaid,
+        yearlyTarget,
+        targetType,
+        slabQualified,
+        daysCompleted: providedDaysCompleted,
       } = data;
 
       let employeeId = providedEmployeeId;
@@ -450,16 +455,6 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
 
         if (user) {
           employeeId = user.id;
-          
-          // Update VBID if missing/different
-          if (vbid) {
-               const profile = await prisma.employeeProfile.findUnique({ where: { id: user.id } });
-               if (!profile) {
-                   await prisma.employeeProfile.create({ data: { id: user.id, vbid: String(vbid).trim() } });
-               } else if (!profile.vbid) {
-                   await prisma.employeeProfile.update({ where: { id: user.id }, data: { vbid: String(vbid).trim() } });
-               }
-          }
         } else {
            errors.push({ data, error: `Recruiter not found: "${recruiterName}"` });
            continue;
@@ -471,6 +466,62 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         continue;
       }
 
+      // Update Profile Information if provided (runs for both new and existing users)
+      {
+          const updateData = {};
+          
+          if (vbid) {
+            updateData.vbid = String(vbid).trim();
+          }
+
+          if (yearlyTarget !== undefined && yearlyTarget !== null && yearlyTarget !== "") {
+            const targetVal = Number(yearlyTarget);
+            if (!isNaN(targetVal)) {
+              updateData.yearlyTarget = targetVal;
+            }
+          }
+
+          if (targetType) {
+             const t = String(targetType).toUpperCase();
+             if (t === "REVENUE" || t === "PLACEMENTS") {
+                 updateData.targetType = t;
+             }
+          }
+
+          if (slabQualified !== undefined && slabQualified !== null && slabQualified !== "") {
+            updateData.slabQualified = String(slabQualified);
+          }
+
+          // Apply updates if any
+          if (Object.keys(updateData).length > 0) {
+            const profile = await prisma.employeeProfile.findUnique({ where: { id: employeeId } });
+            
+            if (!profile) {
+              // Create new profile
+              await prisma.employeeProfile.create({ 
+                data: { 
+                  id: employeeId, 
+                  ...updateData,
+                  yearlyTarget: updateData.yearlyTarget || 0 
+                } 
+              });
+            } else {
+              const finalUpdates = {};
+              if (updateData.vbid && !profile.vbid) finalUpdates.vbid = updateData.vbid; // Only set if missing
+              if (updateData.yearlyTarget !== undefined) finalUpdates.yearlyTarget = updateData.yearlyTarget; // Always update target
+              if (updateData.targetType !== undefined) finalUpdates.targetType = updateData.targetType; // Always update target type
+              if (updateData.slabQualified !== undefined) finalUpdates.slabQualified = updateData.slabQualified; // Always update slab
+
+              if (Object.keys(finalUpdates).length > 0) {
+                await prisma.employeeProfile.update({ 
+                  where: { id: employeeId }, 
+                  data: finalUpdates 
+                });
+              }
+            }
+          }
+      }
+
       // Campaign segregation check
       if (validEmployeeIds && !validEmployeeIds.has(employeeId)) {
          errors.push({ data, error: "Employee does not belong to the specified campaign" });
@@ -479,17 +530,46 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
 
       // Validate Dates
       const validDoj = doj ? new Date(doj) : new Date(); // Default to now if missing
-      const validDoi = doi ? new Date(doi) : validDoj;   // Default to DOJ if missing
+      
+      // DOQ (DOI) Logic: Handle "NA" or missing by setting to null (since schema now allows DateTime?)
+      let validDoi = null;
+      if (doi && String(doi).toLowerCase() !== 'na' && String(doi).trim() !== '') {
+         const d = new Date(doi);
+         if (!isNaN(d.getTime())) validDoi = d;
+      }
+      // If NA or empty or invalid, validDoi remains null.
 
-      if (isNaN(validDoj.getTime()) || isNaN(validDoi.getTime())) {
-        errors.push({ data, error: "Invalid Date format for DOJ or DOI" });
+      if (isNaN(validDoj.getTime())) {
+        errors.push({ data, error: "Invalid Date format for DOJ" });
         continue;
       }
 
-      const daysCompleted = calculateDaysCompleted(validDoj, billingStatus);
+      // Days Completed Logic: Use Excel value if present (and not "NA"), else calculate
+      let daysCompleted;
+      if (providedDaysCompleted !== undefined && providedDaysCompleted !== null && String(providedDaysCompleted).toLowerCase() !== 'na' && String(providedDaysCompleted).trim() !== '') {
+          daysCompleted = Number(providedDaysCompleted);
+          if (isNaN(daysCompleted)) {
+              daysCompleted = calculateDaysCompleted(validDoj, billingStatus);
+          }
+      } else {
+          daysCompleted = calculateDaysCompleted(validDoj, billingStatus);
+      }
+
       const qualifier = checkQualifier(daysCompleted);
       const normalizedBillingStatus = mapBillingStatus(billingStatus);
       const normalizedPlacementType = mapPlacementType(placementType);
+
+      // Billed Hours Logic: Handle "NA" -> null
+      let normalizedBilledHours = null;
+      if (billedHours !== undefined && billedHours !== null && String(billedHours).toLowerCase() !== 'na' && String(billedHours).trim() !== '') {
+          const bh = Number(billedHours);
+          if (!isNaN(bh)) normalizedBilledHours = bh;
+      }
+
+      const normalizedCandidateId = candidateId || null;
+      const normalizedClientId = clientId || null;
+      const normalizedJpcId = jpcId || null;
+      const normalizedIncentivePaid = String(incentivePaid).toLowerCase() === 'true';
 
       // SMART UPLOAD: Check for duplicate
       const existingPlacement = await prisma.placement.findFirst({
@@ -510,9 +590,11 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
               (Math.abs((Number(existingPlacement.incentiveAmountInr) || 0) - (Number(incentiveAmountInr) || 0)) > 0.01) ||
               (existingPlacement.incentivePaid !== (String(incentivePaid).toLowerCase() === 'true')) ||
               (existingPlacement.candidateId !== candidateId) ||
-              (existingPlacement.jpcId !== jpcId) ||
+              (existingPlacement.clientId !== normalizedClientId) ||
+              (existingPlacement.jpcId !== normalizedJpcId) ||
+              ((existingPlacement.doi ? existingPlacement.doi.getTime() : null) !== (validDoi ? validDoi.getTime() : null)) ||
               (existingPlacement.doj.getTime() !== validDoj.getTime()) ||
-              (existingPlacement.billedHours !== (billedHours ? Number(billedHours) : null));
+              (existingPlacement.billedHours !== normalizedBilledHours);
 
          if (!isDifferent) {
              unchangedPlacements.push(existingPlacement);
@@ -524,12 +606,13 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
           where: { id: existingPlacement.id },
           data: {
             candidateId,
-            jpcId,
+            clientId: normalizedClientId,
+            jpcId: normalizedJpcId,
             doi: validDoi,
             doj: validDoj,
             daysCompleted,
             placementType: normalizedPlacementType,
-            billedHours: billedHours ? Number(billedHours) : null,
+            billedHours: normalizedBilledHours,
             marginPercent: parseCurrency(marginPercent),
             revenue: parseCurrency(revenue),
             billingStatus: normalizedBillingStatus,
@@ -545,12 +628,15 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
           data: {
             employee: { connect: { id: employeeId } },
             candidateName: candidateName || "Unknown Candidate",
+            candidateId,
             clientName: clientName || "Unknown Client",
+            clientId: normalizedClientId,
+            jpcId: normalizedJpcId,
             doi: validDoi,
             doj: validDoj,
             daysCompleted,
             placementType: normalizedPlacementType,
-            billedHours: billedHours ? Number(billedHours) : null,
+            billedHours: normalizedBilledHours,
             marginPercent: parseCurrency(marginPercent),
             revenue: parseCurrency(revenue),
             billingStatus: normalizedBillingStatus,

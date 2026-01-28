@@ -440,7 +440,10 @@ const HierarchyTab = ({ user }) => {
                                     admin.teams.map((team, index) => {
                                         const colors = getTeamColorClasses(team.color || 'blue');
                                         const calculatedTeamTarget = team.teamLeads?.reduce((sum, lead) => sum + Number(lead.target || 0), 0) || 0;
-                                        const formattedTeamTarget = CalculationService.formatCurrency(calculatedTeamTarget);
+                                        const isPlacementTeam = team.isPlacementTeam || (team.teamLeads?.length > 0 && team.teamLeads[0].targetType === 'PLACEMENTS');
+                                        const formattedTeamTarget = isPlacementTeam 
+                                            ? calculatedTeamTarget 
+                                            : CalculationService.formatCurrency(calculatedTeamTarget);
                                         
                                         return (
                                             <div key={team.id} className={`border-l-2 ${colors.border} pl-4 md:pl-6 transition-all duration-200`}>
@@ -481,9 +484,12 @@ const HierarchyTab = ({ user }) => {
                                                                     <div className="flex items-center gap-2">
                                                                         <span className="text-xs text-slate-600 font-medium">Achieved:</span>
                                                                         <span className="text-xs font-semibold text-green-600">
-                                                                            {CalculationService.formatCurrency(
-                                                                                CalculationService.calculateAchievedValue(calculatedTeamTarget, team.targetAchieved)
-                                                                            )}
+                                                                            {isPlacementTeam 
+                                                                                ? CalculationService.calculateAchievedValue(calculatedTeamTarget, team.targetAchieved)
+                                                                                : CalculationService.formatCurrency(
+                                                                                    CalculationService.calculateAchievedValue(calculatedTeamTarget, team.targetAchieved)
+                                                                                )
+                                                                            }
                                                                         </span>
                                                                     </div>
                                                                 </div>

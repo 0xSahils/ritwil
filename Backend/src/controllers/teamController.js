@@ -67,12 +67,13 @@ export async function listTeamsWithMembers(currentUser) {
     );
 
     // Calculate aggregated stats
-    const aggregatedTarget = leads.reduce(
-      (sum, lead) => sum + Number(lead.yearlyTarget || 0),
+    // Update: Aggregated Target should be sum of ALL team members (L4 + L3 + L2) targets
+    const aggregatedTarget = team.employees.reduce(
+      (sum, member) => sum + Number(member.yearlyTarget || 0),
       0
     );
 
-    const aggregatedRevenue = members.reduce((total, member) => {
+    const aggregatedRevenue = team.employees.reduce((total, member) => {
       const memberRevenue = member.user.placements.reduce(
         (sum, entry) => sum + Number(entry.revenue || 0),
         0
@@ -80,24 +81,37 @@ export async function listTeamsWithMembers(currentUser) {
       return total + memberRevenue;
     }, 0);
 
+    const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
+      return total + (member.user.placements?.length || 0);
+    }, 0);
+
+    // Determine team target type from members (default to REVENUE)
+    // If any member has PLACEMENTS, the team is likely PLACEMENTS
+    const targetType = team.employees.some(m => m.targetType === 'PLACEMENTS') ? 'PLACEMENTS' : 'REVENUE';
+
     return {
       id: team.id,
       name: team.name,
       color: team.color,
       yearlyTarget: aggregatedTarget, // Use aggregated target from leads
+      targetType,
       totalRevenue: aggregatedRevenue, // Add calculated revenue
+      totalPlacements: aggregatedPlacementsCount,
       leads: leads.map((p) => ({
         id: p.id,
         userId: p.user.id,
         name: p.user.name,
         level: p.level,
         target: Number(p.yearlyTarget || 0),
+        targetType: p.targetType,
       })),
       members: members.map((p) => ({
         id: p.id,
         userId: p.user.id,
         name: p.user.name,
         level: p.level,
+        target: Number(p.yearlyTarget || 0),
+        targetType: p.targetType,
         revenue: p.user.placements.reduce(
           (sum, e) => sum + Number(e.revenue || 0),
           0
@@ -139,6 +153,60 @@ export async function createTeam(payload, actorId) {
         color: team.color,
         yearlyTarget: team.yearlyTarget,
       },
+    },
+  });
+
+  return team;
+}
+
+export async function updateTeam(id, payload, actorId) {
+  const { name, color, yearlyTarget, targetType } = payload;
+  const data = {};
+  if (name !== undefined) data.name = name;
+  if (color !== undefined) data.color = color;
+  if (yearlyTarget !== undefined) data.yearlyTarget = yearlyTarget;
+
+  const team = await prisma.team.update({
+    where: { id },
+    data,
+  });
+
+  // Handle Target Type Propagation
+  if (targetType) {
+    // 1. Fetch all members
+    const members = await prisma.employeeProfile.findMany({
+      where: { teamId: id }
+    });
+
+    // 2. Update each member
+    await Promise.all(members.map(async (member) => {
+      let newTarget = member.yearlyTarget;
+
+      // Logic: If switching to PLACEMENTS, ensure target is reasonable (default to 10 if 0 or high revenue number)
+      if (targetType === 'PLACEMENTS') {
+        const currentTarget = Number(member.yearlyTarget || 0);
+        if (currentTarget === 0 || currentTarget > 500) {
+           newTarget = 10;
+        }
+      }
+
+      await prisma.employeeProfile.update({
+        where: { id: member.id },
+        data: {
+          targetType: targetType,
+          yearlyTarget: newTarget
+        }
+      });
+    }));
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: "TEAM_UPDATED",
+      entityType: "Team",
+      entityId: id,
+      changes: { name, color, yearlyTarget, targetType },
     },
   });
 
@@ -256,12 +324,12 @@ export async function getTeamDetails(id) {
     (p) => p.user.role === Role.EMPLOYEE
   );
 
-  const aggregatedTarget = leads.reduce(
-    (sum, lead) => sum + Number(lead.yearlyTarget || 0),
+  const aggregatedTarget = team.employees.reduce(
+    (sum, member) => sum + Number(member.yearlyTarget || 0),
     0
   );
 
-  const aggregatedRevenue = members.reduce((total, member) => {
+  const aggregatedRevenue = team.employees.reduce((total, member) => {
     const memberRevenue = member.user.placements.reduce(
       (sum, entry) => sum + Number(entry.revenue || 0),
       0
@@ -269,12 +337,21 @@ export async function getTeamDetails(id) {
     return total + memberRevenue;
   }, 0);
 
+  const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
+    return total + (member.user.placements?.length || 0);
+  }, 0);
+
+  // Determine team target type from members (default to REVENUE)
+  const targetType = team.employees.some(m => m.targetType === 'PLACEMENTS') ? 'PLACEMENTS' : 'REVENUE';
+
   return {
     id: team.id,
     name: team.name,
     color: team.color,
     yearlyTarget: aggregatedTarget,
+    targetType,
     totalRevenue: aggregatedRevenue,
+    totalPlacements: aggregatedPlacementsCount,
     leads: leads.map((p) => ({
       id: p.id,
       userId: p.user.id,
@@ -283,10 +360,13 @@ export async function getTeamDetails(id) {
       role: p.user.role,
       level: p.level,
       target: Number(p.yearlyTarget || 0),
+      targetType: p.targetType,
+      slabQualified: p.slabQualified,
       revenue: p.user.placements.reduce(
         (sum, e) => sum + Number(e.revenue || 0),
         0
       ),
+      placementsCount: p.user.placements.length,
       joinedAt: p.createdAt,
     })),
     members: members.map((p) => ({
@@ -297,12 +377,15 @@ export async function getTeamDetails(id) {
       role: p.user.role,
       level: p.level,
       target: Number(p.yearlyTarget || 0),
+      targetType: p.targetType,
+      slabQualified: p.slabQualified,
       managerName: p.manager?.name || null,
       managerId: p.managerId,
       revenue: p.user.placements.reduce(
         (sum, e) => sum + Number(e.revenue || 0),
         0
       ),
+      placementsCount: p.user.placements.length,
       joinedAt: p.createdAt,
     })),
   };
@@ -343,12 +426,18 @@ export async function removeMemberFromTeam(teamId, userId, actorId) {
   });
 }
 
-export async function updateMemberTarget(userId, target, actorId) {
+export async function updateMemberTarget(userId, target, targetType, actorId) {
+  const dataToUpdate = {
+    yearlyTarget: target,
+  };
+  
+  if (targetType) {
+    dataToUpdate.targetType = targetType;
+  }
+
   const profile = await prisma.employeeProfile.update({
     where: { id: userId },
-    data: {
-      yearlyTarget: target,
-    },
+    data: dataToUpdate,
     include: { user: true }
   });
 
@@ -360,6 +449,7 @@ export async function updateMemberTarget(userId, target, actorId) {
       entityId: userId,
       changes: {
         yearlyTarget: target,
+        targetType: targetType
       },
     },
   });
@@ -367,13 +457,81 @@ export async function updateMemberTarget(userId, target, actorId) {
   return profile;
 }
 
-export async function updateMemberManager(userId, managerId, actorId) {
-    // Verify manager is in the same team or allowed?
-    // For simplicity, just update.
-    await prisma.employeeProfile.update({
-        where: { id: userId },
-        data: { managerId }
-    });
+export async function importTeamTargets(teamId, targets, actorId) {
+  const results = {
+    updated: 0,
+    failed: 0,
+    errors: []
+  };
+
+  // 1. Fetch all team members to match names efficiently
+  const teamMembers = await prisma.user.findMany({
+    where: {
+      employeeProfile: {
+        teamId: teamId
+      }
+    },
+    include: {
+      employeeProfile: true
+    }
+  });
+
+  // Create a map of normalized name -> user
+  const memberMap = new Map();
+  teamMembers.forEach(m => {
+    memberMap.set(m.name.trim().toLowerCase(), m);
+  });
+
+  for (const row of targets) {
+    try {
+      if (!row.name) continue;
+
+      const normalizedName = row.name.trim().toLowerCase();
+      const user = memberMap.get(normalizedName);
+
+      if (!user) {
+        results.failed++;
+        results.errors.push(`User not found: ${row.name}`);
+        continue;
+      }
+
+      // Determine target and type
+      // Default type to PLACEMENTS if not specified, or respect row input
+      // Default target to 10 if missing/invalid
+      let targetVal = Number(row.target);
+      if (isNaN(targetVal)) targetVal = 10; // Default logic per requirements
+
+      const targetType = row.type || "PLACEMENTS";
+
+      await prisma.employeeProfile.update({
+        where: { id: user.id },
+        data: {
+          yearlyTarget: targetVal,
+          targetType: targetType
+        }
+      });
+
+      results.updated++;
+    } catch (err) {
+      results.failed++;
+      results.errors.push(`Error updating ${row.name}: ${err.message}`);
+    }
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorId,
+      action: "BULK_TARGET_IMPORT",
+      entityType: "Team",
+      entityId: teamId,
+      changes: {
+        updatedCount: results.updated,
+        failedCount: results.failed
+      },
+    },
+  });
+
+  return results;
 }
 
 export async function assignTeamLead(teamId, userId, actorId) {

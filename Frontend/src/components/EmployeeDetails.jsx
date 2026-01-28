@@ -32,7 +32,7 @@ const EmployeeDetails = () => {
     navigate(`/employee/${params.id}/edit`);
   };
 
-  const isVantedgeTeam = employeeData?.teamName === 'Vantedge'
+  const isRevenueTarget = employeeData?.targetType === 'REVENUE'
   const showMargin = user?.role === 'S1_ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'TEAM_LEAD';
 
   const handleBack = () => {
@@ -277,7 +277,7 @@ const EmployeeDetails = () => {
           clientId: p.clientId || '',
           jpcId: p.jpcId || '',
           doj: p.doj?.slice(0, 10),
-          doq: p.doi?.slice(0, 10) || '-',
+          doq: p.doi?.slice(0, 10) || 'NA',
           daysCompleted: (p.daysCompleted !== undefined && p.daysCompleted !== null) ? String(p.daysCompleted) : '',
           client: p.clientName || p.client, // Fallback if clientName used
           placementType: p.placementType === 'PERMANENT' ? 'FTE' : 'Contract',
@@ -299,23 +299,36 @@ const EmployeeDetails = () => {
         const incentiveUsd = data.incentive ? Number(data.incentive.amountUsd || 0) : 0
         const incentiveInr = data.incentive ? Number(data.incentive.amountInr || 0) : 0
 
+        // Calculate total Incentive INR from placements (as user requested to sum from placements)
+        const totalPlacementIncentiveInr = placements.reduce((sum, p) => {
+           // Parse "₹1,234" or similar string back to number
+           const valStr = p.incentiveAmountINR ? String(p.incentiveAmountINR).replace(/[^0-9.-]+/g,"") : "0";
+           return sum + (Number(valStr) || 0);
+        }, 0);
+
+        // Calculate Incentive USD by dividing Total INR by 80
+        const calculatedIncentiveUsd = totalPlacementIncentiveInr / 80;
+
         const mapped = {
           id: data.id,
           loginVBCode: data.vbid || 'VB' + String(data.id).slice(-3),
           recruiterName: data.name || 'Employee Name',
           teamLead: data.teamLead || 'Team Lead Name',
           teamName: data.team || 'Team Name',
+          level: data.level,
+          targetType: data.targetType || 'REVENUE',
           individualSynopsis: 'Active Recruiter',
-          yearlyTarget: CalculationService.formatCurrency(yearlyTarget),
+          yearlyTarget: data.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
           targetAchieved: CalculationService.formatPercentage(percentage),
-          targetPlacements: String(placements.length || 0),
-          placementsAchieved: String(placements.filter((p) => p.placementQualifier === 'Yes').length),
+          targetPlacements: String(yearlyTarget),
+          placementsAchieved: String(data.placementsCount || placements.length),
           revenueGenerated: CalculationService.formatCurrency(revenueGenerated),
           revenueGeneratedPercentage: CalculationService.formatPercentage(percentage),
-          totalRevenue: CalculationService.formatCurrency(yearlyTarget),
-          slabQualified: data.incentive?.slabName || 'Slab1',
-          incentiveUSD: CalculationService.formatCurrency(incentiveUsd),
-          incentiveINR: CalculationService.formatCurrency(incentiveInr, 'INR'),
+          totalRevenue: data.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
+          slabQualified: data.slabQualified || (data.incentive?.slabName || null),
+          // Use calculated values for display
+          incentiveUSD: CalculationService.formatCurrency(calculatedIncentiveUsd),
+          incentiveINR: CalculationService.formatCurrency(totalPlacementIncentiveInr, 'INR'),
           placements,
         }
 
@@ -440,10 +453,10 @@ const EmployeeDetails = () => {
               )}
               
               <div className="flex flex-col sm:flex-row gap-3">
-              {isVantedgeTeam ? (
+              {isRevenueTarget ? (
                 <>
                   <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Total Revenue</div>
+                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Target Revenue</div>
                     <div className="text-xl font-bold text-white leading-tight group-hover/item:text-yellow-200 transition-colors">{employeeData.totalRevenue}</div>
                   </div>
                   <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
@@ -468,7 +481,7 @@ const EmployeeDetails = () => {
                   <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
                     <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Percentage</div>
                     <div className="text-xl font-bold text-blue-200 leading-tight group-hover/item:text-blue-100 transition-colors">
-                      {Math.round((parseInt(employeeData.placementsAchieved) / parseInt(employeeData.targetPlacements)) * 100)}%
+                      {employeeData.targetAchieved}
                     </div>
                   </div>
                 </>
@@ -540,10 +553,10 @@ const EmployeeDetails = () => {
                   </tr>
                   <tr className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      {employeeData.teamName === 'Vantedge' ? 'Yearly Target' : 'Target no of placements'}
+                      {isRevenueTarget ? 'Yearly Target' : 'Target no of placements'}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {employeeData.teamName === 'Vantedge' ? employeeData.yearlyTarget : employeeData.targetPlacements}
+                      {isRevenueTarget ? employeeData.yearlyTarget : employeeData.targetPlacements}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50 transition-colors">
@@ -562,20 +575,44 @@ const EmployeeDetails = () => {
                       </div>
                     </td>
                   </tr>
-                  <tr className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      Revenue Generated
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-blue-600">{employeeData.revenueGenerated}</td>
-                  </tr>
+                  {isRevenueTarget ? (
+                    <tr className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                        Revenue Generated
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-blue-600">{employeeData.revenueGenerated}</td>
+                    </tr>
+                  ) : (
+                    <tr className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                        Placements Achieved
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-blue-600">{employeeData.placementsAchieved}</td>
+                    </tr>
+                  )}
                   <tr className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
                       Slab qualified
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
-                        {employeeData.slabQualified}
-                      </span>
+                      {(() => {
+                        const dbSlab = employeeData.slabQualified;
+                        let slabInfo;
+
+                        if (dbSlab) {
+                             // Use the helper to determine slab from the stored percentage
+                             slabInfo = CalculationService.getSlabFromIncentivePercentage(dbSlab, employeeData.teamName, employeeData.level);
+                        } else {
+                             // Fallback to calculation based on Target Achieved %
+                             slabInfo = CalculationService.calculateSlab(employeeData.targetAchieved, employeeData.teamName, employeeData.level);
+                        }
+
+                        return (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${slabInfo.color}`}>
+                            {slabInfo.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50 transition-colors">

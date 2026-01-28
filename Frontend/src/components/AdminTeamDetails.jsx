@@ -27,6 +27,22 @@ const AdminTeamDetails = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const handleUpdateTeam = async (data) => {
+    try {
+      const response = await apiRequest(`/teams/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update team");
+      fetchTeamDetails();
+      setShowSettingsModal(false);
+      showNotification("success", "Team updated successfully");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const fetchTeamDetails = async () => {
     try {
@@ -62,11 +78,14 @@ const AdminTeamDetails = () => {
     }
   };
 
-  const handleUpdateTarget = async (userId, newTarget) => {
+  const handleUpdateTarget = async (userId, newTarget, newTargetType) => {
     try {
       const response = await apiRequest(`/teams/${id}/members/${userId}/target`, {
         method: "PATCH",
-        body: JSON.stringify({ target: Number(newTarget) }),
+        body: JSON.stringify({ 
+          target: Number(newTarget),
+          targetType: newTargetType 
+        }),
       });
       if (!response.ok) throw new Error("Failed to update target");
       fetchTeamDetails();
@@ -173,13 +192,16 @@ const AdminTeamDetails = () => {
                else if (val.includes("doj")) cols.doj = idx;
                else if (val.includes("doi")) cols.doi = idx;
                else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) cols.revenue = idx;
-              else if (val.includes("margin")) cols.marginPercent = idx;
+               else if (val.includes("target")) cols.yearlyTarget = idx;
+               else if (val.includes("slab") || val.includes("qualifier")) cols.slabQualified = idx;
+               else if (val.includes("margin")) cols.marginPercent = idx;
               else if (val.includes("billed hours") || val.includes("hours")) cols.billedHours = idx;
               else if (val.includes("billing")) cols.billingStatus = idx;
                else if (val.includes("days")) cols.daysCompleted = idx;
                else if (val.includes("incentive")) cols.incentiveAmountInr = idx; // Broader match for incentive
                else if (val.includes("paid")) cols.incentivePaid = idx;
-               else if (val.includes("type")) cols.placementType = idx; // Try to find type
+               else if (val.includes("target") && val.includes("type")) cols.targetType = idx;
+               else if (val.includes("type")) cols.placementType = idx; // Default to placement type if just "type"
              });
              console.log("Columns Mapped:", cols);
              continue;
@@ -263,10 +285,16 @@ const AdminTeamDetails = () => {
             doj: CalculationService.parseExcelDate(row[cols.doj]),
             doi: cols.doi !== undefined ? CalculationService.parseExcelDate(row[cols.doi]) : CalculationService.parseExcelDate(row[cols.doj]), 
             revenue: row[cols.revenue],
+            daysCompleted: cols.daysCompleted !== undefined ? row[cols.daysCompleted] : null,
+            billedHours: cols.billedHours !== undefined ? row[cols.billedHours] : null,
+            marginPercent: cols.marginPercent !== undefined ? row[cols.marginPercent] : null,
             billingStatus: row[cols.billingStatus],
             incentiveAmountInr: row[cols.incentiveAmountInr],
             incentivePaid: String(row[cols.incentivePaid]).toLowerCase() === 'yes',
-            placementType: cols.placementType !== undefined ? String(row[cols.placementType] || "PERMANENT").toUpperCase() : "PERMANENT", 
+            placementType: cols.placementType !== undefined ? String(row[cols.placementType] || "PERMANENT").toUpperCase() : "PERMANENT",
+            yearlyTarget: cols.yearlyTarget !== undefined ? row[cols.yearlyTarget] : null,
+            targetType: cols.targetType !== undefined ? String(row[cols.targetType]).toUpperCase() : null,
+            slabQualified: cols.slabQualified !== undefined ? row[cols.slabQualified] : null,
           });
         }
       }
@@ -344,10 +372,30 @@ const AdminTeamDetails = () => {
               <span className={`px-3 py-1 rounded-full text-sm font-medium bg-${team.color}-100 text-${team.color}-700 capitalize`}>
                 {team.color}
               </span>
+              <button 
+                onClick={() => setShowSettingsModal(true)}
+                className="ml-2 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Team Settings"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
             </div>
             <div className="flex gap-6 mt-2 text-sm text-slate-600">
-              <span>Total Target: <span className="font-semibold text-slate-900">{CalculationService.formatCurrency(team.yearlyTarget)}</span></span>
-              <span>Total Revenue: <span className="font-semibold text-emerald-600">{CalculationService.formatCurrency(team.totalRevenue)}</span></span>
+              <span>Total Target: <span className="font-semibold text-slate-900">
+                {team.targetType === "PLACEMENTS" 
+                  ? `${team.yearlyTarget} Placements` 
+                  : CalculationService.formatCurrency(team.yearlyTarget)
+                }
+              </span></span>
+              <span>Achieved: <span className="font-semibold text-emerald-600">
+                {team.targetType === "PLACEMENTS"
+                  ? `${team.totalPlacements || 0} Placements`
+                  : CalculationService.formatCurrency(team.totalRevenue)
+                }
+              </span></span>
             </div>
           </div>
         </div>
@@ -413,8 +461,9 @@ const AdminTeamDetails = () => {
                   <tr className="border-b border-slate-200 text-slate-500 text-sm">
                     <th className="pb-3 font-medium pl-4">Name</th>
                     <th className="pb-3 font-medium">Email</th>
-                    <th className="pb-3 font-medium">Target ($)</th>
-                    <th className="pb-3 font-medium">Revenue ($)</th>
+                    <th className="pb-3 font-medium">Target</th>
+                    <th className="pb-3 font-medium">Achievement</th>
+                    <th className="pb-3 font-medium">Slab Qualified</th>
                     {activeTab === "members" && <th className="pb-3 font-medium">Manager</th>}
                     <th className="pb-3 font-medium text-right pr-4">Actions</th>
                   </tr>
@@ -432,18 +481,51 @@ const AdminTeamDetails = () => {
                       </td>
                       <td className="py-4 text-slate-600">{user.email}</td>
                       <td className="py-4">
-                        <input
-                          type="number"
-                          defaultValue={user.target}
-                          onBlur={(e) => {
-                            if (Number(e.target.value) !== user.target) {
-                              handleUpdateTarget(user.userId, e.target.value);
-                            }
-                          }}
-                          className="w-32 px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded bg-transparent transition-all outline-none"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            defaultValue={user.target}
+                            onBlur={(e) => {
+                              if (Number(e.target.value) !== user.target) {
+                                handleUpdateTarget(user.userId, e.target.value, user.targetType || "REVENUE");
+                              }
+                            }}
+                            className="w-24 px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded bg-transparent transition-all outline-none"
+                          />
+                          <select
+                            defaultValue={user.targetType || "REVENUE"}
+                            onChange={(e) => {
+                              const newTargetType = e.target.value;
+                              if (newTargetType !== user.targetType) {
+                                const promptMessage = newTargetType === "PLACEMENTS" 
+                                  ? "Enter target number of placements:" 
+                                  : "Enter target revenue amount:";
+                                const newValue = window.prompt(promptMessage, "0");
+                                
+                                if (newValue !== null && !isNaN(Number(newValue))) {
+                                  handleUpdateTarget(user.userId, newValue, newTargetType);
+                                } else {
+                                  // Reset selection if cancelled or invalid
+                                  e.target.value = user.targetType || "REVENUE";
+                                }
+                              }
+                            }}
+                            className="w-28 px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded bg-transparent transition-all outline-none text-xs"
+                          >
+                            <option value="REVENUE">Revenue</option>
+                            <option value="PLACEMENTS">Placements</option>
+                          </select>
+                        </div>
                       </td>
-                      <td className="py-4 text-emerald-600 font-medium">{CalculationService.formatCurrency(user.revenue)}</td>
+                      <td className="py-4 text-emerald-600 font-medium">
+                        {user.targetType === "PLACEMENTS" 
+                          ? `${user.placementsCount || 0} Placements` 
+                          : CalculationService.formatCurrency(user.revenue)
+                        }
+                      </td>
+                      <td className="py-4 text-slate-600 font-medium">
+                        {user.slabQualified || "-"}
+                      </td>
                       {activeTab === "members" && (
                         <td className="py-4 text-slate-600">{user.managerName || "-"}</td>
                       )}
@@ -470,6 +552,96 @@ const AdminTeamDetails = () => {
           </div>
         </div>
       </div>
+
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">Team Settings</h2>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              handleUpdateTeam({
+                name: formData.get("name"),
+                color: formData.get("color"),
+                targetType: formData.get("targetType"),
+              });
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Team Name</label>
+                  <input
+                    name="name"
+                    defaultValue={team.name}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Color Theme</label>
+                  <select
+                    name="color"
+                    defaultValue={team.color}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  >
+                    <option value="blue">Blue</option>
+                    <option value="emerald">Emerald</option>
+                    <option value="violet">Violet</option>
+                    <option value="amber">Amber</option>
+                    <option value="rose">Rose</option>
+                    <option value="cyan">Cyan</option>
+                    <option value="red">Red</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Type</label>
+                  <select
+                    name="targetType"
+                    defaultValue={team.targetType || "REVENUE"}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  >
+                    <option value="REVENUE">Revenue Based</option>
+                    <option value="PLACEMENTS">Placement Based</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Changing this will reset member targets if they are incompatible.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <span className="text-sm text-slate-600">Total Target: </span>
+                  <span className="font-semibold text-slate-900">
+                    {team.targetType === "PLACEMENTS" 
+                      ? `${team.yearlyTarget || 0} Placements`
+                      : CalculationService.formatCurrency(team.yearlyTarget)
+                    }
+                  </span>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Calculated automatically from member targets.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

@@ -45,6 +45,9 @@ const TeamLeadPage = () => {
           level: data.lead.level || 'L2',
           target: Number(data.lead.target || 0),
           targetAchieved: Number(data.lead.targetAchieved || 0),
+          targetType: data.lead.targetType,
+          totalRevenue: data.lead.totalRevenue,
+          totalPlacements: data.lead.totalPlacements,
           members: mappedMembers,
         }
 
@@ -175,16 +178,28 @@ const TeamLeadPage = () => {
 
   const colorClasses = getTeamColorClasses(teamData.color)
   const members = teamLeadData.members || []
-  // Calculate team target as sum of all team lead targets
-  const calculatedTeamTarget = teamData.teamLeads.reduce((sum, lead) => {
-    return sum + Number(lead.target || 0)
-  }, 0)
-  const formattedTeamTarget = CalculationService.formatCurrency(calculatedTeamTarget)
+  const isPlacementTeam = teamLeadData.targetType === 'PLACEMENTS'
+  
+  // Use target from backend if available, otherwise calculate from members
+  const leadTarget = teamLeadData.target || members.reduce((sum, member) => sum + (Number(member.target) || 0), 0)
+  
+  // Update teamLeadData target for consistency in this render cycle
+  const currentLeadData = {
+    ...teamLeadData,
+    target: leadTarget
+  }
+
+  const formattedTeamTarget = isPlacementTeam 
+    ? leadTarget 
+    : CalculationService.formatCurrency(leadTarget)
   
   // Calculate total achievement percentage
-   const totalRevenue = teamLeadData.totalRevenue || teamLeadData.targetAchieved || 0
-   const totalTarget = teamLeadData.target || 1
-   const achievementPercentage = Math.min(Math.round((totalRevenue / totalTarget) * 100), 100)
+   const achievedValue = isPlacementTeam 
+     ? (currentLeadData.totalPlacements || 0)
+     : (currentLeadData.totalRevenue || currentLeadData.targetAchieved || 0)
+   
+   const totalTarget = leadTarget || 1
+   const achievementPercentage = Math.min(Math.round((achievedValue / totalTarget) * 100), 100)
  
    // Helper for Circular Progress
   const CircularProgress = ({ percentage, color = "text-green-500" }) => {
@@ -266,7 +281,7 @@ const TeamLeadPage = () => {
              <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
                  <span className="text-xs text-slate-400 mr-2">Target Achieved:</span>
                  <span className="text-sm font-bold text-green-400">
-                     {CalculationService.formatCurrency(totalRevenue)}
+                     {isPlacementTeam ? achievedValue : CalculationService.formatCurrency(achievedValue)}
                  </span>
                  <span className="text-xs text-slate-400 ml-1">({achievementPercentage}%)</span>
               </div>
@@ -283,6 +298,60 @@ const TeamLeadPage = () => {
           </div>
         </div>
 
+        {/* My Personal Performance Section */}
+        <div className="bg-white rounded-[2rem] shadow-sm p-8 border border-slate-100">
+          <div className="flex items-center gap-3 mb-8">
+            <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
+            <h2 className="text-xl font-bold text-slate-800">My Personal Performance</h2>
+          </div>
+
+          <div 
+             onClick={() => handleMemberClick(currentLeadData, currentLeadData, teamData)}
+             className="bg-white border border-blue-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group max-w-sm border-l-4 border-l-blue-500"
+          >
+             <div className="flex items-start justify-between mb-6">
+               <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                   </svg>
+                 </div>
+                 <div>
+                   <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-600 transition-colors">My Stats</h3>
+                   <div className="text-slate-400 text-sm font-medium">{currentLeadData.level || 'L2'}</div>
+                 </div>
+               </div>
+               <CircularProgress 
+                  percentage={achievementPercentage} 
+                  color={
+                    achievementPercentage >= 75 ? "text-green-500" :
+                    achievementPercentage >= 50 ? "text-yellow-500" : "text-red-500"
+                  } 
+               />
+             </div>
+
+             <div className="space-y-3">
+               <div className="flex items-center justify-between text-sm">
+                 <span className="text-slate-500 font-medium">My Target:</span>
+                 <span className="text-slate-700 font-bold">
+                    {isPlacementTeam ? currentLeadData.target : CalculationService.formatCurrency(currentLeadData.target)}
+                 </span>
+               </div>
+               <div className="flex items-center justify-between text-sm">
+                 <span className="text-slate-500 font-medium">Achieved:</span>
+                 <span className={`font-bold ${
+                    achievementPercentage >= 75 ? "text-green-500" :
+                    achievementPercentage >= 50 ? "text-yellow-500" : "text-red-500"
+                 }`}>
+                   {isPlacementTeam ? achievedValue : CalculationService.formatCurrency(achievedValue)}
+                 </span>
+               </div>
+             </div>
+          </div>
+        </div>
+
         {/* Team Members Section */}
         <div className="bg-white rounded-[2rem] shadow-sm p-8 border border-slate-100">
           <div className="flex items-center gap-3 mb-8">
@@ -294,9 +363,13 @@ const TeamLeadPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {members.filter(m => m.name !== 'pass through').map((member) => {
+                const memberIsPlacement = member.targetType === 'PLACEMENTS' || isPlacementTeam;
                 const memberTarget = member.target || 0;
-                const memberRevenue = member.revenue || member.targetAchieved || 0; 
-                const memberPercentage = memberTarget > 0 ? Math.min(Math.round((memberRevenue / memberTarget) * 100), 100) : 0;
+                const memberAchieved = memberIsPlacement 
+                  ? (member.totalPlacements || member.placements || 0) 
+                  : (member.totalRevenue || member.revenue || member.targetAchieved || 0);
+                
+                const memberPercentage = memberTarget > 0 ? Math.min(Math.round((memberAchieved / memberTarget) * 100), 100) : 0;
                 
                 // Dynamic color based on percentage
                let progressColor = "text-red-500";
@@ -327,12 +400,14 @@ const TeamLeadPage = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500 font-medium">Total Target:</span>
-                      <span className="text-slate-700 font-bold">{CalculationService.formatCurrency(memberTarget)}</span>
+                      <span className="text-slate-700 font-bold">
+                        {memberIsPlacement ? memberTarget : CalculationService.formatCurrency(memberTarget)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500 font-medium">Achieved:</span>
                       <span className={`font-bold ${progressColor}`}>
-                        {CalculationService.formatCurrency(memberRevenue)}
+                        {memberIsPlacement ? memberAchieved : CalculationService.formatCurrency(memberAchieved)}
                       </span>
                     </div>
                   </div>

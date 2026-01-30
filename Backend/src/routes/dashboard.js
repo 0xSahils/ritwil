@@ -175,7 +175,7 @@ router.get(
 
 router.get(
   "/employee/:id",
-  requireRole(Role.SUPER_ADMIN, Role.TEAM_LEAD),
+  requireRole(Role.SUPER_ADMIN, Role.TEAM_LEAD, Role.EMPLOYEE),
   async (req, res, next) => {
     try {
       const { id } = req.params;
@@ -207,11 +207,18 @@ router.get(
         return res.status(404).json({ error: "Employee not found" });
       }
 
-      if (
-        viewer.role === Role.TEAM_LEAD &&
-        employee.employeeProfile.managerId !== viewerId
-      ) {
-        return res.status(403).json({ error: "Forbidden" });
+      const isSelf = id === viewerId;
+      const hasFullAccess = viewer.role === Role.SUPER_ADMIN || viewer.role === Role.S1_ADMIN;
+
+      if (!isSelf && !hasFullAccess) {
+        if (viewer.role === Role.TEAM_LEAD) {
+          if (employee.employeeProfile.managerId !== viewerId) {
+            return res.status(403).json({ error: "Forbidden: Not your subordinate" });
+          }
+        } else {
+          // Regular employees cannot view others
+          return res.status(403).json({ error: "Forbidden" });
+        }
       }
 
       const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);

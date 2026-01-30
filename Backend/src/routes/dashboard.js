@@ -82,6 +82,8 @@ router.get(
       }
 
       const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
+      const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
+      const yearlyPlacementTarget = employee.employeeProfile.yearlyPlacementTarget ? Number(employee.employeeProfile.yearlyPlacementTarget) : null;
       const targetType = employee.employeeProfile.targetType || "REVENUE";
       const slabQualified = employee.employeeProfile.slabQualified || false;
       
@@ -118,6 +120,8 @@ router.get(
         level: employee.employeeProfile.level || "L4",
         vbid: employee.employeeProfile.vbid || null,
         yearlyTarget,
+        yearlyRevenueTarget,
+        yearlyPlacementTarget,
         targetType,
         slabQualified,
         revenueGenerated,
@@ -134,8 +138,16 @@ router.get(
           candidateId: p.candidateId,
           clientId: p.clientId,
           jpcId: p.jpcId,
+          sourcer: p.sourcer,
+          accountManager: p.accountManager,
+          teamLead: p.teamLead,
+          placementSharing: p.placementSharing,
+          placementCredit: p.placementCredit,
+          totalRevenue: p.totalRevenue,
+          revenueAsLead: p.revenueAsLead,
           doi: p.doi,
           doj: p.doj,
+          doq: p.doq,
           daysCompleted: calculateDaysCompleted(p.doj),
           client: p.clientName,
           placementType: p.placementType,
@@ -203,6 +215,8 @@ router.get(
       }
 
       const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
+      const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
+      const yearlyPlacementTarget = employee.employeeProfile.yearlyPlacementTarget ? Number(employee.employeeProfile.yearlyPlacementTarget) : null;
       const targetType = employee.employeeProfile.targetType || "REVENUE";
       
       const revenueGenerated = employee.placements.reduce(
@@ -238,6 +252,8 @@ router.get(
         level: employee.employeeProfile.level || "L4",
         vbid: employee.employeeProfile.vbid || null,
         yearlyTarget,
+        yearlyRevenueTarget,
+        yearlyPlacementTarget,
         targetType,
         slabQualified: employee.employeeProfile.slabQualified,
         revenueGenerated,
@@ -252,9 +268,18 @@ router.get(
           id: p.id,
           candidateName: p.candidateName,
           candidateId: p.candidateId,
+          clientId: p.clientId,
           jpcId: p.jpcId,
+          sourcer: p.sourcer,
+          accountManager: p.accountManager,
+          teamLead: p.teamLead,
+          placementSharing: p.placementSharing,
+          placementCredit: p.placementCredit,
+          totalRevenue: p.totalRevenue,
+          revenueAsLead: p.revenueAsLead,
           doi: p.doi,
           doj: p.doj,
+          doq: p.doq,
           daysCompleted: calculateDaysCompleted(p.doj),
           client: p.clientName,
           placementType: p.placementType,

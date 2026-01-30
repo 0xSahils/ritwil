@@ -104,6 +104,8 @@ model EmployeeProfile {
   level        String?
   vbid         String?
   yearlyTarget  Decimal        @db.Decimal(14, 2)
+  yearlyRevenueTarget Decimal? @db.Decimal(14, 2)
+  yearlyPlacementTarget Decimal? @db.Decimal(14, 2)
   slabQualified String?
   targetType    TargetType     @default(REVENUE)
   isActive      Boolean        @default(true)
@@ -144,9 +146,18 @@ model Placement {
   clientId           String?
   jpcId              String?
   clientName         String
+  recruiter          String?
+  sourcer            String?
+  accountManager     String?
+  teamLead           String?
+  placementSharing   String?
+  placementCredit    Decimal?       @db.Decimal(5, 2)
+  totalRevenue       Decimal?       @db.Decimal(14, 2)
+  revenueAsLead      Decimal?       @db.Decimal(14, 2)
   doi                DateTime?
   doj                DateTime
-  daysCompleted      Int
+  doq                DateTime?
+  daysCompleted      Int?
   placementType      PlacementType
   billedHours        Int?
   marginPercent      Decimal        @db.Decimal(5, 2)

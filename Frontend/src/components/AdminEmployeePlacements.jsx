@@ -36,6 +36,13 @@ const AdminEmployeePlacements = () => {
     billedHours: "",
     marginPercent: "",
     revenue: "",
+    sourcer: "",
+    accountManager: "",
+    teamLead: "",
+    placementSharing: "",
+    totalRevenue: "",
+    revenueAsLead: "",
+    placementCredit: "",
     billingStatus: "PENDING",
     incentivePayoutEta: "",
     incentiveAmountInr: "",
@@ -46,6 +53,7 @@ const AdminEmployeePlacements = () => {
   const [formData, setFormData] = useState(initialFormState);
 
   const [allUsers, setAllUsers] = useState([]);
+  const [targetUser, setTargetUser] = useState(null);
   
   // Auto-calculate Days Completed in form
   useEffect(() => {
@@ -82,6 +90,20 @@ const AdminEmployeePlacements = () => {
 
   useEffect(() => {
     fetchPlacements();
+    // Fetch detailed user info
+    const fetchUserDetails = async () => {
+      try {
+        const response = await apiRequest(`/users/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setTargetUser(data);
+          setUserName(data.name);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user details", err);
+      }
+    };
+    if (userId) fetchUserDetails();
   }, [userId]);
 
   useEffect(() => {
@@ -99,6 +121,14 @@ const AdminEmployeePlacements = () => {
     fetchUsers();
   }, []);
 
+  // Use simplified layout for L3 and L4 employees ONLY if they are in Vantage team
+  const isVantageL4 = targetUser?.employeeProfile?.team?.name && 
+                      targetUser.employeeProfile.team.name.toLowerCase().includes('vant') && 
+                      ['L3', 'L4'].includes(targetUser?.employeeProfile?.level?.toUpperCase());
+
+  // L2 specific layout
+  const isL2 = targetUser?.employeeProfile?.level?.toUpperCase() === 'L2';
+
   const handleEdit = (placement) => {
     setEditingId(placement.id);
     setFormData({
@@ -114,6 +144,7 @@ const AdminEmployeePlacements = () => {
       billedHours: placement.billedHours || "",
       marginPercent: placement.marginPercent || "",
       revenue: placement.revenue || "",
+      revenueAsLead: placement.revenueAsLead || "",
       billingStatus: placement.billingStatus,
       incentivePayoutEta: placement.incentivePayoutEta ? placement.incentivePayoutEta.split('T')[0] : "",
       incentiveAmountInr: placement.incentiveAmountInr || "",
@@ -168,24 +199,27 @@ const AdminEmployeePlacements = () => {
               const sheet = workbook.Sheets[sheetName];
               const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
               
-              let currentRecruiterId = null; // Reset per sheet (safer assumption)
+              let currentRecruiterId = null; 
+              let colMap = null;
      
               // Iterate
               for (let i = 0; i < jsonData.length; i++) {
                  const row = jsonData[i];
                  if (!row || row.length === 0) continue;
                  
-                 const firstStr = String(row[0] || "").trim();
-                 
+                 const rowLower = row.map(c => String(c||"").trim().toLowerCase());
+
                  // Recruiter Block Start
-                 if (firstStr.toLowerCase().startsWith("recruiter name")) {
-                     // Try to split by ':' or check next cell
-                     let name = "";
-                     if (firstStr.includes(":")) {
-                         name = firstStr.split(":")[1].trim();
+                 let name = "";
+                 const recruiterIdx = row.findIndex(c => String(c||"").trim().toLowerCase().startsWith("recruiter name"));
+                 
+                 if (recruiterIdx !== -1) {
+                     const cellVal = String(row[recruiterIdx]).trim();
+                     if (cellVal.includes(":")) {
+                         name = cellVal.split(":")[1].trim();
                      } 
-                     if (!name && row[1]) {
-                         name = String(row[1]).trim();
+                     if (!name && row[recruiterIdx+1]) {
+                         name = String(row[recruiterIdx+1]).trim();
                      }
                      
                      // Find ID
@@ -199,43 +233,115 @@ const AdminEmployeePlacements = () => {
                      continue;
                  }
      
-                 // Headers row - skip
-                 if (firstStr.toLowerCase() === "candidate name" || row.some(c => String(c).toLowerCase() === "candidate name")) {
+                 // Headers row detection
+                 if (rowLower.includes("candidate name")) {
+                     colMap = {};
+                     rowLower.forEach((h, idx) => colMap[h] = idx);
                      continue;
                  }
      
                  // Data Row
+                 // Check for per-row recruiter (VB Code or Recruiter Name column)
+                 if (colMap) {
+                    const recruiterCol = colMap['recruiter name'] !== undefined ? colMap['recruiter name'] : colMap['vb code'];
+                    if (recruiterCol !== undefined) {
+                        const cellVal = row[recruiterCol];
+                        if (cellVal) {
+                             const name = String(cellVal).trim();
+                             // Find ID
+                             const user = allUsers.find(u => u.name.toLowerCase() === name.toLowerCase());
+                             if (user) {
+                                 currentRecruiterId = user.id;
+                             } else {
+                                 // Only reset if it's clearly a name but not found. 
+                                 // If it's a code like "VB0001" we might not map it, so maybe ignore?
+                                 // But here the name is in the cell "Umar Mujahid Husain".
+                                 // If it's "VB Code" header but value is "Umar...", it matches.
+                                 // If value is "VB0001", it won't match a user name.
+                                 // Let's assume name match.
+                             }
+                        }
+                    }
+                 }
+
                  if (currentRecruiterId) {
-                     // Expecting: Candidate Name, Company Name, CTC, Role, Date
-                     const candidateName = row[0];
-                     const clientName = row[1];
-                     const ctc = row[2];
-                     const role = row[3];
-                     const dateVal = row[4];
-     
-                     if (!candidateName || !clientName) continue;
-     
-                     // Parse Date
-                     let doj = new Date();
-                     if (typeof dateVal === 'number') {
-                          // Excel date
-                          doj = new Date(Math.round((dateVal - 25569)*86400*1000));
-                     } else if (dateVal) {
-                          doj = new Date(dateVal);
+                     let candidateName, clientName, doj, revenue, placementType, billingStatus, doi, clientId, jpcId, totalRevenue, daysCompleted, qualifier, marginPercent, incentiveAmountInr, incentivePaid;
+
+                     if (colMap) {
+                        // Use Dynamic Map
+                        candidateName = row[colMap['candidate name']];
+                        clientName = row[colMap['client']] || row[colMap['client name']];
+                        const dateVal = row[colMap['doj']];
+                        const dateValDoi = row[colMap['doq']] || row[colMap['doi']]; // DOQ maps to DOI
+                        
+                        // Parse Dates
+                        const parseDate = (d) => {
+                            if (!d) return new Date();
+                            if (typeof d === 'number') return new Date(Math.round((d - 25569)*86400*1000));
+                            return new Date(d);
+                        };
+                        doj = parseDate(dateVal);
+                        doi = parseDate(dateValDoi);
+
+                        totalRevenue = row[colMap['total revenue']];
+                        billingStatus = row[colMap['billing status']];
+                        clientId = row[colMap['client id']];
+                        jpcId = row[colMap['jpc id']];
+                        placementType = String(row[colMap['placement type']] || "").toLowerCase().includes("contract") ? "CONTRACT" : "PERMANENT";
+                        daysCompleted = row[colMap['days completed']];
+                        qualifier = String(row[colMap['revenue qualifier']] || row[colMap['qualifier']] || "").toLowerCase().includes("yes"); // Assuming text
+                        marginPercent = row[colMap['margin %']];
+                        incentiveAmountInr = row[colMap['incentive amount (inr)']] || row[colMap['incentive amount']] || row[colMap['incentive amount(inr)']];
+                        incentivePaid = String(row[colMap['incentive paid']] || "").toLowerCase().includes("yes"); // Assuming text
+                        
+                        // Fallback revenue if not present
+                        revenue = totalRevenue; 
+
+                     } else {
+                        // Fallback to legacy hardcoded format
+                        candidateName = row[0];
+                        clientName = row[1];
+                        const ctc = row[2];
+                        const role = row[3];
+                        const dateVal = row[4];
+        
+                        if (!candidateName || !clientName) continue;
+        
+                        // Parse Date
+                        if (typeof dateVal === 'number') {
+                            doj = new Date(Math.round((dateVal - 25569)*86400*1000));
+                        } else if (dateVal) {
+                            doj = new Date(dateVal);
+                        }
+                        if (!doj || isNaN(doj.getTime())) doj = new Date();
+                        doi = doj;
+
+                        revenue = ctc || 0;
+                        placementType = String(role).toLowerCase().includes("contract") ? "CONTRACT" : "PERMANENT";
+                        billingStatus = "PENDING";
+                        incentivePaid = false;
                      }
-     
-                     if (isNaN(doj.getTime())) doj = new Date();
-     
+
+                     if (!candidateName) continue;
+
                      globalPlacements.push({
                          employeeId: currentRecruiterId,
                          candidateName,
                          clientName,
-                         doi: doj,
-                         doj: doj,
-                         revenue: ctc || 0,
-                         placementType: String(role).toLowerCase().includes("contract") ? "CONTRACT" : "PERMANENT",
-                         billingStatus: "PENDING",
-                         incentivePaid: false
+                         doi,
+                         doj,
+                         revenue: revenue || 0, // Maps to 'revenue' in DB
+                         totalRevenue: totalRevenue || revenue || 0,
+                         revenueAsLead: null, // L4 doesn't track this usually
+                         placementType,
+                         billingStatus: billingStatus ? (billingStatus.toUpperCase() === 'COMPLETED' ? 'BILLED' : billingStatus.toUpperCase()) : "PENDING",
+                         clientId,
+                         jpcId,
+                         daysCompleted,
+                         qualifier,
+                         marginPercent,
+                         incentiveAmountInr,
+                         incentivePaid
                      });
                  }
               }
@@ -287,7 +393,7 @@ const AdminEmployeePlacements = () => {
 
         // Check if first line looks like headers. If not, use default headers and start from index 0
         if (!headers.includes("candidateName")) {
-           headers = ["candidateName", "candidateId", "jpcId", "clientName", "doj", "revenue", "placementType", "billedHours", "marginPercent", "billingStatus", "incentivePayoutEta", "incentiveAmountInr", "incentivePaid"];
+           headers = ["candidateName", "candidateId", "jpcId", "clientName", "doj", "revenue", "revenueAsLead", "placementType", "billedHours", "marginPercent", "billingStatus", "incentivePayoutEta", "incentiveAmountInr", "incentivePaid"];
            startIndex = 0;
         }
 
@@ -424,32 +530,71 @@ const AdminEmployeePlacements = () => {
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                    <th className="py-3 px-2">
+                  <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider text-left border-b border-slate-200">
+                    <th className="py-3 px-2 w-8">
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        checked={placements.length > 0 && selectedIds.length === placements.length}
                         onChange={handleSelectAll}
+                        checked={selectedIds.length === placements.length && placements.length > 0}
                       />
                     </th>
-                    <th className="py-3 px-2 font-medium">Candidate</th>
-                    <th className="py-3 px-2 font-medium">Client ID</th>
-                    <th className="py-3 px-2 font-medium">JPC ID</th>
-                    <th className="py-3 px-2 font-medium">DOJ</th>
-                    <th className="py-3 px-2 font-medium">Days</th>
-                    <th className="py-3 px-2 font-medium">Client</th>
-                    <th className="py-3 px-2 font-medium">Type</th>
-                    <th className="py-3 px-2 font-medium">Hours</th>
-                    <th className="py-3 px-2 font-medium">Margin %</th>
-                    <th className="py-3 px-2 font-medium">Revenue ($)</th>
-                    <th className="py-3 px-2 font-medium">Status</th>
-                    <th className="py-3 px-2 font-medium">Inc. ETA</th>
-                    <th className="py-3 px-2 font-medium">Inc. (INR)</th>
-                    <th className="py-3 px-2 font-medium">Paid</th>
-                    <th className="py-3 px-2 font-medium">Qualifier</th>
+                    {isL2 ? (
+                      <>
+                        <th className="py-3 px-2 font-medium">Candidate Name</th>
+                        <th className="py-3 px-2 font-medium">DOJ</th>
+                        <th className="py-3 px-2 font-medium">Client</th>
+                        <th className="py-3 px-2 font-medium">Total Revenue</th>
+                        <th className="py-3 px-2 font-medium">Billing status</th>
+                        <th className="py-3 px-2 font-medium">DOQ</th>
+                        <th className="py-3 px-2 font-medium">Recruiter</th>
+                        <th className="py-3 px-2 font-medium">Sourcer</th>
+                        <th className="py-3 px-2 font-medium">Account Manager</th>
+                        <th className="py-3 px-2 font-medium">TL</th>
+                        <th className="py-3 px-2 font-medium">Days Completed</th>
+                        <th className="py-3 px-2 font-medium">Placement sharing</th>
+                        <th className="py-3 px-2 font-medium">Placement Credit</th>
+                        <th className="py-3 px-2 font-medium">Revenue as Lead</th>
+                        <th className="py-3 px-2 font-medium">Revenue Qualifier</th>
+                      </>
+                    ) : isVantageL4 ? (
+                      <>
+                        <th className="py-3 px-2 font-medium">Candidate Name</th>
+                        <th className="py-3 px-2 font-medium">DOJ</th>
+                        <th className="py-3 px-2 font-medium">Client</th>
+                        <th className="py-3 px-2 font-medium">Total Revenue</th>
+                        <th className="py-3 px-2 font-medium">Billing status</th>
+                        <th className="py-3 px-2 font-medium">DOQ</th>
+                        <th className="py-3 px-2 font-medium">Client ID</th>
+                        <th className="py-3 px-2 font-medium">JPC ID</th>
+                        <th className="py-3 px-2 font-medium">Placement Type</th>
+                        <th className="py-3 px-2 font-medium">Days Completed</th>
+                        <th className="py-3 px-2 font-medium">Revenue Qualifier</th>
+                        <th className="py-3 px-2 font-medium">Incentive amount (INR)</th>
+                        <th className="py-3 px-2 font-medium">Incentive Paid</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-3 px-2 font-medium">Recruiter Name</th>
+                        <th className="py-3 px-2 font-medium">Candidate Name</th>
+                        <th className="py-3 px-2 font-medium">DOJ</th>
+                        <th className="py-3 px-2 font-medium">DOQ</th>
+                        <th className="py-3 px-2 font-medium">Client</th>
+                        <th className="py-3 px-2 font-medium">Client ID</th>
+                        <th className="py-3 px-2 font-medium">JPC ID</th>
+                        <th className="py-3 px-2 font-medium">Placement Type</th>
+                        <th className="py-3 px-2 font-medium">Revenue Generated</th>
+                        <th className="py-3 px-2 font-medium">Margin</th>
+                        <th className="py-3 px-2 font-medium">Billed Hours</th>
+                        <th className="py-3 px-2 font-medium">Billing Status</th>
+                        <th className="py-3 px-2 font-medium">Days Completed</th>
+                        <th className="py-3 px-2 font-medium">Revenue Qualifier</th>
+                        <th className="py-3 px-2 font-medium">Incentive amount (INR)</th>
+                        <th className="py-3 px-2 font-medium">Incentive Paid (INR)</th>
+                      </>
+                    )}
                     <th className="py-3 px-2 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -464,38 +609,103 @@ const AdminEmployeePlacements = () => {
                           onChange={() => handleSelectOne(p.id)}
                         />
                       </td>
-                      <td className="py-3 px-2 font-medium text-slate-800">{p.candidateName}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.clientId || "—"}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.jpcId || "—"}</td>
-                      <td className="py-3 px-2 text-slate-600">{new Date(p.doj).toLocaleDateString()}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.clientName}</td>
-                      <td className="py-3 px-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          p.placementType === 'PERMANENT' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {p.placementType === 'PERMANENT' ? 'FTE' : 'Contract'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-slate-600">{p.billedHours || '-'}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.marginPercent ? CalculationService.formatPercentage(p.marginPercent) : '-'}</td>
-                      <td className="py-3 px-2 text-emerald-600 font-medium">{CalculationService.formatCurrency(p.revenue)}</td>
-                      <td className="py-3 px-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          p.billingStatus === 'BILLED' ? 'bg-green-100 text-green-700' : 
-                          p.billingStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-slate-600">{p.incentivePayoutEta ? new Date(p.incentivePayoutEta).toLocaleDateString() : '-'}</td>
-                      <td className="py-3 px-2 text-slate-600">{p.incentiveAmountInr ? CalculationService.formatCurrency(p.incentiveAmountInr, 'INR') : '-'}</td>
-                      <td className="py-3 px-2">
-                        {p.incentivePaid ? <span className="text-green-600">✓</span> : <span className="text-slate-300">✗</span>}
-                      </td>
-                      <td className="py-3 px-2">
-                        {p.qualifier ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-slate-400">No</span>}
-                      </td>
+                      {isL2 ? (
+                        <>
+                          <td className="py-3 px-2 font-medium text-slate-800">{p.candidateName}</td>
+                          <td className="py-3 px-2 text-slate-600">{new Date(p.doj).toLocaleDateString()}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.clientName}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.totalRevenue || '-'}</td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              p.billingStatus === 'BILLED' ? 'bg-green-100 text-green-700' : 
+                              p.billingStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-slate-600">{p.doq ? new Date(p.doq).toLocaleDateString() : '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.recruiter || '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.sourcer || '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.accountManager || '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.teamLead || '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.placementSharing || '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.placementCredit || '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.revenueAsLead || '-'}</td>
+                          <td className="py-3 px-2">
+                            {p.qualifier ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-slate-400">No</span>}
+                          </td>
+                        </>
+                      ) : isVantageL4 ? (
+                        <>
+                          <td className="py-3 px-2 font-medium text-slate-800">{p.candidateName}</td>
+                          <td className="py-3 px-2 text-slate-600">{new Date(p.doj).toLocaleDateString()}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.clientName}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.totalRevenue || '-'}</td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              p.billingStatus === 'BILLED' ? 'bg-green-100 text-green-700' : 
+                              p.billingStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-slate-600">{p.doi ? new Date(p.doi).toLocaleDateString() : '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.clientId || "—"}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.jpcId || "—"}</td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              p.placementType === 'PERMANENT' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {p.placementType === 'PERMANENT' ? 'FTE' : 'Contract'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
+                          <td className="py-3 px-2">
+                            {p.qualifier ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-slate-400">No</span>}
+                          </td>
+                          <td className="py-3 px-2 text-slate-600">{p.incentiveAmountInr ? CalculationService.formatCurrency(p.incentiveAmountInr, 'INR') : '-'}</td>
+                          <td className="py-3 px-2">
+                            {p.incentivePaid ? <span className="text-green-600">Yes</span> : <span className="text-slate-300">No</span>}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-3 px-2 text-slate-600">{userName}</td>
+                          <td className="py-3 px-2 font-medium text-slate-800">{p.candidateName}</td>
+                          <td className="py-3 px-2 text-slate-600">{new Date(p.doj).toLocaleDateString()}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.doq ? new Date(p.doq).toLocaleDateString() : '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.clientName}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.clientId || "—"}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.jpcId || "—"}</td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              p.placementType === 'PERMANENT' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {p.placementType === 'PERMANENT' ? 'FTE' : 'Contract'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-emerald-600 font-medium">{CalculationService.formatCurrency(p.revenue)}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.marginPercent ? CalculationService.formatPercentage(p.marginPercent) : '-'}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.billedHours || '-'}</td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              p.billingStatus === 'BILLED' ? 'bg-green-100 text-green-700' : 
+                              p.billingStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
+                          <td className="py-3 px-2">
+                            {p.qualifier ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-slate-400">No</span>}
+                          </td>
+                          <td className="py-3 px-2 text-slate-600">{p.incentiveAmountInr ? CalculationService.formatCurrency(p.incentiveAmountInr, 'INR') : '-'}</td>
+                          <td className="py-3 px-2">
+                            {p.incentivePaid ? <span className="text-green-600">Yes</span> : <span className="text-slate-300">No</span>}
+                          </td>
+                        </>
+                      )}
                       <td className="py-3 px-2 text-right flex gap-2 justify-end">
                         <button onClick={() => handleEdit(p)} className="text-blue-600 hover:text-blue-800 text-xs">Edit</button>
                         <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700 text-xs">Del</button>
@@ -561,20 +771,59 @@ const AdminEmployeePlacements = () => {
                 <p className="text-[10px] text-slate-500">Auto-calculated from DOQ</p>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Billed Hours</label>
-                <input type="number" className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={formData.billedHours} onChange={e => setFormData({...formData, billedHours: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Margin %</label>
-                <input type="number" step="0.01" className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={formData.marginPercent} onChange={e => setFormData({...formData, marginPercent: e.target.value})} />
-              </div>
+              {!isVantageL4 && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Billed Hours</label>
+                    <input type="number" className="w-full px-3 py-2 border rounded-lg text-sm"
+                      value={formData.billedHours} onChange={e => setFormData({...formData, billedHours: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Margin %</label>
+                    <input type="number" step="0.01" className="w-full px-3 py-2 border rounded-lg text-sm"
+                      value={formData.marginPercent} onChange={e => setFormData({...formData, marginPercent: e.target.value})} />
+                  </div>
+                </>
+              )}
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Revenue ($)</label>
                 <input required type="number" className="w-full px-3 py-2 border rounded-lg text-sm"
                   value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Sourcer</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.sourcer} onChange={e => setFormData({...formData, sourcer: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Account Manager</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.accountManager} onChange={e => setFormData({...formData, accountManager: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Team Lead</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.teamLead} onChange={e => setFormData({...formData, teamLead: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Placement Sharing</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.placementSharing} onChange={e => setFormData({...formData, placementSharing: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Total Revenue</label>
+                <input type="number" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.totalRevenue} onChange={e => setFormData({...formData, totalRevenue: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Revenue as Lead</label>
+                <input type="number" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.revenueAsLead} onChange={e => setFormData({...formData, revenueAsLead: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Placement Credit</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.placementCredit} onChange={e => setFormData({...formData, placementCredit: e.target.value})} />
               </div>
 
               <div>
@@ -642,7 +891,7 @@ const AdminEmployeePlacements = () => {
                   value={bulkText}
                   onChange={e => setBulkText(e.target.value)}
                 />
-                <p className="text-xs text-slate-500 mt-1">Headers: candidateName, clientName, doi, doj, revenue, placementType, billedHours, marginPercent, billingStatus, incentivePayoutEta, incentiveAmountInr, incentivePaid</p>
+                <p className="text-xs text-slate-500 mt-1">Headers: candidateName, clientName, doi, doj, revenue, revenueAsLead, placementType, billedHours, marginPercent, billingStatus, incentivePayoutEta, incentiveAmountInr, incentivePaid</p>
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button onClick={() => setShowBulkModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>

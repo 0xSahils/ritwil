@@ -59,11 +59,15 @@ export async function getPlacementsByUser(userId) {
 
   // Calculate dynamic fields on the fly
   return placements.map(p => {
-    const days = calculateDaysCompleted(p.doj, p.billingStatus);
+    // If daysCompleted is stored in DB (from import), use it. Otherwise calculate.
+    const days = (p.daysCompleted !== null && p.daysCompleted !== undefined) 
+                 ? p.daysCompleted 
+                 : calculateDaysCompleted(p.doj, p.billingStatus);
+                 
     return {
       ...p,
-      daysCompleted: days, // Override DB value with fresh calculation
-      qualifier: checkQualifier(days) // Override DB value
+      daysCompleted: days, 
+      qualifier: (p.qualifier !== null && p.qualifier !== undefined) ? p.qualifier : checkQualifier(days)
     };
   });
 }
@@ -76,6 +80,8 @@ export async function createPlacement(userId, data, actorId) {
     clientName,
     doi,
     doj,
+    doq,
+    daysCompleted: providedDaysCompleted,
     placementType,
     billedHours,
     marginPercent,
@@ -83,11 +89,25 @@ export async function createPlacement(userId, data, actorId) {
     billingStatus,
     incentivePayoutEta,
     incentiveAmountInr,
+    sourcer,
+    accountManager,
+    teamLead,
+    placementSharing,
+    placementCredit,
+    totalRevenue,
+    revenueAsLead
     // incentivePaid, // Manual
     // qualifier, // Auto-calculated
   } = data;
 
-  const daysCompleted = calculateDaysCompleted(doj, billingStatus);
+  // Use provided daysCompleted if available, otherwise calculate
+  let daysCompleted = providedDaysCompleted;
+  if (daysCompleted === undefined || daysCompleted === null) {
+      daysCompleted = calculateDaysCompleted(doj, billingStatus); // Fallback to DOJ logic
+  } else {
+      daysCompleted = Number(daysCompleted) || 0;
+  }
+
   const qualifier = checkQualifier(daysCompleted);
   const normalizedBillingStatus = mapBillingStatus(billingStatus);
   const normalizedPlacementType = mapPlacementType(placementType);
@@ -99,8 +119,9 @@ export async function createPlacement(userId, data, actorId) {
       candidateId,
       jpcId,
       clientName,
-      doi: new Date(doi),
+      doi: doi ? new Date(doi) : null,
       doj: new Date(doj),
+      doq: doq ? new Date(doq) : null,
       daysCompleted,
       placementType: normalizedPlacementType,
       billedHours: billedHours ? Number(billedHours) : null,
@@ -111,6 +132,13 @@ export async function createPlacement(userId, data, actorId) {
       incentiveAmountInr: parseCurrency(incentiveAmountInr),
       incentivePaid: String(data.incentivePaid).toLowerCase() === 'true',
       qualifier,
+      sourcer,
+      accountManager,
+      teamLead,
+      placementSharing,
+      placementCredit: placementCredit ? parseCurrency(placementCredit) : null,
+      totalRevenue: totalRevenue ? parseCurrency(totalRevenue) : null,
+      revenueAsLead: revenueAsLead ? parseCurrency(revenueAsLead) : null,
     },
   });
 
@@ -132,10 +160,13 @@ export async function updatePlacement(id, data, actorId) {
   let updates = { ...data };
   
   // Handle numeric conversions
-  if (updates.revenue) updates.revenue = parseCurrency(updates.revenue);
-  if (updates.marginPercent) updates.marginPercent = parseCurrency(updates.marginPercent);
-  if (updates.billedHours) updates.billedHours = Number(updates.billedHours);
-  if (updates.incentiveAmountInr) updates.incentiveAmountInr = parseCurrency(updates.incentiveAmountInr);
+  if (updates.revenue !== undefined) updates.revenue = parseCurrency(updates.revenue);
+  if (updates.marginPercent !== undefined) updates.marginPercent = parseCurrency(updates.marginPercent);
+  if (updates.billedHours !== undefined) updates.billedHours = updates.billedHours ? Number(updates.billedHours) : null;
+  if (updates.incentiveAmountInr !== undefined) updates.incentiveAmountInr = parseCurrency(updates.incentiveAmountInr);
+  if (updates.placementCredit !== undefined) updates.placementCredit = updates.placementCredit ? parseCurrency(updates.placementCredit) : null;
+  if (updates.totalRevenue !== undefined) updates.totalRevenue = updates.totalRevenue ? parseCurrency(updates.totalRevenue) : null;
+  if (updates.revenueAsLead !== undefined) updates.revenueAsLead = updates.revenueAsLead ? parseCurrency(updates.revenueAsLead) : null;
   if (updates.incentivePaid !== undefined) {
     updates.incentivePaid = String(updates.incentivePaid).toLowerCase() === 'true';
   }
@@ -146,6 +177,7 @@ export async function updatePlacement(id, data, actorId) {
   // Handle dates
   if (updates.doi) updates.doi = new Date(updates.doi);
   if (updates.doj) updates.doj = new Date(updates.doj);
+  if (updates.doq) updates.doq = new Date(updates.doq);
   if (updates.incentivePayoutEta) updates.incentivePayoutEta = new Date(updates.incentivePayoutEta);
 
   // Auto-calc fields if DOJ or relevant fields are present
@@ -159,7 +191,14 @@ export async function updatePlacement(id, data, actorId) {
   const dojToUse = updates.doj || current.doj;
   const statusToUse = updates.billingStatus || current.billingStatus;
   
-  const daysCompleted = calculateDaysCompleted(dojToUse, statusToUse);
+  // Only recalculate days if not explicitly provided in update
+  let daysCompleted;
+  if (updates.daysCompleted !== undefined) {
+      daysCompleted = Number(updates.daysCompleted);
+  } else {
+      daysCompleted = calculateDaysCompleted(dojToUse, statusToUse);
+  }
+  
   const qualifier = checkQualifier(daysCompleted);
 
   updates.daysCompleted = daysCompleted;
@@ -241,9 +280,11 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
         candidateName,
         candidateId,
         jpcId,
+        clientId,
         clientName,
         doi,
         doj,
+        doq,
         revenue,
         placementType,
         billedHours,
@@ -252,14 +293,24 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
         incentivePayoutEta,
         incentiveAmountInr,
         incentivePaid,
+        daysCompleted: providedDaysCompleted,
+        revenueAsLead,
       } = data;
 
-      const daysCompleted = calculateDaysCompleted(doj, billingStatus);
+      // Use provided daysCompleted if available, otherwise calculate
+      let daysCompleted = providedDaysCompleted;
+      if (daysCompleted === undefined || daysCompleted === null) {
+          daysCompleted = calculateDaysCompleted(doj, billingStatus);
+      } else {
+          daysCompleted = Number(daysCompleted) || 0;
+      }
       const qualifier = checkQualifier(daysCompleted);
+
       const normalizedBillingStatus = mapBillingStatus(billingStatus);
       const normalizedPlacementType = mapPlacementType(placementType);
-      const normalizedCandidateId = candidateId || null;
-      const normalizedJpcId = jpcId || null;
+      const normalizedCandidateId = candidateId || '-';
+      const normalizedJpcId = jpcId || '-';
+      const normalizedClientId = clientId || '-';
       const normalizedBilledHours = billedHours ? Number(billedHours) : null;
       const normalizedIncentivePaid = String(incentivePaid).toLowerCase() === 'true';
 
@@ -283,8 +334,11 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
              (existingPlacement.incentivePaid !== normalizedIncentivePaid) ||
              (existingPlacement.candidateId !== normalizedCandidateId) ||
              (existingPlacement.jpcId !== normalizedJpcId) ||
+             (existingPlacement.clientId !== normalizedClientId) ||
              (existingPlacement.doj.getTime() !== new Date(doj).getTime()) ||
-             (existingPlacement.billedHours !== normalizedBilledHours);
+             (existingPlacement.billedHours !== normalizedBilledHours) ||
+             (Math.abs((Number(existingPlacement.revenueAsLead) || 0) - (Number(revenueAsLead) || 0)) > 0.01) ||
+             (existingPlacement.daysCompleted !== daysCompleted);
 
         if (!isDifferent) {
             // UNCHANGED
@@ -296,8 +350,12 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
         const updated = await prisma.placement.update({
           where: { id: existingPlacement.id },
           data: {
+            candidateId: normalizedCandidateId,
+            jpcId: normalizedJpcId,
+            clientId: normalizedClientId,
             doi: doi ? new Date(doi) : new Date(doj),
             doj: new Date(doj),
+            doq: doq ? new Date(doq) : null,
             daysCompleted,
             placementType: normalizedPlacementType,
             billedHours: normalizedBilledHours,
@@ -317,14 +375,16 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
           data: {
             employeeId: userId,
             candidateName,
-            candidateId,
-            jpcId,
+            candidateId: normalizedCandidateId,
+            jpcId: normalizedJpcId,
+            clientId: normalizedClientId,
             clientName,
             doi: doi ? new Date(doi) : new Date(doj),
             doj: new Date(doj),
+            doq: doq ? new Date(doq) : null,
             daysCompleted,
             placementType: normalizedPlacementType,
-            billedHours: billedHours ? Number(billedHours) : null,
+            billedHours: normalizedBilledHours,
             marginPercent: parseCurrency(marginPercent),
             revenue: parseCurrency(revenue),
             billingStatus: normalizedBillingStatus,
@@ -388,6 +448,7 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         jpcId,
         doi,
         doj,
+        doq,
         placementType,
         billedHours,
         marginPercent,
@@ -400,9 +461,32 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         targetType,
         slabQualified,
         daysCompleted: providedDaysCompleted,
+        yearlyRevenueTarget,
+        yearlyPlacementTarget,
+        sourcer,
+        accountManager,
+        teamLead,
+        placementSharing,
+        placementCredit,
+        totalRevenue,
+        revenueAsLead
       } = data;
 
+      const sanitizeString = (val) => {
+        if (val === 0 || val === '0' || !val) return null;
+        return String(val).trim();
+      };
+
+      const normalizedSourcer = sanitizeString(sourcer);
+      const normalizedAccountManager = sanitizeString(accountManager);
+      const normalizedTeamLead = sanitizeString(teamLead);
+      const normalizedPlacementSharing = sanitizeString(placementSharing);
+
       let employeeId = providedEmployeeId;
+
+      // Use provided daysCompleted if available, otherwise calculate
+      // logic deferred to below
+
 
       // Lookup or Create User if ID is missing
       if (!employeeId && recruiterName) {
@@ -443,7 +527,8 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
                          role: 'EMPLOYEE',
                          employeeProfile: {
                              create: {
-                                 vbid: vbid ? String(vbid).trim() : null
+                                 vbid: vbid ? String(vbid).trim() : null,
+                                 yearlyTarget: 0 // Default value to satisfy schema
                              }
                          }
                      }
@@ -481,6 +566,16 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
             }
           }
 
+          if (yearlyRevenueTarget !== undefined && yearlyRevenueTarget !== null && yearlyRevenueTarget !== "") {
+            const rt = Number(yearlyRevenueTarget);
+            if (!isNaN(rt)) updateData.yearlyRevenueTarget = rt;
+          }
+
+          if (yearlyPlacementTarget !== undefined && yearlyPlacementTarget !== null && yearlyPlacementTarget !== "") {
+            const pt = Number(yearlyPlacementTarget);
+            if (!isNaN(pt)) updateData.yearlyPlacementTarget = pt;
+          }
+
           if (targetType) {
              const t = String(targetType).toUpperCase();
              if (t === "REVENUE" || t === "PLACEMENTS") {
@@ -509,6 +604,8 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
               const finalUpdates = {};
               if (updateData.vbid && !profile.vbid) finalUpdates.vbid = updateData.vbid; // Only set if missing
               if (updateData.yearlyTarget !== undefined) finalUpdates.yearlyTarget = updateData.yearlyTarget; // Always update target
+              if (updateData.yearlyRevenueTarget !== undefined) finalUpdates.yearlyRevenueTarget = updateData.yearlyRevenueTarget;
+              if (updateData.yearlyPlacementTarget !== undefined) finalUpdates.yearlyPlacementTarget = updateData.yearlyPlacementTarget;
               if (updateData.targetType !== undefined) finalUpdates.targetType = updateData.targetType; // Always update target type
               if (updateData.slabQualified !== undefined) finalUpdates.slabQualified = updateData.slabQualified; // Always update slab
 
@@ -531,7 +628,14 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
       // Validate Dates
       const validDoj = doj ? new Date(doj) : new Date(); // Default to now if missing
       
-      // DOQ (DOI) Logic: Handle "NA" or missing by setting to null (since schema now allows DateTime?)
+      // DOQ Logic
+      let validDoq = null;
+      if (doq && String(doq).toLowerCase() !== 'na' && String(doq).trim() !== '') {
+          const d = new Date(doq);
+          if (!isNaN(d.getTime())) validDoq = d;
+      }
+
+      // DOI Logic: Handle "NA" or missing by setting to null (since schema now allows DateTime?)
       let validDoi = null;
       if (doi && String(doi).toLowerCase() !== 'na' && String(doi).trim() !== '') {
          const d = new Date(doi);
@@ -566,9 +670,9 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
           if (!isNaN(bh)) normalizedBilledHours = bh;
       }
 
-      const normalizedCandidateId = candidateId || null;
-      const normalizedClientId = clientId || null;
-      const normalizedJpcId = jpcId || null;
+      const normalizedCandidateId = candidateId || '-';
+      const normalizedClientId = clientId || '-';
+      const normalizedJpcId = jpcId || '-';
       const normalizedIncentivePaid = String(incentivePaid).toLowerCase() === 'true';
 
       // SMART UPLOAD: Check for duplicate
@@ -589,12 +693,21 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
               (Math.abs((Number(existingPlacement.marginPercent) || 0) - (Number(marginPercent) || 0)) > 0.01) ||
               (Math.abs((Number(existingPlacement.incentiveAmountInr) || 0) - (Number(incentiveAmountInr) || 0)) > 0.01) ||
               (existingPlacement.incentivePaid !== (String(incentivePaid).toLowerCase() === 'true')) ||
-              (existingPlacement.candidateId !== candidateId) ||
+              (existingPlacement.candidateId !== normalizedCandidateId) ||
               (existingPlacement.clientId !== normalizedClientId) ||
               (existingPlacement.jpcId !== normalizedJpcId) ||
               ((existingPlacement.doi ? existingPlacement.doi.getTime() : null) !== (validDoi ? validDoi.getTime() : null)) ||
               (existingPlacement.doj.getTime() !== validDoj.getTime()) ||
-              (existingPlacement.billedHours !== normalizedBilledHours);
+              ((existingPlacement.doq ? existingPlacement.doq.getTime() : null) !== (validDoq ? validDoq.getTime() : null)) ||
+              (existingPlacement.daysCompleted !== daysCompleted) ||
+              (existingPlacement.billedHours !== normalizedBilledHours) ||
+              (existingPlacement.sourcer !== normalizedSourcer) ||
+              (existingPlacement.accountManager !== normalizedAccountManager) ||
+              (existingPlacement.teamLead !== normalizedTeamLead) ||
+              (existingPlacement.placementSharing !== normalizedPlacementSharing) ||
+              (Math.abs((Number(existingPlacement.placementCredit) || 0) - (Number(placementCredit) || 0)) > 0.01) ||
+              (Math.abs((Number(existingPlacement.totalRevenue) || 0) - (Number(totalRevenue) || 0)) > 0.01) ||
+              (Math.abs((Number(existingPlacement.revenueAsLead) || 0) - (Number(revenueAsLead) || 0)) > 0.01);
 
          if (!isDifferent) {
              unchangedPlacements.push(existingPlacement);
@@ -605,11 +718,12 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         const updated = await prisma.placement.update({
           where: { id: existingPlacement.id },
           data: {
-            candidateId,
+            candidateId: normalizedCandidateId,
             clientId: normalizedClientId,
             jpcId: normalizedJpcId,
             doi: validDoi,
             doj: validDoj,
+            doq: validDoq,
             daysCompleted,
             placementType: normalizedPlacementType,
             billedHours: normalizedBilledHours,
@@ -620,6 +734,13 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
             incentiveAmountInr: parseCurrency(incentiveAmountInr),
             incentivePaid: String(incentivePaid).toLowerCase() === 'true',
             qualifier,
+            sourcer: normalizedSourcer,
+            accountManager: normalizedAccountManager,
+            teamLead: normalizedTeamLead,
+            placementSharing: normalizedPlacementSharing,
+            placementCredit: placementCredit ? parseCurrency(placementCredit) : null,
+            totalRevenue: totalRevenue ? parseCurrency(totalRevenue) : null,
+            revenueAsLead: revenueAsLead ? parseCurrency(revenueAsLead) : null,
           }
         });
         updatedPlacements.push(updated);
@@ -628,12 +749,13 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
           data: {
             employee: { connect: { id: employeeId } },
             candidateName: candidateName || "Unknown Candidate",
-            candidateId,
+            candidateId: normalizedCandidateId,
             clientName: clientName || "Unknown Client",
             clientId: normalizedClientId,
             jpcId: normalizedJpcId,
             doi: validDoi,
             doj: validDoj,
+            doq: validDoq,
             daysCompleted,
             placementType: normalizedPlacementType,
             billedHours: normalizedBilledHours,
@@ -644,6 +766,13 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
             incentiveAmountInr: parseCurrency(incentiveAmountInr),
             incentivePaid: String(incentivePaid).toLowerCase() === 'true',
             qualifier,
+            sourcer: normalizedSourcer,
+            accountManager: normalizedAccountManager,
+            teamLead: normalizedTeamLead,
+            placementSharing: normalizedPlacementSharing,
+            placementCredit: placementCredit ? parseCurrency(placementCredit) : null,
+            totalRevenue: totalRevenue ? parseCurrency(totalRevenue) : null,
+            revenueAsLead: revenueAsLead ? parseCurrency(revenueAsLead) : null,
           },
         });
         createdPlacements.push(placement);

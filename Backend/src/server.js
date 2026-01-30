@@ -84,3 +84,4 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`API server listening on port ${PORT}`);
 });
+// Trigger restart for prisma update 2

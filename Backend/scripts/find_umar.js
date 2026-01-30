@@ -1,12 +1,12 @@
 
-import prisma from '../src/prisma.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
-async function findUser() {
-  const user = await prisma.user.findFirst({
+async function find() {
+  const users = await prisma.user.findMany({
     where: { name: { contains: 'Umar', mode: 'insensitive' } }
   });
-  console.log("Found User:", user);
-  await prisma.$disconnect();
+  console.log(users);
 }
 
-findUser().catch(console.error);
+find().finally(() => prisma.$disconnect());

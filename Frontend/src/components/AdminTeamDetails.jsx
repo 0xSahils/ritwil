@@ -128,6 +128,7 @@ const AdminTeamDetails = () => {
       let mode = 'SCANNING'; 
       let cols = {};
       let recruiterNameIndex = 1;
+      let l2Targets = null;
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -142,17 +143,57 @@ const AdminTeamDetails = () => {
         }
 
         if (firstCell === "Team") {
-           let foundIndex = -1;
+           let foundRecruiterIndex = -1;
+           let foundL2Index = -1;
+           
            row.forEach((cell, idx) => {
-               if (String(cell).trim() === "Recruiter Name") foundIndex = idx;
+               const cellStr = String(cell).trim();
+               if (cellStr === "Recruiter Name") foundRecruiterIndex = idx;
+               if (cellStr === "L2 Name") foundL2Index = idx;
            });
            
-           if (foundIndex !== -1) {
-              console.log(`Row ${i}: Found Team Block. Recruiter Name at index ${foundIndex}`);
-              recruiterNameIndex = foundIndex;
-              mode = 'EXPECT_RECRUITER_INFO';
+           if (foundL2Index !== -1) {
+              console.log(`Row ${i}: Found L2 Team Block.`);
+              recruiterNameIndex = foundL2Index;
+              mode = 'EXPECT_L2_INFO';
+              
+              // Map L2 Target Columns from THIS header row
+              cols.l2RevenueTarget = -1;
+              cols.l2PlacementTarget = -1;
+              
+              row.forEach((cell, idx) => {
+                 const val = String(cell).trim().toLowerCase();
+                 if (val.includes("yearly revenue target")) cols.l2RevenueTarget = idx;
+                 else if (val.includes("yearly placement target")) cols.l2PlacementTarget = idx;
+                 else if (val.includes("yearly target")) cols.l2RevenueTarget = idx; // Fallback for Vantage/General
+              });
               continue;
            }
+           
+           if (foundRecruiterIndex !== -1) {
+              console.log(`Row ${i}: Found Team Block. Recruiter Name at index ${foundRecruiterIndex}`);
+              recruiterNameIndex = foundRecruiterIndex;
+              mode = 'EXPECT_RECRUITER_INFO';
+              l2Targets = null; // Reset L2 targets for standard sheets
+              continue;
+           }
+        }
+
+        if (mode === 'EXPECT_L2_INFO') {
+           const rName = row[recruiterNameIndex];
+           if (rName) {
+             currentRecruiterName = rName;
+             console.log(`Row ${i}: Found L2 Info: "${currentRecruiterName}"`);
+             
+             // Capture Targets
+             l2Targets = {};
+             if (cols.l2RevenueTarget !== -1) l2Targets.yearlyRevenueTarget = row[cols.l2RevenueTarget];
+             if (cols.l2PlacementTarget !== -1) l2Targets.yearlyPlacementTarget = row[cols.l2PlacementTarget];
+             
+             console.log("Captured L2 Targets:", l2Targets);
+             mode = 'EXPECT_PLACEMENT_HEADER'; 
+           }
+           continue;
         }
 
         if (mode === 'EXPECT_RECRUITER_INFO') {
@@ -180,28 +221,46 @@ const AdminTeamDetails = () => {
              
              row.forEach((cell, idx) => {
                const val = String(cell).trim().toLowerCase();
-               if (val.includes("candidate name")) cols.candidateName = idx;
+               if (val.includes("recruiter name")) cols.recruiterName = idx;
+               else if (val.includes("candidate name")) cols.candidateName = idx;
                else if (val.includes("candidate id")) cols.candidateId = idx;
                else if (val.includes("candidate")) cols.candidateName = cols.candidateName ?? idx; // Fallback
                
-               else if (val.includes("client name")) cols.clientName = idx;
-               else if (val.includes("client id")) cols.clientId = idx;
-               else if (val.includes("client")) cols.clientName = cols.clientName ?? idx; // Fallback
+               else if (val.includes("client") && (val.includes("name") || val === "client")) cols.clientName = idx;
+               else if (val.includes("client") && val.includes("id")) cols.clientId = idx;
+               else if (val.includes("client")) cols.clientName = cols.clientName ?? idx; // Fallback for just "Client"
                
                else if (val.includes("jpc")) cols.jpcId = idx;
                else if (val.includes("doj")) cols.doj = idx;
                else if (val.includes("doi")) cols.doi = idx;
-               else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) cols.revenue = idx;
+               
+               // Check Total Revenue FIRST to avoid it being caught by generic "revenue"
+               else if (val.includes("total revenue")) cols.totalRevenue = idx;
+               
+               else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) {
+                   if (val.includes("lead")) {
+                       cols.revenueAsLead = idx;
+                       // Also map standard revenue to revenueAsLead for calculations
+                       cols.revenue = idx;
+                   }
+                   else cols.revenue = idx;
+               }
                else if (val.includes("target")) cols.yearlyTarget = idx;
                else if (val.includes("slab") || val.includes("qualifier")) cols.slabQualified = idx;
                else if (val.includes("margin")) cols.marginPercent = idx;
               else if (val.includes("billed hours") || val.includes("hours")) cols.billedHours = idx;
-              else if (val.includes("billing")) cols.billingStatus = idx;
+               else if (val.includes("billing")) cols.billingStatus = idx;
                else if (val.includes("days")) cols.daysCompleted = idx;
-               else if (val.includes("incentive")) cols.incentiveAmountInr = idx; // Broader match for incentive
-               else if (val.includes("paid")) cols.incentivePaid = idx;
-               else if (val.includes("target") && val.includes("type")) cols.targetType = idx;
-               else if (val.includes("type")) cols.placementType = idx; // Default to placement type if just "type"
+              else if (val.includes("incentive") && (val.includes("amount") || val.includes("inr"))) cols.incentiveAmountInr = idx; 
+              else if (val.includes("paid") || (val.includes("incentive") && val.includes("paid"))) cols.incentivePaid = idx;
+              else if (val.includes("target") && val.includes("type")) cols.targetType = idx;
+               else if (val.includes("type")) cols.placementType = idx;
+               
+               else if (val.includes("sourcer")) cols.sourcer = idx;
+               else if (val.includes("account") || val.includes("manager")) cols.accountManager = idx;
+               else if (val.includes("tl") || val.includes("team lead")) cols.teamLead = idx;
+               else if (val.includes("sharing") || val.includes("split")) cols.placementSharing = idx;
+               else if (val.includes("credit")) cols.placementCredit = idx;
              });
              console.log("Columns Mapped:", cols);
              continue;
@@ -237,7 +296,7 @@ const AdminTeamDetails = () => {
           const candidateName = row[cols.candidateName];
           if (!candidateName) continue;
 
-          let rawRecruiterVal = row[recruiterNameIndex];
+          let rawRecruiterVal = row[cols.recruiterName !== undefined ? cols.recruiterName : recruiterNameIndex];
           let recruiterName = currentRecruiterName;
           let vbid = null;
 
@@ -273,6 +332,35 @@ const AdminTeamDetails = () => {
               jpcId = jpcId.substring(6).trim();
           }
 
+          // Handle Date of Quit and Days Completed
+          let doq = cols.doq !== undefined ? row[cols.doq] : "NA";
+          if (String(doq).trim().toUpperCase() === "NA" || !doq) {
+             doq = null;
+          } else {
+             doq = CalculationService.parseExcelDate(doq);
+          }
+
+          let doj = CalculationService.parseExcelDate(row[cols.doj]);
+          let daysCompleted = cols.daysCompleted !== undefined ? row[cols.daysCompleted] : null;
+          
+          // Recalculate days completed if needed or if it looks wrong (NA handling)
+          if (doj) {
+             const dojDate = new Date(doj);
+             const now = new Date();
+             let endDate = now;
+             
+             if (doq) {
+                endDate = new Date(doq);
+             }
+             
+             // If calculation is required (e.g. if sheet has "NA" or invalid number)
+             // But usually we trust the sheet unless it's explicitly "NA" or missing
+             if (!daysCompleted || String(daysCompleted).toUpperCase() === "NA" || String(daysCompleted).trim() === "-") {
+                 const diffTime = Math.abs(endDate - dojDate);
+                 daysCompleted = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+             }
+          }
+
           placementsToUpload.push({
             employeeId: null, 
             recruiterName: String(recruiterName).trim(),
@@ -282,10 +370,12 @@ const AdminTeamDetails = () => {
             clientName: String(row[cols.clientName] || row[cols.client] || ""), // Use clientName col, fallback to generic client
             clientId: cols.clientId !== undefined ? String(row[cols.clientId] || "") : null,
             jpcId: jpcId,
-            doj: CalculationService.parseExcelDate(row[cols.doj]),
+            doj: doj,
+            doq: doq,
             doi: cols.doi !== undefined ? CalculationService.parseExcelDate(row[cols.doi]) : CalculationService.parseExcelDate(row[cols.doj]), 
             revenue: row[cols.revenue],
-            daysCompleted: cols.daysCompleted !== undefined ? row[cols.daysCompleted] : null,
+            revenueAsLead: cols.revenueAsLead !== undefined ? row[cols.revenueAsLead] : null,
+            daysCompleted: daysCompleted,
             billedHours: cols.billedHours !== undefined ? row[cols.billedHours] : null,
             marginPercent: cols.marginPercent !== undefined ? row[cols.marginPercent] : null,
             billingStatus: row[cols.billingStatus],
@@ -295,6 +385,17 @@ const AdminTeamDetails = () => {
             yearlyTarget: cols.yearlyTarget !== undefined ? row[cols.yearlyTarget] : null,
             targetType: cols.targetType !== undefined ? String(row[cols.targetType]).toUpperCase() : null,
             slabQualified: cols.slabQualified !== undefined ? row[cols.slabQualified] : null,
+            // Attach L2 targets if present and name matches (or just attach to all if we assume this block belongs to this L2)
+            // Since we are inside the block for this recruiter, we can attach them.
+            yearlyRevenueTarget: l2Targets ? l2Targets.yearlyRevenueTarget : null,
+            yearlyPlacementTarget: l2Targets ? l2Targets.yearlyPlacementTarget : null,
+
+            sourcer: cols.sourcer !== undefined ? row[cols.sourcer] : null,
+            accountManager: cols.accountManager !== undefined ? row[cols.accountManager] : null,
+            teamLead: cols.teamLead !== undefined ? row[cols.teamLead] : null,
+            placementSharing: cols.placementSharing !== undefined ? row[cols.placementSharing] : null,
+            placementCredit: cols.placementCredit !== undefined ? row[cols.placementCredit] : null,
+            totalRevenue: cols.totalRevenue !== undefined ? row[cols.totalRevenue] : null,
           });
         }
       }

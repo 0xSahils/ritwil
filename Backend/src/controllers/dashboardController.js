@@ -355,7 +355,7 @@ export async function getTeamLeadOverview(currentUser) {
 
     // Build Revenue Map
     const totalRev = (emp.placements || []).reduce(
-        (sum, p) => sum + Number(p.revenue || 0),
+        (sum, p) => sum + Number(p.revenueAsLead || p.revenue || 0),
         0
     );
     const totalCount = (emp.placements || []).length;

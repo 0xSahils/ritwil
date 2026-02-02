@@ -149,24 +149,17 @@ const TeamLeadPage = () => {
     })
   }
 
-  if (loading || !teamLeadData || !teamData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading team data...</p>
-        </div>
-      </div>
-    )
+  if (isLoading) {
+    return <TeamLeadSkeleton />
   }
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg px-8 py-6 max-w-md w-full text-center">
-          <p className="text-red-600 font-medium mb-4">{error}</p>
+          <p className="text-red-600 font-medium mb-4">{error.message || 'Something went wrong'}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()}
             className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
           >
             Retry
@@ -175,6 +168,9 @@ const TeamLeadPage = () => {
       </div>
     )
   }
+
+  // Ensure data exists before rendering
+  if (!teamData || !teamLeadData) return null
 
   const colorClasses = getTeamColorClasses(teamData.color)
   const members = teamLeadData.members || []

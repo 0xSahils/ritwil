@@ -7,7 +7,7 @@ const PieChart = ({ percentage, size = 50, colorClass }) => {
   const circumference = 2 * Math.PI * radius
   
   // Calculate the angle for the pie slice
-  const angle = (percentage / 100) * 360
+  const angle = (Math.min(percentage, 100) / 100) * 360
   const largeArcFlag = angle > 180 ? 1 : 0
   
   // Calculate end point of the arc

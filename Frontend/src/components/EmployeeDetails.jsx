@@ -1,8 +1,10 @@
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
+import { useEmployeeDetails, useUpdateVbid } from '../hooks/useEmployee'
+import { Skeleton, CardSkeleton, TableRowSkeleton } from './common/Skeleton'
 
 const EmployeeDetails = () => {
   const navigate = useNavigate()
@@ -11,24 +13,101 @@ const EmployeeDetails = () => {
   const { user } = useAuth()
   const { employeeId: stateEmployeeId } = location.state || {}
 
-  const [employeeData, setEmployeeData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const employeeIdToFetch = stateEmployeeId || params.id
+  const [selectedYear, setSelectedYear] = useState('All')
+  const { data: rawData, isLoading, error, refetch } = useEmployeeDetails(employeeIdToFetch, user?.role, user?.id, selectedYear)
+  const updateVbidMutation = useUpdateVbid()
 
   const [isEditingVbid, setIsEditingVbid] = useState(false)
   const [vbidValue, setVbidValue] = useState('')
-
   const [openTooltip, setOpenTooltip] = useState(null)
   const tooltipRef = useRef(null)
 
+  const employeeData = useMemo(() => {
+    if (!rawData) return null
+
+    const yearlyTarget = Number(rawData.yearlyTarget || 0)
+    const revenueGenerated = Number(rawData.revenueGenerated || 0)
+    const percentage = Number(rawData.percentage || 0)
+
+    const placements = (rawData.placements || []).map((p) => ({
+      candidateName: p.candidateName,
+      candidateId: p.candidateId || '-',
+      clientId: p.clientId || '-',
+      jpcId: p.jpcId || '-',
+      doj: p.doj?.slice(0, 10),
+      doq: p.doq ? p.doq.slice(0, 10) : '-',
+      recruiter: p.recruiter || '-',
+      daysCompleted: (p.daysCompleted !== undefined && p.daysCompleted !== null) ? String(p.daysCompleted) : '-',
+      client: p.clientName || p.client,
+      sourcer: p.sourcer || '-',
+      accountManager: p.accountManager || '-',
+      teamLead: p.teamLead || '-',
+      placementSharing: p.placementSharing || '-',
+      placementCredit: p.placementCredit ? String(Number(p.placementCredit)) : '-',
+      totalRevenue: p.totalRevenue ? CalculationService.formatCurrency(p.totalRevenue) : '-',
+      revenueAsLead: p.revenueAsLead ? CalculationService.formatCurrency(p.revenueAsLead) : '-',
+      placementType: p.placementType === 'PERMANENT' ? 'FTE' : 'Contract',
+      billedHours: p.billedHours ? String(p.billedHours) : '',
+      margin: CalculationService.formatPercentage(p.marginPercent),
+      billingStatus: p.billingStatus === 'BILLED' ? 'Done' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
+      incentivePayoutETA: p.incentivePayoutEta ? p.incentivePayoutEta.slice(0, 10) : '',
+      placementQualifier: p.qualifier ? 'Yes' : 'No',
+      incentiveAmountINR: CalculationService.formatCurrency(p.incentiveAmountInr, 'INR'),
+      incentivePaid: p.incentivePaid,
+      monthlyBilling: (p.monthlyBilling || []).map((mb) => ({
+        month: mb.month,
+        hours: mb.hours || 0,
+        status: mb.status === 'BILLED' ? 'Billed' : 'Pending',
+      })),
+    }))
+
+    // Calculate total Incentive INR from placements
+    const totalPlacementIncentiveInr = placements.reduce((sum, p) => {
+       const valStr = p.incentiveAmountINR ? String(p.incentiveAmountINR).replace(/[^0-9.-]+/g,"") : "0";
+       return sum + (Number(valStr) || 0);
+    }, 0);
+
+    const calculatedIncentiveUsd = totalPlacementIncentiveInr / 80;
+
+    const totalPlacementRevenue = (rawData.placements || []).reduce((sum, p) => {
+       return sum + (Number(p.totalRevenue) || 0);
+    }, 0);
+
+    return {
+      id: rawData.id,
+      loginVBCode: rawData.vbid || 'VB' + String(rawData.id).slice(-3),
+      recruiterName: rawData.name || 'Employee Name',
+      teamLead: rawData.teamLead || 'Team Lead Name',
+      teamName: rawData.team || 'Team Name',
+      level: rawData.level,
+      targetType: rawData.targetType || 'REVENUE',
+      individualSynopsis: 'Active Recruiter',
+      yearlyTarget: rawData.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
+      yearlyRevenueTarget: rawData.yearlyRevenueTarget,
+      yearlyPlacementTarget: rawData.yearlyPlacementTarget,
+      rawRevenueGenerated: revenueGenerated,
+      rawPlacementsCount: rawData.placementsCount || placements.length,
+      targetAchieved: CalculationService.formatPercentage(percentage),
+      rawPercentage: percentage,
+      targetPlacements: String(yearlyTarget),
+      placementsAchieved: String(rawData.placementsCount || placements.length),
+      revenueGenerated: CalculationService.formatCurrency(revenueGenerated),
+      revenueGeneratedPercentage: CalculationService.formatPercentage(percentage),
+      calculatedRevenueGenerated: CalculationService.formatCurrency(totalPlacementRevenue),
+      totalRevenue: rawData.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
+      slabQualified: rawData.slabQualified || (rawData.incentive?.slabName || null),
+      incentiveUSD: CalculationService.formatCurrency(calculatedIncentiveUsd),
+      incentiveINR: CalculationService.formatCurrency(totalPlacementIncentiveInr, 'INR'),
+      placements,
+    }
+  }, [rawData])
+
   const handleLogout = () => {
-    // Assuming logout logic is available or can be passed
     navigate('/')
   }
 
   const navigateToProfileEdit = () => {
-    // Navigate to a profile edit page or open a modal
-    // For now, let's assume we navigate to a new route
     navigate(`/employee/${params.id}/edit`);
   };
 
@@ -37,7 +116,6 @@ const EmployeeDetails = () => {
                        employeeData?.yearlyRevenueTarget != null && 
                        employeeData?.yearlyPlacementTarget != null;
 
-  // Dual Target Calculations
   const dualRevenueTarget = employeeData?.yearlyRevenueTarget || 0;
   const dualPlacementTarget = employeeData?.yearlyPlacementTarget || 0;
   
@@ -45,11 +123,8 @@ const EmployeeDetails = () => {
   const dualPlacementPercent = dualPlacementTarget > 0 ? (employeeData?.rawPlacementsCount / dualPlacementTarget) * 100 : 0;
 
   const showMargin = user?.role === 'S1_ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'TEAM_LEAD';
-
-  // Use simplified layout for L3 and L4 employees ONLY if they are in Vantage team
   const isVantageL4 = employeeData?.teamName && employeeData.teamName.toLowerCase().includes('vant') && 
                       ['L3', 'L4'].includes(employeeData?.level?.toUpperCase());
-
   const isL2 = employeeData?.level?.toUpperCase() === 'L2';
 
   const handleBack = () => {
@@ -70,14 +145,7 @@ const EmployeeDetails = () => {
 
   const handleSaveVbid = async () => {
     try {
-      const response = await apiRequest(`/users/${employeeData.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vbid: vbidValue })
-      });
-      if (!response.ok) throw new Error('Failed to update VBID');
-      
-      setEmployeeData(prev => ({ ...prev, loginVBCode: vbidValue }));
+      await updateVbidMutation.mutateAsync({ employeeId: employeeData.id, vbid: vbidValue })
       setIsEditingVbid(false);
     } catch (err) {
       alert(err.message);
@@ -266,133 +334,23 @@ const EmployeeDetails = () => {
     )
   }
 
-  useEffect(() => {
-    let isMounted = true
-
-    const fetchData = async () => {
-      try {
-        const isSelf = user?.role === 'EMPLOYEE' && (!stateEmployeeId || stateEmployeeId === user.id)
-        const endpoint = isSelf
-          ? '/dashboard/employee'
-          : `/dashboard/employee/${stateEmployeeId || params.id}`
-
-        const response = await apiRequest(endpoint)
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
-          throw new Error(data.error || 'Failed to load employee details')
-        }
-
-        const data = await response.json()
-
-        const yearlyTarget = Number(data.yearlyTarget || 0)
-        const revenueGenerated = Number(data.revenueGenerated || 0)
-        const percentage = Number(data.percentage || 0)
-
-        const placements = (data.placements || []).map((p) => ({
-          candidateName: p.candidateName,
-          candidateId: p.candidateId || '-',
-          clientId: p.clientId || '-',
-          jpcId: p.jpcId || '-',
-          doj: p.doj?.slice(0, 10),
-          doq: p.doq ? p.doq.slice(0, 10) : '-',
-          recruiter: p.recruiter || '-',
-          daysCompleted: (p.daysCompleted !== undefined && p.daysCompleted !== null) ? String(p.daysCompleted) : '-',
-          client: p.clientName || p.client, // Fallback if clientName used
-          sourcer: p.sourcer || '-',
-          accountManager: p.accountManager || '-',
-          teamLead: p.teamLead || '-',
-          placementSharing: p.placementSharing || '-',
-          placementCredit: p.placementCredit ? String(Number(p.placementCredit)) : '-',
-          totalRevenue: p.totalRevenue ? CalculationService.formatCurrency(p.totalRevenue) : '-',
-          revenueAsLead: p.revenueAsLead ? CalculationService.formatCurrency(p.revenueAsLead) : '-',
-          placementType: p.placementType === 'PERMANENT' ? 'FTE' : 'Contract',
-          billedHours: p.billedHours ? String(p.billedHours) : '',
-          margin: CalculationService.formatPercentage(p.marginPercent),
-          billingStatus: p.billingStatus === 'BILLED' ? 'Done' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
-          incentivePayoutETA: p.incentivePayoutEta ? p.incentivePayoutEta.slice(0, 10) : '',
-          placementQualifier: p.qualifier ? 'Yes' : 'No',
-          incentiveAmountINR: CalculationService.formatCurrency(p.incentiveAmountInr, 'INR'),
-          incentivePaid: p.incentivePaid ? 'Yes' : 'No',
-          monthlyBilling: (p.monthlyBilling || []).map((mb) => ({
-            month: mb.month,
-            hours: mb.hours || 0,
-            status: mb.status === 'BILLED' ? 'Billed' : 'Pending',
-          })),
-        }))
-
-        const incentiveUsd = data.incentive ? Number(data.incentive.amountUsd || 0) : 0
-        const incentiveInr = data.incentive ? Number(data.incentive.amountInr || 0) : 0
-
-        // Calculate total Incentive INR from placements (as user requested to sum from placements)
-        const totalPlacementIncentiveInr = placements.reduce((sum, p) => {
-           // Parse "₹1,234" or similar string back to number
-           const valStr = p.incentiveAmountINR ? String(p.incentiveAmountINR).replace(/[^0-9.-]+/g,"") : "0";
-           return sum + (Number(valStr) || 0);
-        }, 0);
-
-        // Calculate Incentive USD by dividing Total INR by 80
-        const calculatedIncentiveUsd = totalPlacementIncentiveInr / 80;
-
-        // Calculate total Revenue Generated from placements (summing p.totalRevenue)
-        const totalPlacementRevenue = (data.placements || []).reduce((sum, p) => {
-           return sum + (Number(p.totalRevenue) || 0);
-        }, 0);
-
-        const mapped = {
-          id: data.id,
-          loginVBCode: data.vbid || 'VB' + String(data.id).slice(-3),
-          recruiterName: data.name || 'Employee Name',
-          teamLead: data.teamLead || 'Team Lead Name',
-          teamName: data.team || 'Team Name',
-          level: data.level,
-          targetType: data.targetType || 'REVENUE',
-          individualSynopsis: 'Active Recruiter',
-          yearlyTarget: data.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
-          yearlyRevenueTarget: data.yearlyRevenueTarget,
-          yearlyPlacementTarget: data.yearlyPlacementTarget,
-          rawRevenueGenerated: revenueGenerated,
-          rawPlacementsCount: data.placementsCount || placements.length,
-          targetAchieved: CalculationService.formatPercentage(percentage),
-          targetPlacements: String(yearlyTarget),
-          placementsAchieved: String(data.placementsCount || placements.length),
-          revenueGenerated: CalculationService.formatCurrency(revenueGenerated),
-          revenueGeneratedPercentage: CalculationService.formatPercentage(percentage),
-          calculatedRevenueGenerated: CalculationService.formatCurrency(totalPlacementRevenue),
-          totalRevenue: data.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
-          slabQualified: data.slabQualified || (data.incentive?.slabName || null),
-          // Use calculated values for display
-          incentiveUSD: CalculationService.formatCurrency(calculatedIncentiveUsd),
-          incentiveINR: CalculationService.formatCurrency(totalPlacementIncentiveInr, 'INR'),
-          placements,
-        }
-
-        if (isMounted) {
-          setEmployeeData(mapped)
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err.message || 'Something went wrong')
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchData()
-
-    return () => {
-      isMounted = false
-    }
-  }, [user, stateEmployeeId, params.id])
-
-  if (loading || !employeeData) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading employee details...</p>
+      <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm">
+            <div className="flex justify-between items-center mb-6">
+               <Skeleton className="h-10 w-32 rounded-xl" />
+               <Skeleton className="h-10 w-48 rounded-xl" />
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               <Skeleton className="h-24 w-full rounded-2xl" />
+               <Skeleton className="h-24 w-full rounded-2xl" />
+               <Skeleton className="h-24 w-full rounded-2xl" />
+               <Skeleton className="h-24 w-full rounded-2xl" />
+             </div>
+          </div>
+          <CardSkeleton />
         </div>
       </div>
     )
@@ -402,9 +360,9 @@ const EmployeeDetails = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg px-8 py-6 max-w-md w-full text-center">
-          <p className="text-red-600 font-medium mb-4">{error}</p>
+          <p className="text-red-600 font-medium mb-4">{error.message}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()}
             className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
           >
             Retry
@@ -474,17 +432,39 @@ const EmployeeDetails = () => {
             </div>
             
             <div className="flex flex-col gap-3">
-              {user?.id === employeeData?.id && user?.role !== 'EMPLOYEE' && (
-                <button
-                  onClick={navigateToProfileEdit}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-5 py-2.5 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 font-medium"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center justify-end gap-3">
+                <div className="relative group">
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="appearance-none bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white pl-4 pr-10 py-2.5 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 font-medium focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
+                    disabled={isLoading}
+                  >
+                    {(employeeData?.availableYears || [new Date().getFullYear()]).map(year => (
+                      <option key={year} value={year} className="text-slate-800 bg-white">
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/80">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+
+                {user?.id === employeeData?.id && user?.role !== 'EMPLOYEE' && (
+                  <button
+                    onClick={navigateToProfileEdit}
+                    className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-5 py-2.5 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Edit Profile
                 </button>
               )}
+              </div>
               
               <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
               {isDualTarget ? (
@@ -587,21 +567,9 @@ const EmployeeDetails = () => {
                       ) : (
                         <div className="flex items-center gap-2">
                           <span>{employeeData.loginVBCode}</span>
-                          {(user?.id === employeeData.id || user?.role === 'SUPER_ADMIN' || user?.role === 'TEAM_LEAD') && (
-                             <button onClick={() => {
-                               setVbidValue(employeeData.loginVBCode);
-                               setIsEditingVbid(true);
-                             }} className="text-blue-600 hover:text-blue-800 text-xs font-medium ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
-                          )}
                         </div>
                       )}
                     </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      Recruiter Name - Only Individual
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{employeeData.recruiterName}</td>
                   </tr>
                   <tr className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
@@ -630,10 +598,10 @@ const EmployeeDetails = () => {
                     <td className="px-6 py-4 text-sm text-slate-600">
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-green-600">{employeeData.targetAchieved}</span>
-                        <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-xs">
+                        <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-xs overflow-hidden">
                           <div 
                             className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500"
-                            style={{width: employeeData.targetAchieved}}
+                            style={{width: `${Math.min(employeeData.rawPercentage || 0, 100)}%`}}
                           ></div>
                         </div>
                       </div>
@@ -725,9 +693,7 @@ const EmployeeDetails = () => {
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Revenue</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billing status</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Recruiter</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sourcer</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Account Manager</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">TL</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days Completed</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement sharing</th>
@@ -753,7 +719,6 @@ const EmployeeDetails = () => {
                       </>
                     ) : (
                       <>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Recruiter Name</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOJ</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
@@ -811,11 +776,9 @@ const EmployeeDetails = () => {
                              </div>
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.recruiter || '-'}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.sourcer || '-'}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.accountManager || '-'}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.teamLead || '-'}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.daysCompleted}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.placementType === 'FTE' ? placement.daysCompleted : ''}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.placementSharing || '-'}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.placementCredit || '-'}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.revenueAsLead || '-'}</td>
@@ -875,7 +838,7 @@ const EmployeeDetails = () => {
                                {placement.placementType}
                              </span>
                            </td>
-                           <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.daysCompleted}</td>
+                           <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.placementType === 'FTE' ? placement.daysCompleted : ''}</td>
                            <td className="px-4 py-4 text-sm text-slate-600">
                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                                placement.placementQualifier === 'Yes' 
@@ -887,18 +850,13 @@ const EmployeeDetails = () => {
                            </td>
                            <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.incentiveAmountINR}</td>
                            <td className="px-4 py-4 text-sm text-slate-600">
-                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                               placement.incentivePaid === 'Yes' 
-                                 ? 'bg-green-100 text-green-700' 
-                                 : 'bg-slate-100 text-slate-700'
-                             }`}>
-                               {placement.incentivePaid}
+                             <span className="text-slate-700 font-medium">
+                               {placement.incentivePaid || '-'}
                              </span>
                            </td>
                         </>
                       ) : (
                         <>
-                          <td className="px-4 py-4 text-sm text-slate-700 font-medium">{employeeData.recruiterName}</td>
                           <td className="px-4 py-4 text-sm text-slate-700 font-medium">
                             <div>{placement.candidateName}</div>
                             {placement.candidateId && placement.candidateId !== '-' && <div className="text-xs text-slate-500">{placement.candidateId}</div>}
@@ -973,7 +931,7 @@ const EmployeeDetails = () => {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.daysCompleted}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.placementType === 'FTE' ? placement.daysCompleted : ''}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                               placement.placementQualifier === 'Yes' 
@@ -985,12 +943,8 @@ const EmployeeDetails = () => {
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.incentiveAmountINR}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              placement.incentivePaid === 'Yes' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-slate-100 text-slate-700'
-                            }`}>
-                              {placement.incentivePaid}
+                            <span className="text-slate-700 font-medium">
+                              {placement.incentivePaid || '-'}
                             </span>
                           </td>
                         </>

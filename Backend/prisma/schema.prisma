@@ -165,7 +165,7 @@ model Placement {
   billingStatus      BillingStatus
   incentivePayoutEta DateTime?
   incentiveAmountInr Decimal        @db.Decimal(14, 2)
-  incentivePaid      Boolean
+  incentivePaid      String?
   qualifier          Boolean
   createdAt          DateTime       @default(now())
 
@@ -321,13 +321,17 @@ model CampaignActivity {
 
 model AuditLog {
   id         String   @id @default(cuid())
-  actorId    String
-  actor      User     @relation(fields: [actorId], references: [id])
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
   action     String
   module     String?
-  entityType String
-  entityId   String
+  entityType String?
+  entityId   String?
   changes    Json?
+  status     String   @default("SUCCESS")
+  ipAddress  String?
+  userAgent  String?
+  geoLocation String?
   createdAt  DateTime @default(now())
   
   // Security
@@ -336,5 +340,7 @@ model AuditLog {
 
   @@index([actorId])
   @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
 }
 

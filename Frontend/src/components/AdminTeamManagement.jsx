@@ -1,15 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../api/client";
+import { useTeams } from "../hooks/useTeams";
+import { Skeleton } from "./common/Skeleton";
 import CalculationService from "../utils/calculationService";
 
 const AdminTeamManagement = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { teams, isLoading, error, createTeam, deleteTeam } = useTeams();
   
   // Create Team Modal
   const [showModal, setShowModal] = useState(false);
@@ -18,70 +17,66 @@ const AdminTeamManagement = () => {
     color: "blue",
   });
 
-  const fetchTeams = async () => {
-    try {
-      setLoading(true);
-      const response = await apiRequest("/teams");
-      if (!response.ok) throw new Error("Failed to fetch teams");
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setTeams(data);
-      } else {
-        setTeams([]);
-        console.error("Expected array of teams but got:", data);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeams();
-  }, []);
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      const response = await apiRequest("/teams", {
-        method: "POST",
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create team");
+    createTeam(formData, {
+      onSuccess: () => {
+        setShowModal(false);
+        setFormData({ name: "", color: "blue" });
+      },
+      onError: (err) => {
+        alert(err.message);
       }
-
-      setShowModal(false);
-      setFormData({ name: "", color: "blue" });
-      fetchTeams();
-    } catch (err) {
-      alert(err.message);
-    }
+    });
   };
 
-  const handleDelete = async (teamId) => {
+  const handleDelete = (teamId) => {
     if (!window.confirm("Are you sure? This will fail if the team has active members.")) return;
-    try {
-      const response = await apiRequest(`/teams/${teamId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to delete team");
+    deleteTeam(teamId, {
+      onError: (err) => {
+        alert(err.message);
       }
-
-      fetchTeams();
-    } catch (err) {
-      alert(err.message);
-    }
+    });
   };
 
-  if (loading && teams.length === 0) {
-    return <div className="p-8 text-center">Loading teams...</div>;
+  if (isLoading) {
+    return (
+      <div className="p-6 bg-slate-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+             <div className="flex gap-4">
+                <Skeleton className="h-8 w-8 rounded" />
+                <Skeleton className="h-8 w-48 rounded" />
+             </div>
+             <Skeleton className="h-10 w-32 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                <div className="flex justify-between items-start mb-4">
+                   <div className="flex items-center gap-3">
+                      <Skeleton className="h-12 w-12 rounded-lg" />
+                      <div>
+                         <Skeleton className="h-5 w-32 rounded mb-1" />
+                         <Skeleton className="h-3 w-20 rounded" />
+                      </div>
+                   </div>
+                   <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+                <div className="space-y-2 mt-4">
+                   <Skeleton className="h-4 w-full rounded" />
+                   <Skeleton className="h-4 w-2/3 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+     return <div className="p-8 text-center text-red-600">Error loading teams: {error.message}</div>;
   }
 
   return (

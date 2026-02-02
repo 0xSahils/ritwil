@@ -8,6 +8,7 @@ import {
   createUserWithProfile,
   updateUserWithProfile,
   softDeleteUser,
+  getUserById,
 } from "../controllers/userController.js";
 
 const { Role } = pkg;
@@ -41,6 +42,16 @@ router.post("/", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
     if (err.statusCode) {
       return res.status(err.statusCode).json({ error: err.message });
     }
+    next(err);
+  }
+});
+
+router.get("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await getUserById(id);
+    res.json(user);
+  } catch (err) {
     next(err);
   }
 });

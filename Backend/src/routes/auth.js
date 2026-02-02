@@ -10,6 +10,7 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.js";
 import { authenticate } from "../middleware/auth.js";
+import { createAuditLog } from "../controllers/auditLogController.js";
 
 const { PrismaClient } = pkg;
 const router = express.Router();
@@ -43,6 +44,9 @@ async function createRefreshToken(userId) {
 }
 
 router.post("/login", async (req, res, next) => {
+  const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const userAgent = req.headers['user-agent'];
+
   try {
     const { email, password } = req.body;
 
@@ -59,11 +63,33 @@ router.post("/login", async (req, res, next) => {
     });
 
     if (!user || !user.isActive) {
+      await createAuditLog({
+        actorId: null,
+        action: "LOGIN_ATTEMPT",
+        module: "AUTH",
+        entityType: "User",
+        entityId: email,
+        status: "FAILURE",
+        ipAddress,
+        userAgent,
+        changes: { reason: "User not found or inactive", email }
+      });
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
+      await createAuditLog({
+        actorId: user.id,
+        action: "LOGIN_ATTEMPT",
+        module: "AUTH",
+        entityType: "User",
+        entityId: user.id,
+        status: "FAILURE",
+        ipAddress,
+        userAgent,
+        changes: { reason: "Invalid password" }
+      });
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -81,6 +107,17 @@ router.post("/login", async (req, res, next) => {
       });
 
       if (!verified) {
+        await createAuditLog({
+          actorId: user.id,
+          action: "LOGIN_ATTEMPT",
+          module: "AUTH",
+          entityType: "User",
+          entityId: user.id,
+          status: "FAILURE",
+          ipAddress,
+          userAgent,
+          changes: { reason: "Invalid MFA code" }
+        });
         return res.status(401).json({ error: "Invalid MFA code" });
       }
     }
@@ -89,6 +126,18 @@ router.post("/login", async (req, res, next) => {
     const refreshToken = await createRefreshToken(user.id);
 
     const profile = user.employeeProfile;
+
+    await createAuditLog({
+      actorId: user.id,
+      action: "LOGIN_ATTEMPT",
+      module: "AUTH",
+      entityType: "User",
+      entityId: user.id,
+      status: "SUCCESS",
+      ipAddress,
+      userAgent,
+      changes: { email: user.email }
+    });
 
     res
       .cookie("refreshToken", refreshToken, {

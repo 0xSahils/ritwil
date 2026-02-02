@@ -1,16 +1,29 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
-import { apiRequest } from "../api/client";
+import { apiRequest } from "../api/client"; // Keep for import functionality if not refactored yet
 import CalculationService from "../utils/calculationService";
 import UserCreationModal from "./UserCreationModal";
+import { useTeamDetails } from "../hooks/useTeams";
+import { Skeleton } from "./common/Skeleton";
+import { useAuth } from "../context/AuthContext";
 
 const AdminTeamDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [team, setTeam] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { user: currentUser } = useAuth();
+  const canEditTarget = currentUser?.role === "S1_ADMIN";
+  
+  const { 
+    team, 
+    isLoading, 
+    error, 
+    refetch, 
+    updateTeam, 
+    removeMember, 
+    updateMemberTarget 
+  } = useTeamDetails(id);
+
   const [activeTab, setActiveTab] = useState("leads");
   
   // Modal states
@@ -29,75 +42,76 @@ const AdminTeamDetails = () => {
   const [importing, setImporting] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  const handleUpdateTeam = async (data) => {
-    try {
-      const response = await apiRequest(`/teams/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to update team");
-      fetchTeamDetails();
-      setShowSettingsModal(false);
-      showNotification("success", "Team updated successfully");
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const fetchTeamDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await apiRequest(`/teams/${id}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch team details (${response.status})`);
+  const handleUpdateTeam = (data) => {
+    updateTeam(data, {
+      onSuccess: () => {
+        setShowSettingsModal(false);
+        showNotification("success", "Team updated successfully");
+      },
+      onError: (err) => {
+        alert(err.message);
       }
-      const data = await response.json();
-      setTeam(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
-  useEffect(() => {
-    fetchTeamDetails();
-  }, [id]);
-
-  const handleRemoveUser = async (userId, type) => {
+  const handleRemoveUser = (userId, type) => {
     if (!window.confirm(`Are you sure you want to remove this ${type}?`)) return;
-    try {
-      const response = await apiRequest(`/teams/${id}/members/${userId}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to remove user");
-      fetchTeamDetails();
-    } catch (err) {
-      alert(err.message);
-    }
+    removeMember({ userId, type }, {
+      onError: (err) => {
+        alert(err.message);
+      }
+    });
   };
 
-  const handleUpdateTarget = async (userId, newTarget, newTargetType) => {
-    try {
-      const response = await apiRequest(`/teams/${id}/members/${userId}/target`, {
-        method: "PATCH",
-        body: JSON.stringify({ 
-          target: Number(newTarget),
-          targetType: newTargetType 
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to update target");
-      fetchTeamDetails();
-    } catch (err) {
-      alert(err.message);
-    }
+  const handleUpdateTarget = (userId, newTarget, newTargetType) => {
+    updateMemberTarget({ userId, newTarget, newTargetType }, {
+      onError: (err) => {
+        alert(err.message);
+      }
+    });
   };
 
   const handleCreateSuccess = () => {
-    fetchTeamDetails();
+    refetch();
     showNotification("success", "User created and added to team successfully");
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6 md:p-12">
+        <div className="max-w-7xl mx-auto space-y-8">
+           <div className="bg-white rounded-3xl p-8 shadow-sm">
+              <div className="flex justify-between items-center">
+                 <div className="flex items-center gap-4">
+                    <Skeleton className="h-16 w-16 rounded-2xl" />
+                    <div>
+                       <Skeleton className="h-8 w-48 rounded mb-2" />
+                       <Skeleton className="h-4 w-32 rounded" />
+                    </div>
+                 </div>
+                 <Skeleton className="h-10 w-32 rounded-lg" />
+              </div>
+           </div>
+           <div className="bg-white rounded-3xl p-8 shadow-sm h-96">
+              <div className="flex gap-4 mb-6">
+                 <Skeleton className="h-10 w-24 rounded-full" />
+                 <Skeleton className="h-10 w-24 rounded-full" />
+              </div>
+              <div className="space-y-4">
+                 <Skeleton className="h-16 w-full rounded-xl" />
+                 <Skeleton className="h-16 w-full rounded-xl" />
+                 <Skeleton className="h-16 w-full rounded-xl" />
+              </div>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+     return <div className="p-8 text-center text-red-600">Error: {error.message}</div>;
+  }
+
 
   const handleTeamImport = async () => {
     if (!importFile) {
@@ -434,7 +448,7 @@ const AdminTeamDetails = () => {
       
       setShowImportModal(false);
       setImportFile(null);
-      fetchTeamDetails(); // Refresh to show updated revenue
+      refetch(); // Refresh to show updated revenue
       
     } catch (err) {
       console.error(err);
@@ -444,8 +458,8 @@ const AdminTeamDetails = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading team details...</div>;
-  if (error) return <div className="p-8 text-center text-red-600">Error: {error}</div>;
+  if (isLoading) return <div className="p-8 text-center">Loading team details...</div>;
+  if (error) return <div className="p-8 text-center text-red-600">Error: {error.message}</div>;
   if (!team) return <div className="p-8 text-center">Team not found</div>;
 
   return (
@@ -586,15 +600,22 @@ const AdminTeamDetails = () => {
                           <input
                             type="number"
                             defaultValue={user.target}
+                            disabled={!canEditTarget}
                             onBlur={(e) => {
                               if (Number(e.target.value) !== user.target) {
                                 handleUpdateTarget(user.userId, e.target.value, user.targetType || "REVENUE");
                               }
                             }}
-                            className="w-24 px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded bg-transparent transition-all outline-none"
+                            className={`w-24 px-2 py-1 border border-transparent rounded bg-transparent transition-all outline-none ${
+                              canEditTarget 
+                                ? "hover:border-slate-300 focus:border-blue-500" 
+                                : "cursor-not-allowed opacity-70"
+                            }`}
+                            title={!canEditTarget ? "Only Admin can edit targets" : ""}
                           />
                           <select
                             defaultValue={user.targetType || "REVENUE"}
+                            disabled={!canEditTarget}
                             onChange={(e) => {
                               const newTargetType = e.target.value;
                               if (newTargetType !== user.targetType) {
@@ -611,7 +632,12 @@ const AdminTeamDetails = () => {
                                 }
                               }
                             }}
-                            className="w-28 px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded bg-transparent transition-all outline-none text-xs"
+                            className={`w-28 px-2 py-1 border border-transparent rounded bg-transparent transition-all outline-none text-xs ${
+                              canEditTarget
+                                ? "hover:border-slate-300 focus:border-blue-500"
+                                : "cursor-not-allowed opacity-70"
+                            }`}
+                            title={!canEditTarget ? "Only Admin can edit targets" : ""}
                           >
                             <option value="REVENUE">Revenue</option>
                             <option value="PLACEMENTS">Placements</option>

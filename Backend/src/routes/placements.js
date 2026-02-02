@@ -45,7 +45,7 @@ router.get("/user/:userId", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async 
 });
 
 // Create a single placement
-router.post("/user/:userId", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
+router.post("/user/:userId", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
   try {
     const { userId } = req.params;
     const placement = await createPlacement(userId, req.body, req.user.id);
@@ -85,7 +85,7 @@ router.post("/bulk-global", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async 
 });
 
 // Update a placement
-router.put("/:id", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
+router.put("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
   try {
     const { id } = req.params;
     const placement = await updatePlacement(id, req.body, req.user.id);

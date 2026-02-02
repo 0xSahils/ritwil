@@ -95,6 +95,32 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
   };
 }
 
+export async function getUserById(id) {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      employeeProfile: {
+        include: { team: true, manager: true },
+      },
+    },
+  });
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    isActive: user.isActive,
+    employeeProfile: user.employeeProfile
+  };
+}
+
 export async function createUserWithProfile(payload, actorId) {
   const {
     email,
@@ -340,6 +366,44 @@ export async function updateUserWithProfile(id, body, actor) {
 }
 
 export async function softDeleteUser(id, actorId) {
+  // Check if actor has permission (get actor details first)
+  const actor = await prisma.user.findUnique({ where: { id: actorId }, include: { employeeProfile: true } });
+  
+  if (actor.role === Role.SUPER_ADMIN) {
+      // Perform same scope check as update
+      const targetUser = await prisma.user.findUnique({
+          where: { id },
+          include: { employeeProfile: true }
+      });
+      
+      if (!targetUser) return null; // Or throw not found
+
+      const actorTeamId = actor.employeeProfile?.teamId;
+      let hasAccess = false;
+      
+      if (actorTeamId) {
+          if (targetUser.employeeProfile?.teamId === actorTeamId) hasAccess = true;
+      } else {
+           const hierarchyCheck = await prisma.user.findFirst({
+            where: {
+              id,
+              OR: [
+                { managerId: actor.id },
+                { manager: { managerId: actor.id } },
+                { manager: { manager: { managerId: actor.id } } },
+              ],
+            },
+          });
+          if (hierarchyCheck) hasAccess = true;
+      }
+      
+      if (!hasAccess) {
+          const error = new Error("Forbidden: Access denied to this user");
+          error.statusCode = 403;
+          throw error;
+      }
+  }
+
   const profile = await prisma.employeeProfile.findUnique({
     where: { id },
   });

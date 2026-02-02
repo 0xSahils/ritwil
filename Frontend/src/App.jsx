@@ -13,6 +13,7 @@ const AdminTeamManagement = lazy(() => import('./components/AdminTeamManagement'
 const AdminTeamDetails = lazy(() => import('./components/AdminTeamDetails'))
 const AdminEmployeePlacements = lazy(() => import('./components/AdminEmployeePlacements'))
 const S1AdminDashboard = lazy(() => import('./components/S1AdminDashboard'))
+const AdminAuditLogs = lazy(() => import('./components/AdminAuditLogs'))
 
 // Loading component
 const LoadingSpinner = () => (
@@ -32,6 +33,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['S1_ADMIN']}>
                 <S1AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/audit-logs"
+            element={
+              <ProtectedRoute allowedRoles={['S1_ADMIN', 'SUPER_ADMIN']}>
+                <AdminAuditLogs />
               </ProtectedRoute>
             }
           />
@@ -62,7 +71,7 @@ function App() {
           <Route
             path="/admin/employee/:id/placements"
             element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'S1_ADMIN']}>
                 <AdminEmployeePlacements />
               </ProtectedRoute>
             }

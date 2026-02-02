@@ -427,6 +427,18 @@ export async function removeMemberFromTeam(teamId, userId, actorId) {
 }
 
 export async function updateMemberTarget(userId, target, targetType, actorId) {
+  // Check actor role (security redundancy)
+  const actor = await prisma.user.findUnique({
+    where: { id: actorId },
+    select: { role: true }
+  });
+
+  if (!actor || actor.role !== "S1_ADMIN") {
+    const error = new Error("Only Admin can update targets");
+    error.statusCode = 403;
+    throw error;
+  }
+
   const dataToUpdate = {
     yearlyTarget: target,
   };

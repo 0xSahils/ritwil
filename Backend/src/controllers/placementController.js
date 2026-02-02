@@ -130,7 +130,7 @@ export async function createPlacement(userId, data, actorId) {
       billingStatus: normalizedBillingStatus,
       incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
       incentiveAmountInr: parseCurrency(incentiveAmountInr),
-      incentivePaid: String(data.incentivePaid).toLowerCase() === 'true',
+      incentivePaid: (data.incentivePaid !== undefined && data.incentivePaid !== null) ? String(data.incentivePaid).trim() : "",
       qualifier,
       sourcer,
       accountManager,
@@ -168,7 +168,7 @@ export async function updatePlacement(id, data, actorId) {
   if (updates.totalRevenue !== undefined) updates.totalRevenue = updates.totalRevenue ? parseCurrency(updates.totalRevenue) : null;
   if (updates.revenueAsLead !== undefined) updates.revenueAsLead = updates.revenueAsLead ? parseCurrency(updates.revenueAsLead) : null;
   if (updates.incentivePaid !== undefined) {
-    updates.incentivePaid = String(updates.incentivePaid).toLowerCase() === 'true';
+    updates.incentivePaid = (updates.incentivePaid !== null) ? String(updates.incentivePaid).trim() : "";
   }
   
   if (updates.billingStatus) updates.billingStatus = mapBillingStatus(updates.billingStatus);
@@ -309,17 +309,19 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
       const normalizedBillingStatus = mapBillingStatus(billingStatus);
       const normalizedPlacementType = mapPlacementType(placementType);
       const normalizedCandidateId = candidateId || '-';
-      const normalizedJpcId = jpcId || '-';
       const normalizedClientId = clientId || '-';
+      const normalizedJpcId = jpcId || '-';
       const normalizedBilledHours = billedHours ? Number(billedHours) : null;
-      const normalizedIncentivePaid = String(incentivePaid).toLowerCase() === 'true';
+      const normalizedIncentivePaid = (incentivePaid !== undefined && incentivePaid !== null) ? String(incentivePaid).trim() : "";
+      const validDoj = doj ? new Date(doj) : new Date();
 
       // SMART UPLOAD: Check for duplicate
       const existingPlacement = await prisma.placement.findFirst({
         where: {
           employeeId: userId,
           candidateName: { equals: candidateName, mode: 'insensitive' },
-          clientName: { equals: clientName, mode: 'insensitive' }
+          clientName: { equals: clientName, mode: 'insensitive' },
+          doj: validDoj
         }
       });
 
@@ -390,7 +392,7 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
             billingStatus: normalizedBillingStatus,
             incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
             incentiveAmountInr: parseCurrency(incentiveAmountInr),
-            incentivePaid: String(incentivePaid).toLowerCase() === 'true',
+            incentivePaid: normalizedIncentivePaid,
             qualifier,
           },
         });
@@ -673,14 +675,15 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
       const normalizedCandidateId = candidateId || '-';
       const normalizedClientId = clientId || '-';
       const normalizedJpcId = jpcId || '-';
-      const normalizedIncentivePaid = String(incentivePaid).toLowerCase() === 'true';
+      const normalizedIncentivePaid = incentivePaid ? String(incentivePaid).trim() : "";
 
       // SMART UPLOAD: Check for duplicate
       const existingPlacement = await prisma.placement.findFirst({
         where: {
           employeeId: employeeId,
           candidateName: { equals: candidateName || "Unknown Candidate", mode: 'insensitive' },
-          clientName: { equals: clientName || "Unknown Client", mode: 'insensitive' }
+          clientName: { equals: clientName || "Unknown Client", mode: 'insensitive' },
+          doj: validDoj
         }
       });
 
@@ -692,7 +695,7 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
               (Math.abs((Number(existingPlacement.revenue) || 0) - (Number(revenue) || 0)) > 0.01) ||
               (Math.abs((Number(existingPlacement.marginPercent) || 0) - (Number(marginPercent) || 0)) > 0.01) ||
               (Math.abs((Number(existingPlacement.incentiveAmountInr) || 0) - (Number(incentiveAmountInr) || 0)) > 0.01) ||
-              (existingPlacement.incentivePaid !== (String(incentivePaid).toLowerCase() === 'true')) ||
+              (existingPlacement.incentivePaid !== normalizedIncentivePaid) ||
               (existingPlacement.candidateId !== normalizedCandidateId) ||
               (existingPlacement.clientId !== normalizedClientId) ||
               (existingPlacement.jpcId !== normalizedJpcId) ||
@@ -732,7 +735,7 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
             billingStatus: normalizedBillingStatus,
             incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
             incentiveAmountInr: parseCurrency(incentiveAmountInr),
-            incentivePaid: String(incentivePaid).toLowerCase() === 'true',
+            incentivePaid: normalizedIncentivePaid,
             qualifier,
             sourcer: normalizedSourcer,
             accountManager: normalizedAccountManager,
@@ -764,7 +767,7 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
             billingStatus: normalizedBillingStatus,
             incentivePayoutEta: incentivePayoutEta ? new Date(incentivePayoutEta) : null,
             incentiveAmountInr: parseCurrency(incentiveAmountInr),
-            incentivePaid: String(incentivePaid).toLowerCase() === 'true',
+            incentivePaid: normalizedIncentivePaid,
             qualifier,
             sourcer: normalizedSourcer,
             accountManager: normalizedAccountManager,

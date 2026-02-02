@@ -6,7 +6,8 @@ import { getUsers } from '../api/users';
 import { getAuditLogs } from '../api/auditLogs';
 import CalculationService from '../utils/calculationService';
 import RecursiveMemberNode from './RecursiveMemberNode';
-
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { Skeleton, CardSkeleton, TableRowSkeleton } from './common/Skeleton';
 // Pie Chart Component
 const PieChart = ({ percentage, size = 50, colorClass }) => {
   const radius = size / 2 - 4
@@ -204,87 +205,77 @@ const S1AdminDashboard = () => {
 
 const HierarchyTab = ({ user }) => {
     const navigate = useNavigate();
-    const [hierarchyData, setHierarchyData] = useState({ superAdmins: [], unassignedTeams: [] });
-    const [loading, setLoading] = useState(true);
     const [expandedAdmins, setExpandedAdmins] = useState({});
     const [expandedTeams, setExpandedTeams] = useState({});
     const [expandedLeads, setExpandedLeads] = useState({});
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                // 1. Fetch Super Admins (L1)
-                const adminsRes = await getUsers({ role: 'SUPER_ADMIN', pageSize: 100 });
-                const superAdmins = adminsRes.data || [];
+    const { data: hierarchyData = { superAdmins: [], unassignedTeams: [] }, isLoading: loading } = useQuery({
+        queryKey: ['hierarchyData'],
+        queryFn: async () => {
+            // 1. Fetch Super Admins (L1)
+            const adminsRes = await getUsers({ role: 'SUPER_ADMIN', pageSize: 100 });
+            const superAdmins = adminsRes.data || [];
 
-                // 2. Fetch All Teams Data (Full Hierarchy)
-                const teamsRes = await apiRequest('/dashboard/super-admin');
-                if (!teamsRes.ok) throw new Error('Failed to fetch teams');
-                const teamsData = await teamsRes.json();
-                const allTeams = teamsData.teams || [];
+            // 2. Fetch All Teams Data (Full Hierarchy)
+            const teamsRes = await apiRequest('/dashboard/super-admin');
+            if (!teamsRes.ok) throw new Error('Failed to fetch teams');
+            const teamsData = await teamsRes.json();
+            const allTeams = teamsData.teams || [];
 
-                // 3. Fetch Team Leads to map to Super Admins
-                const leadsRes = await getUsers({ role: 'TEAM_LEAD', pageSize: 1000 });
-                const leads = leadsRes.data || [];
+            // 3. Fetch Team Leads to map to Super Admins
+            const leadsRes = await getUsers({ role: 'TEAM_LEAD', pageSize: 1000 });
+            const leads = leadsRes.data || [];
+            
+            // Map Lead ID -> Manager ID (Super Admin ID)
+            const leadManagerMap = {};
+            leads.forEach(lead => {
+                if (lead.manager) {
+                    leadManagerMap[lead.id] = lead.manager.id;
+                }
+            });
+
+            // 4. Assign Teams to Super Admins
+            const adminTeamsMap = {}; // AdminID -> [Teams]
+            
+            // Initialize map for all admins
+            superAdmins.forEach(admin => {
+                adminTeamsMap[admin.id] = [];
+            });
+            
+            const unassignedTeams = [];
+
+            allTeams.forEach(team => {
+                let assignedAdminId = null;
                 
-                // Map Lead ID -> Manager ID (Super Admin ID)
-                const leadManagerMap = {};
-                leads.forEach(lead => {
-                    if (lead.manager) {
-                        leadManagerMap[lead.id] = lead.manager.id;
-                    }
-                });
-
-                // 4. Assign Teams to Super Admins
-                const adminTeamsMap = {}; // AdminID -> [Teams]
-                
-                // Initialize map for all admins
-                superAdmins.forEach(admin => {
-                    adminTeamsMap[admin.id] = [];
-                });
-                
-                const unassignedTeams = [];
-
-                allTeams.forEach(team => {
-                    let assignedAdminId = null;
-                    
-                    if (team.teamLeads && team.teamLeads.length > 0) {
-                        for (const lead of team.teamLeads) {
-                            const managerId = leadManagerMap[lead.id];
-                            if (managerId && adminTeamsMap[managerId]) {
-                                assignedAdminId = managerId;
-                                break;
-                            }
+                if (team.teamLeads && team.teamLeads.length > 0) {
+                    for (const lead of team.teamLeads) {
+                        const managerId = leadManagerMap[lead.id];
+                        if (managerId && adminTeamsMap[managerId]) {
+                            assignedAdminId = managerId;
+                            break;
                         }
                     }
+                }
 
-                    if (assignedAdminId) {
-                        adminTeamsMap[assignedAdminId].push(team);
-                    } else {
-                        unassignedTeams.push(team);
-                    }
-                });
+                if (assignedAdminId) {
+                    adminTeamsMap[assignedAdminId].push(team);
+                } else {
+                    unassignedTeams.push(team);
+                }
+            });
 
-                const adminsWithTeams = superAdmins.map(admin => ({
-                    ...admin,
-                    teams: adminTeamsMap[admin.id] || []
-                }));
+            const adminsWithTeams = superAdmins.map(admin => ({
+                ...admin,
+                teams: adminTeamsMap[admin.id] || []
+            }));
 
-                setHierarchyData({
-                    superAdmins: adminsWithTeams,
-                    unassignedTeams
-                });
-
-            } catch (err) {
-                console.error("Failed to load hierarchy:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
+            return {
+                superAdmins: adminsWithTeams,
+                unassignedTeams
+            };
+        },
+        placeholderData: keepPreviousData
+    });
 
     const toggleAdmin = (adminId) => {
         setExpandedAdmins(prev => ({ ...prev, [adminId]: !prev[adminId] }));
@@ -314,8 +305,18 @@ const HierarchyTab = ({ user }) => {
 
     if (loading) {
         return (
-            <div className="flex justify-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="space-y-8 animate-fadeInUp">
+                <CardSkeleton />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <Skeleton className="h-32 rounded-xl" />
+                  <Skeleton className="h-32 rounded-xl" />
+                  <Skeleton className="h-32 rounded-xl" />
+                </div>
+                <div className="space-y-4">
+                  <CardSkeleton />
+                  <CardSkeleton />
+                  <CardSkeleton />
+                </div>
             </div>
         );
     }
@@ -349,6 +350,9 @@ const HierarchyTab = ({ user }) => {
                         </div>
                         <div className="text-2xl font-bold tracking-tight">{user?.name || 'Supreme Administrator'}</div>
                     </div>
+                </div>
+                
+                <div className="flex gap-3 relative z-10 mt-4 md:mt-0">
                 </div>
             </div>
 
@@ -390,7 +394,7 @@ const HierarchyTab = ({ user }) => {
                         <p className="text-sm text-slate-500">Manage all teams across the organization</p>
                     </div>
                     <button 
-                        onClick={() => window.location.href = '/admin/teams'} 
+                        onClick={() => navigate('/admin/teams')} 
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -629,13 +633,11 @@ const StatCard = ({ title, value, change, icon, trend }) => (
 );
 
 const L1AdminsTab = () => {
-  const [admins, setAdmins] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [pagination, setPagination] = useState(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -646,24 +648,12 @@ const L1AdminsTab = () => {
     yearlyTarget: ""
   });
 
-  const fetchAdmins = (pageToLoad = page) => {
-    setLoading(true);
-    getUsers({ role: 'SUPER_ADMIN', page: pageToLoad, pageSize })
-      .then(res => {
-          setAdmins(res.data || []);
-          setPagination(res.pagination || null);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchAdmins(page);
-    
-    // Poll for updates every 15s
-    const interval = setInterval(() => fetchAdmins(page), 15000);
-    return () => clearInterval(interval);
-  }, [page]);
+  const { data: { data: admins = [], pagination } = {}, isLoading: loading } = useQuery({
+    queryKey: ['l1Admins', { page, pageSize }],
+    queryFn: () => getUsers({ role: 'SUPER_ADMIN', page, pageSize }),
+    refetchInterval: 15000, // Poll every 15s
+    placeholderData: keepPreviousData
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -687,7 +677,7 @@ const L1AdminsTab = () => {
       setShowModal(false);
       setEditingAdmin(null);
       resetForm();
-      fetchAdmins();
+      queryClient.invalidateQueries(['l1Admins']);
     } catch (err) {
       alert(err.message);
     }
@@ -698,7 +688,7 @@ const L1AdminsTab = () => {
       try {
           const response = await apiRequest(`/users/${id}`, { method: 'DELETE' });
           if(!response.ok) throw new Error("Failed to delete");
-          fetchAdmins();
+          queryClient.invalidateQueries(['l1Admins']);
       } catch (err) {
           alert(err.message);
       }
@@ -734,7 +724,37 @@ const L1AdminsTab = () => {
       });
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-500">Loading admins...</div>;
+  if (loading && !admins.length) return (
+      <div className="space-y-6 animate-fadeInUp">
+          <div className="flex justify-between items-center">
+             <div>
+                <h2 className="text-2xl font-bold text-slate-800">Super Admins (L1)</h2>
+                <Skeleton className="h-4 w-64 mt-1" />
+             </div>
+             <Skeleton className="h-10 w-40 rounded-lg" />
+          </div>
+          <div className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 overflow-hidden">
+             <table className="w-full text-left">
+                 <thead className="bg-white/50 border-b border-white/60">
+                    <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                       <th className="py-4 pl-6">Admin Name</th>
+                       <th className="py-4">Role</th>
+                       <th className="py-4">Target</th>
+                       <th className="py-4">Status</th>
+                       <th className="py-4 text-right pr-6">Actions</th>
+                    </tr>
+                 </thead>
+                 <tbody className="divide-y divide-white/60">
+                    <TableRowSkeleton cols={5} />
+                    <TableRowSkeleton cols={5} />
+                    <TableRowSkeleton cols={5} />
+                    <TableRowSkeleton cols={5} />
+                    <TableRowSkeleton cols={5} />
+                 </tbody>
+             </table>
+          </div>
+      </div>
+  );
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -905,42 +925,68 @@ const L1AdminsTab = () => {
 };
 
 const MembersTab = () => {
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState(null);
   const [roleFilter, setRoleFilter] = useState('');
 
-  const fetchMembers = (pageToLoad = page) => {
-    setLoading(true);
-    const params = { page: pageToLoad, pageSize: 20 };
-    if (roleFilter) params.role = roleFilter;
-    
-    getUsers(params)
-      .then(res => {
-          // Filter out S1_ADMIN and SUPER_ADMIN if returned
-          const filtered = (res.data || []).filter(u => u.role !== 'S1_ADMIN' && u.role !== 'SUPER_ADMIN');
-          setMembers(filtered);
-          setPagination(res.pagination || null);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchMembers(page);
-  }, [page, roleFilter]);
+  const { data: { data: members = [], pagination } = {}, isLoading: loading } = useQuery({
+    queryKey: ['members', { page, roleFilter }],
+    queryFn: async () => {
+        const params = { page, pageSize: 20 };
+        if (roleFilter) params.role = roleFilter;
+        const res = await getUsers(params);
+        // Filter out S1_ADMIN and SUPER_ADMIN if returned
+        res.data = (res.data || []).filter(u => u.role !== 'S1_ADMIN' && u.role !== 'SUPER_ADMIN');
+        return res;
+    },
+    placeholderData: keepPreviousData
+  });
 
   const handleDelete = async (id) => {
       if(!window.confirm("Are you sure you want to delete this member?")) return;
       try {
           const response = await apiRequest(`/users/${id}`, { method: 'DELETE' });
           if(!response.ok) throw new Error("Failed to delete");
-          fetchMembers(page);
+          queryClient.invalidateQueries(['members']);
       } catch (err) {
           alert(err.message);
       }
   };
+
+  if (loading && !members.length) return (
+      <div className="space-y-6 animate-fadeInUp">
+         <div className="flex justify-between items-center">
+            <div>
+               <h2 className="text-2xl font-bold text-slate-800">Team Members</h2>
+               <Skeleton className="h-4 w-64 mt-1" />
+            </div>
+            <Skeleton className="h-10 w-40 rounded-lg" />
+         </div>
+    
+         <div className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 overflow-hidden">
+            <table className="w-full text-left">
+               <thead className="bg-white/50 border-b border-white/60">
+                  <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                     <th className="py-4 pl-6">Member</th>
+                     <th className="py-4">Role</th>
+                     <th className="py-4">Team</th>
+                     <th className="py-4">Manager</th>
+                     <th className="py-4">Status</th>
+                     <th className="py-4 text-right pr-6">Actions</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-white/60">
+                  <TableRowSkeleton cols={6} />
+                  <TableRowSkeleton cols={6} />
+                  <TableRowSkeleton cols={6} />
+                  <TableRowSkeleton cols={6} />
+                  <TableRowSkeleton cols={6} />
+               </tbody>
+            </table>
+         </div>
+      </div>
+  );
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -1012,7 +1058,7 @@ const MembersTab = () => {
                         )}
                       </td>
                       <td className="py-4 text-right pr-6">
-                         <button onClick={() => window.location.href=`/employee/${member.id}`} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">View</button>
+                         <button onClick={() => navigate(`/employee/${member.id}`)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">View</button>
                          <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
                       </td>
                    </tr>
@@ -1053,10 +1099,8 @@ const MembersTab = () => {
 };
 
 const AuditLogsTab = () => {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState(null);
   const [filters, setFilters] = useState({
     module: '',
     action: '',
@@ -1064,27 +1108,18 @@ const AuditLogsTab = () => {
     endDate: ''
   });
 
-  const fetchLogs = (pageToLoad = page) => {
-    setLoading(true);
-    // Convert filters to query params
-    const params = { page: pageToLoad, pageSize: 50 };
-    if (filters.module) params.module = filters.module;
-    if (filters.action) params.action = filters.action;
-    if (filters.startDate) params.startDate = filters.startDate;
-    if (filters.endDate) params.endDate = filters.endDate;
-
-    getAuditLogs(params)
-      .then(res => {
-          setLogs(res.data);
-          setPagination(res.pagination || null);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchLogs(page);
-  }, [page]); 
+  const { data: { data: logs = [], pagination } = {}, isLoading: loading } = useQuery({
+    queryKey: ['auditLogs', { page, ...filters }],
+    queryFn: async () => {
+        const params = { page, pageSize: 50 };
+        if (filters.module) params.module = filters.module;
+        if (filters.action) params.action = filters.action;
+        if (filters.startDate) params.startDate = filters.startDate;
+        if (filters.endDate) params.endDate = filters.endDate;
+        return getAuditLogs(params);
+    },
+    placeholderData: keepPreviousData
+  });
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -1093,14 +1128,54 @@ const AuditLogsTab = () => {
 
   const applyFilters = () => {
     setPage(1);
-    fetchLogs(1);
+    // useQuery will automatically refetch because filters state updated
+  };
+
+  const handleExport = async (formatType) => {
+    try {
+        const queryParams = new URLSearchParams({ ...filters, format: formatType });
+        const response = await apiRequest(`/audit-logs/export?${queryParams.toString()}`);
+        
+        if (!response.ok) throw new Error('Export failed');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-logs.${formatType === 'excel' ? 'xlsx' : formatType}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    } catch (err) {
+        console.error('Export error:', err);
+        alert('Failed to export logs');
+    }
   };
 
   return (
    <div className="space-y-6 animate-fadeInUp">
-      <div>
-         <h2 className="text-2xl font-bold text-slate-800">Activity History / Audit Log</h2>
-         <p className="text-slate-500 mt-1">Complete history of system actions and changes.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+         <div>
+            <h2 className="text-2xl font-bold text-slate-800">Activity History / Audit Log</h2>
+            <p className="text-slate-500 mt-1">Complete history of system actions and changes.</p>
+         </div>
+         <div className="flex gap-3">
+            <button
+              onClick={() => handleExport('csv')}
+              className="inline-flex items-center px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition shadow-sm"
+            >
+              <svg className="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Export CSV
+            </button>
+            <button
+              onClick={() => handleExport('excel')}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition shadow-sm shadow-blue-500/30"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Export Excel
+            </button>
+         </div>
       </div>
 
       <div className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 p-6">
@@ -1154,8 +1229,14 @@ const AuditLogsTab = () => {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                    {loading ? (
-                        <tr><td colSpan="5" className="text-center py-8 text-slate-500">Loading logs...</td></tr>
+                    {loading && !logs.length ? (
+                        <>
+                            <TableRowSkeleton cols={5} />
+                            <TableRowSkeleton cols={5} />
+                            <TableRowSkeleton cols={5} />
+                            <TableRowSkeleton cols={5} />
+                            <TableRowSkeleton cols={5} />
+                        </>
                     ) : logs.map(log => (
                         <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="py-3 pl-4 text-xs text-slate-500 whitespace-nowrap">

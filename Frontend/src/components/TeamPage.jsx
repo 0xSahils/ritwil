@@ -1,86 +1,106 @@
-import { useEffect, useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import { useSuperAdminDashboard } from '../hooks/useDashboard'
+import { Skeleton } from './common/Skeleton'
 import AdminUserManagement from './AdminUserManagement'
 import CalculationService from '../utils/calculationService'
 import PieChart from './PieChart'
 import RecursiveMemberNode from './RecursiveMemberNode'
+
+const DashboardSkeleton = () => (
+  <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header Skeleton */}
+      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-xl" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48 rounded-lg" />
+              <Skeleton className="h-4 w-32 rounded-lg" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Skeleton className="h-10 w-24 rounded-full" />
+            <Skeleton className="h-10 w-24 rounded-full" />
+          </div>
+        </div>
+      </div>
+
+      {/* Super User Card Skeleton */}
+      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-16 w-16 rounded-2xl" />
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-64 rounded-lg" />
+              <Skeleton className="h-5 w-32 rounded-lg" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Skeleton className="h-10 w-32 rounded-xl" />
+            <Skeleton className="h-10 w-32 rounded-xl" />
+          </div>
+        </div>
+      </div>
+
+      {/* Teams List Skeleton */}
+      <div className="space-y-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="pl-6 border-l-2 border-slate-200">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-48 rounded-lg" />
+                    <Skeleton className="h-4 w-32 rounded-lg" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-8">
+                  <div className="flex gap-8">
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-20 rounded" />
+                      <Skeleton className="h-5 w-24 rounded" />
+                    </div>
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-20 rounded" />
+                      <Skeleton className="h-5 w-24 rounded" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)
 
 const TeamPage = () => {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const [expandedTeams, setExpandedTeams] = useState({})
   const [expandedMembers, setExpandedMembers] = useState({})
-  const [teamData, setTeamData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  
+  const { data: teamData, isLoading, error, refetch } = useSuperAdminDashboard()
 
-  useEffect(() => {
-    let isMounted = true
-    const fetchData = async () => {
-      try {
-        const response = await apiRequest('/dashboard/super-admin')
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
-          throw new Error(data.error || 'Failed to load teams')
-        }
-        const data = await response.json()
-
-        const mappedTeams = (data.teams || []).map((team) => ({
-          ...team,
-          teamTarget: Number(team.teamTarget || 0),
-          targetAchieved: Number(team.targetAchieved || 0),
-          teamLeads: (team.teamLeads || []).map((lead) => ({
-            ...lead,
-            target: Number(lead.target || 0),
-            targetAchieved: Number(lead.targetAchieved || 0),
-            members: (lead.members || []).map((member) => ({
-              ...member,
-              target: Number(member.target || 0),
-              targetAchieved: Number(member.targetAchieved || 0),
-            })),
-          })),
-        }))
-
-        if (isMounted) {
-          setTeamData({
-            superUser: data.superUser,
-            summary: data.summary,
-            teams: mappedTeams,
-          })
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err.message || 'Something went wrong')
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchData()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-  const toggleTeam = (teamId) => {
+  const toggleTeam = useCallback((teamId) => {
     setExpandedTeams(prev => ({
       ...prev,
       [teamId]: !prev[teamId]
     }))
-  }
+  }, [])
 
-  const toggleMember = (memberId) => {
+  const toggleMember = useCallback((memberId) => {
     setExpandedMembers(prev => ({
       ...prev,
       [memberId]: !prev[memberId]
     }))
-  }
+  }, [])
 
   const [activeSection, setActiveSection] = useState('hierarchy')
   const [autoOpenCreate, setAutoOpenCreate] = useState(false)
@@ -91,14 +111,14 @@ const TeamPage = () => {
     })
   }
 
-  const handleMemberClick = (member, lead, team) => {
+  const handleMemberClick = useCallback((member, lead, team) => {
     const slug = member.name.replace(/\s+/g, '-').toLowerCase()
     navigate(`/employee/${slug}`, {
       state: {
         employeeId: member.id,
       },
     })
-  }
+  }, [navigate])
 
   const getTeamColorClasses = (color) => {
     const colors = {
@@ -142,24 +162,17 @@ const TeamPage = () => {
     return colors[color] || colors.blue
   }
 
-  if (loading || !teamData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading team hierarchy...</p>
-        </div>
-      </div>
-    )
+  if (isLoading) {
+    return <DashboardSkeleton />
   }
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg px-8 py-6 max-w-md w-full text-center">
-          <p className="text-red-600 font-medium mb-4">{error}</p>
+          <p className="text-red-600 font-medium mb-4">{error.message || 'Something went wrong'}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()}
             className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
           >
             Retry

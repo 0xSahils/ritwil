@@ -3,6 +3,12 @@ import jwt from "jsonwebtoken";
 const accessSecret = process.env.JWT_ACCESS_SECRET || "dev-access-secret";
 const refreshSecret = process.env.JWT_REFRESH_SECRET || "dev-refresh-secret";
 
+if (process.env.NODE_ENV === 'production') {
+    if (accessSecret === "dev-access-secret" || refreshSecret === "dev-refresh-secret") {
+        console.warn("⚠️  WARNING: You are using default JWT secrets in production! Please set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET in your .env file.");
+    }
+}
+
 const accessTokenTtl = process.env.JWT_ACCESS_TTL || "24h";
 const refreshTokenTtl = process.env.JWT_REFRESH_TTL || "30d";
 

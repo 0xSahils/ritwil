@@ -22,6 +22,145 @@ function calculateDaysCompleted(doj) {
   return diffDays;
 }
 
+// Helper to process employee data with year filtering
+const processEmployeeData = (employee, year) => {
+  if (!employee || !employee.employeeProfile) return null;
+
+  // Calculate available years from all data before filtering
+  const availableYears = new Set();
+  
+  if (employee.placements) {
+    employee.placements.forEach(p => {
+      if (p.doj) {
+        availableYears.add(new Date(p.doj).getFullYear());
+      }
+    });
+  }
+  
+  if (employee.incentives) {
+    employee.incentives.forEach(i => {
+      if (i.periodEnd) {
+        availableYears.add(new Date(i.periodEnd).getFullYear());
+      }
+    });
+  }
+  
+  // Ensure current year is always available
+  availableYears.add(new Date().getFullYear());
+  
+  const sortedAvailableYears = Array.from(availableYears).sort((a, b) => b - a);
+
+  let targetYear = null;
+  if (year && year !== 'All') {
+    targetYear = parseInt(year);
+  }
+
+  // Filter placements by DOJ year
+  const filteredPlacements = employee.placements.filter(p => {
+    if (!targetYear) return true;
+    if (!p.doj) return false;
+    const pDate = new Date(p.doj);
+    return pDate.getFullYear() === targetYear;
+  });
+
+  // Filter incentives by periodEnd year
+  const filteredIncentives = employee.incentives.filter(i => {
+    if (!targetYear) return true;
+    if (!i.periodEnd) return false;
+    const iDate = new Date(i.periodEnd);
+    return iDate.getFullYear() === targetYear;
+  });
+
+  const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
+  const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
+  const yearlyPlacementTarget = employee.employeeProfile.yearlyPlacementTarget ? Number(employee.employeeProfile.yearlyPlacementTarget) : null;
+  const targetType = employee.employeeProfile.targetType || "REVENUE";
+  const slabQualified = employee.employeeProfile.slabQualified || false;
+  
+  const revenueGenerated = filteredPlacements.reduce(
+    (sum, p) => sum + Number(p.revenue || 0),
+    0
+  );
+  const placementsCount = filteredPlacements.length;
+
+  let percentage = 0;
+  if (targetType === "PLACEMENTS") {
+    percentage = yearlyTarget > 0 ? Math.round((placementsCount / yearlyTarget) * 100) : 0;
+  } else {
+    percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
+  }
+
+  const latestIncentive =
+    filteredIncentives.length > 0
+      ? filteredIncentives.reduce((a, b) =>
+          a.periodEnd > b.periodEnd ? a : b
+        )
+      : null;
+
+  const totalIncentiveInr = filteredPlacements.reduce(
+    (sum, p) => sum + Number(p.incentiveAmountInr || 0),
+    0
+  );
+
+  return {
+    id: employee.id,
+    name: employee.name,
+    team: employee.employeeProfile.team?.name || null,
+    teamLead: employee.employeeProfile.manager?.name || null,
+    level: employee.employeeProfile.level || "L4",
+    vbid: employee.employeeProfile.vbid || null,
+    yearlyTarget,
+    yearlyRevenueTarget,
+    yearlyPlacementTarget,
+    targetType,
+    slabQualified,
+    revenueGenerated,
+    placementsCount,
+    percentage,
+    selectedYear: targetYear,
+    availableYears: sortedAvailableYears,
+    incentive: {
+      slabName: latestIncentive?.slabName || null,
+      amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
+      amountInr: totalIncentiveInr,
+    },
+    placements: filteredPlacements.map((p) => ({
+      id: p.id,
+      candidateName: p.candidateName,
+      candidateId: p.candidateId,
+      clientId: p.clientId,
+      jpcId: p.jpcId,
+      sourcer: p.sourcer,
+      accountManager: p.accountManager,
+      teamLead: p.teamLead,
+      placementSharing: p.placementSharing,
+      placementCredit: p.placementCredit,
+      totalRevenue: p.totalRevenue,
+      revenueAsLead: p.revenueAsLead,
+      doi: p.doi,
+      doj: p.doj,
+      doq: p.doq,
+      daysCompleted: calculateDaysCompleted(p.doj),
+      client: p.clientName,
+      placementType: p.placementType,
+      billedHours: p.billedHours,
+      marginPercent: Number(p.marginPercent),
+      revenue: Number(p.revenue),
+      billingStatus: p.billingStatus,
+      incentivePayoutEta: p.incentivePayoutEta,
+      incentiveAmountInr: Number(p.incentiveAmountInr),
+      incentivePaid: p.incentivePaid,
+      qualifier: p.qualifier,
+      monthlyBilling: p.monthlyBillings.map((mb) => ({
+        id: mb.id,
+        month: mb.month,
+        hours: mb.hours,
+        status: mb.status,
+      })),
+    })),
+  };
+};
+
 router.use(authenticate);
 
 router.get(
@@ -59,6 +198,7 @@ router.get(
   async (req, res, next) => {
     try {
       const userId = req.user.id;
+      const { year } = req.query;
 
       const employee = await prisma.user.findUnique({
         where: { id: userId },
@@ -77,96 +217,13 @@ router.get(
         },
       });
 
-      if (!employee || !employee.employeeProfile) {
+      const processedData = processEmployeeData(employee, year);
+      
+      if (!processedData) {
         return res.status(404).json({ error: "Employee not configured" });
       }
 
-      const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
-      const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
-      const yearlyPlacementTarget = employee.employeeProfile.yearlyPlacementTarget ? Number(employee.employeeProfile.yearlyPlacementTarget) : null;
-      const targetType = employee.employeeProfile.targetType || "REVENUE";
-      const slabQualified = employee.employeeProfile.slabQualified || false;
-      
-      const revenueGenerated = employee.placements.reduce(
-        (sum, p) => sum + Number(p.revenue || 0),
-        0
-      );
-      const placementsCount = employee.placements.length;
-
-      let percentage = 0;
-      if (targetType === "PLACEMENTS") {
-        percentage = yearlyTarget > 0 ? Math.round((placementsCount / yearlyTarget) * 100) : 0;
-      } else {
-        percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
-      }
-
-      const latestIncentive =
-        employee.incentives.length > 0
-          ? employee.incentives.reduce((a, b) =>
-              a.periodEnd > b.periodEnd ? a : b
-            )
-          : null;
-
-      const totalIncentiveInr = employee.placements.reduce(
-        (sum, p) => sum + Number(p.incentiveAmountInr || 0),
-        0
-      );
-
-      res.json({
-        id: employee.id,
-        name: employee.name,
-        team: employee.employeeProfile.team?.name || null,
-        teamLead: employee.employeeProfile.manager?.name || null,
-        level: employee.employeeProfile.level || "L4",
-        vbid: employee.employeeProfile.vbid || null,
-        yearlyTarget,
-        yearlyRevenueTarget,
-        yearlyPlacementTarget,
-        targetType,
-        slabQualified,
-        revenueGenerated,
-        placementsCount,
-        percentage,
-        incentive: {
-          slabName: latestIncentive?.slabName || null,
-          amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
-          amountInr: totalIncentiveInr,
-        },
-        placements: employee.placements.map((p) => ({
-          id: p.id,
-          candidateName: p.candidateName,
-          candidateId: p.candidateId,
-          clientId: p.clientId,
-          jpcId: p.jpcId,
-          sourcer: p.sourcer,
-          accountManager: p.accountManager,
-          teamLead: p.teamLead,
-          placementSharing: p.placementSharing,
-          placementCredit: p.placementCredit,
-          totalRevenue: p.totalRevenue,
-          revenueAsLead: p.revenueAsLead,
-          doi: p.doi,
-          doj: p.doj,
-          doq: p.doq,
-          daysCompleted: calculateDaysCompleted(p.doj),
-          client: p.clientName,
-          placementType: p.placementType,
-          billedHours: p.billedHours,
-          marginPercent: Number(p.marginPercent),
-          revenue: Number(p.revenue),
-          billingStatus: p.billingStatus,
-          incentivePayoutEta: p.incentivePayoutEta,
-          incentiveAmountInr: Number(p.incentiveAmountInr),
-          incentivePaid: p.incentivePaid,
-          qualifier: p.qualifier,
-          monthlyBilling: p.monthlyBillings.map((mb) => ({
-            id: mb.id,
-            month: mb.month,
-            hours: mb.hours,
-            status: mb.status,
-          })),
-        })),
-      });
+      res.json(processedData);
     } catch (err) {
       next(err);
     }
@@ -179,6 +236,7 @@ router.get(
   async (req, res, next) => {
     try {
       const { id } = req.params;
+      const { year } = req.query;
 
       const viewerId = req.user.id;
       const viewer = await prisma.user.findUnique({
@@ -221,91 +279,8 @@ router.get(
         }
       }
 
-      const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
-      const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
-      const yearlyPlacementTarget = employee.employeeProfile.yearlyPlacementTarget ? Number(employee.employeeProfile.yearlyPlacementTarget) : null;
-      const targetType = employee.employeeProfile.targetType || "REVENUE";
-      
-      const revenueGenerated = employee.placements.reduce(
-        (sum, p) => sum + Number(p.revenue || 0),
-        0
-      );
-      const placementsCount = employee.placements.length;
-
-      let percentage = 0;
-      if (targetType === "PLACEMENTS") {
-        percentage = yearlyTarget > 0 ? Math.round((placementsCount / yearlyTarget) * 100) : 0;
-      } else {
-        percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
-      }
-
-      const latestIncentive =
-        employee.incentives.length > 0
-          ? employee.incentives.reduce((a, b) =>
-              a.periodEnd > b.periodEnd ? a : b
-            )
-          : null;
-
-      const totalIncentiveInr = employee.placements.reduce(
-        (sum, p) => sum + Number(p.incentiveAmountInr || 0),
-        0
-      );
-
-      res.json({
-        id: employee.id,
-        name: employee.name,
-        team: employee.employeeProfile.team?.name || null,
-        teamLead: employee.employeeProfile.manager?.name || null,
-        level: employee.employeeProfile.level || "L4",
-        vbid: employee.employeeProfile.vbid || null,
-        yearlyTarget,
-        yearlyRevenueTarget,
-        yearlyPlacementTarget,
-        targetType,
-        slabQualified: employee.employeeProfile.slabQualified,
-        revenueGenerated,
-        placementsCount,
-        percentage,
-        incentive: {
-          slabName: latestIncentive?.slabName || null,
-          amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
-          amountInr: totalIncentiveInr,
-        },
-        placements: employee.placements.map((p) => ({
-          id: p.id,
-          candidateName: p.candidateName,
-          candidateId: p.candidateId,
-          clientId: p.clientId,
-          jpcId: p.jpcId,
-          sourcer: p.sourcer,
-          accountManager: p.accountManager,
-          teamLead: p.teamLead,
-          placementSharing: p.placementSharing,
-          placementCredit: p.placementCredit,
-          totalRevenue: p.totalRevenue,
-          revenueAsLead: p.revenueAsLead,
-          doi: p.doi,
-          doj: p.doj,
-          doq: p.doq,
-          daysCompleted: calculateDaysCompleted(p.doj),
-          client: p.clientName,
-          placementType: p.placementType,
-          billedHours: p.billedHours,
-          marginPercent: Number(p.marginPercent),
-          revenue: Number(p.revenue),
-          billingStatus: p.billingStatus,
-          incentivePayoutEta: p.incentivePayoutEta,
-          incentiveAmountInr: Number(p.incentiveAmountInr),
-          incentivePaid: p.incentivePaid,
-          qualifier: p.qualifier,
-          monthlyBilling: p.monthlyBillings.map((mb) => ({
-            id: mb.id,
-            month: mb.month,
-            hours: mb.hours,
-            status: mb.status,
-          })),
-        })),
-      });
+      const processedData = processEmployeeData(employee, year);
+      res.json(processedData);
     } catch (err) {
       next(err);
     }

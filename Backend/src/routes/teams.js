@@ -140,7 +140,7 @@ router.delete(
 
 router.patch(
   "/:id/members/:userId/target",
-  requireRole(Role.SUPER_ADMIN),
+  requireRole(Role.S1_ADMIN),
   async (req, res, next) => {
     try {
       const { userId } = req.params;
@@ -158,7 +158,7 @@ router.patch(
 
 router.post(
   "/:id/import-targets",
-  requireRole(Role.SUPER_ADMIN),
+  requireRole(Role.S1_ADMIN),
   async (req, res, next) => {
     try {
       const { id } = req.params;

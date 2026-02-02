@@ -46,7 +46,7 @@ const AdminEmployeePlacements = () => {
     billingStatus: "PENDING",
     incentivePayoutEta: "",
     incentiveAmountInr: "",
-    incentivePaid: false,
+    incentivePaid: "",
     qualifier: false,
   };
 
@@ -148,7 +148,7 @@ const AdminEmployeePlacements = () => {
       billingStatus: placement.billingStatus,
       incentivePayoutEta: placement.incentivePayoutEta ? placement.incentivePayoutEta.split('T')[0] : "",
       incentiveAmountInr: placement.incentiveAmountInr || "",
-      incentivePaid: placement.incentivePaid,
+      incentivePaid: (placement.incentivePaid !== undefined && placement.incentivePaid !== null) ? String(placement.incentivePaid) : "",
       qualifier: placement.qualifier,
     });
     setShowModal(true);
@@ -292,7 +292,8 @@ const AdminEmployeePlacements = () => {
                         qualifier = String(row[colMap['revenue qualifier']] || row[colMap['qualifier']] || "").toLowerCase().includes("yes"); // Assuming text
                         marginPercent = row[colMap['margin %']];
                         incentiveAmountInr = row[colMap['incentive amount (inr)']] || row[colMap['incentive amount']] || row[colMap['incentive amount(inr)']];
-                        incentivePaid = String(row[colMap['incentive paid']] || "").toLowerCase().includes("yes"); // Assuming text
+                        const rawIncentivePaid = row[colMap['incentive paid']];
+                        incentivePaid = (rawIncentivePaid !== undefined && rawIncentivePaid !== null) ? String(rawIncentivePaid).trim() : "";
                         
                         // Fallback revenue if not present
                         revenue = totalRevenue; 
@@ -319,7 +320,7 @@ const AdminEmployeePlacements = () => {
                         revenue = ctc || 0;
                         placementType = String(role).toLowerCase().includes("contract") ? "CONTRACT" : "PERMANENT";
                         billingStatus = "PENDING";
-                        incentivePaid = false;
+                        incentivePaid = "";
                      }
 
                      if (!candidateName) continue;
@@ -549,7 +550,6 @@ const AdminEmployeePlacements = () => {
                         <th className="py-3 px-2 font-medium">Total Revenue</th>
                         <th className="py-3 px-2 font-medium">Billing status</th>
                         <th className="py-3 px-2 font-medium">DOQ</th>
-                        <th className="py-3 px-2 font-medium">Recruiter</th>
                         <th className="py-3 px-2 font-medium">Sourcer</th>
                         <th className="py-3 px-2 font-medium">Account Manager</th>
                         <th className="py-3 px-2 font-medium">TL</th>
@@ -577,7 +577,6 @@ const AdminEmployeePlacements = () => {
                       </>
                     ) : (
                       <>
-                        <th className="py-3 px-2 font-medium">Recruiter Name</th>
                         <th className="py-3 px-2 font-medium">Candidate Name</th>
                         <th className="py-3 px-2 font-medium">DOJ</th>
                         <th className="py-3 px-2 font-medium">DOQ</th>
@@ -624,11 +623,10 @@ const AdminEmployeePlacements = () => {
                             </span>
                           </td>
                           <td className="py-3 px-2 text-slate-600">{p.doq ? new Date(p.doq).toLocaleDateString() : '-'}</td>
-                          <td className="py-3 px-2 text-slate-600">{p.recruiter || '-'}</td>
                           <td className="py-3 px-2 text-slate-600">{p.sourcer || '-'}</td>
                           <td className="py-3 px-2 text-slate-600">{p.accountManager || '-'}</td>
                           <td className="py-3 px-2 text-slate-600">{p.teamLead || '-'}</td>
-                          <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.placementType === 'PERMANENT' ? p.daysCompleted : ''}</td>
                           <td className="py-3 px-2 text-slate-600">{p.placementSharing || '-'}</td>
                           <td className="py-3 px-2 text-slate-600">{p.placementCredit || '-'}</td>
                           <td className="py-3 px-2 text-slate-600">{p.revenueAsLead || '-'}</td>
@@ -660,18 +658,17 @@ const AdminEmployeePlacements = () => {
                               {p.placementType === 'PERMANENT' ? 'FTE' : 'Contract'}
                             </span>
                           </td>
-                          <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.placementType === 'PERMANENT' ? p.daysCompleted : ''}</td>
                           <td className="py-3 px-2">
                             {p.qualifier ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-slate-400">No</span>}
                           </td>
                           <td className="py-3 px-2 text-slate-600">{p.incentiveAmountInr ? CalculationService.formatCurrency(p.incentiveAmountInr, 'INR') : '-'}</td>
                           <td className="py-3 px-2">
-                            {p.incentivePaid ? <span className="text-green-600">Yes</span> : <span className="text-slate-300">No</span>}
+                            <span className="text-slate-600">{p.incentivePaid || '-'}</span>
                           </td>
                         </>
                       ) : (
                         <>
-                          <td className="py-3 px-2 text-slate-600">{userName}</td>
                           <td className="py-3 px-2 font-medium text-slate-800">{p.candidateName}</td>
                           <td className="py-3 px-2 text-slate-600">{new Date(p.doj).toLocaleDateString()}</td>
                           <td className="py-3 px-2 text-slate-600">{p.doq ? new Date(p.doq).toLocaleDateString() : '-'}</td>
@@ -696,13 +693,13 @@ const AdminEmployeePlacements = () => {
                               {p.billingStatus === 'BILLED' ? 'Completed' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus}
                             </span>
                           </td>
-                          <td className="py-3 px-2 text-slate-600">{p.daysCompleted}</td>
+                          <td className="py-3 px-2 text-slate-600">{p.placementType === 'PERMANENT' ? p.daysCompleted : ''}</td>
                           <td className="py-3 px-2">
                             {p.qualifier ? <span className="text-green-600 font-bold">Yes</span> : <span className="text-slate-400">No</span>}
                           </td>
                           <td className="py-3 px-2 text-slate-600">{p.incentiveAmountInr ? CalculationService.formatCurrency(p.incentiveAmountInr, 'INR') : '-'}</td>
                           <td className="py-3 px-2">
-                            {p.incentivePaid ? <span className="text-green-600">Yes</span> : <span className="text-slate-300">No</span>}
+                            <span className="text-slate-600">{p.incentivePaid || '-'}</span>
                           </td>
                         </>
                       )}
@@ -847,10 +844,10 @@ const AdminEmployeePlacements = () => {
                   value={formData.incentiveAmountInr} onChange={e => setFormData({...formData, incentiveAmountInr: e.target.value})} />
               </div>
 
-              <div className="flex items-center gap-2 mt-6">
-                <input type="checkbox" id="incentivePaid" className="w-4 h-4"
-                  checked={formData.incentivePaid} onChange={e => setFormData({...formData, incentivePaid: e.target.checked})} />
-                <label htmlFor="incentivePaid" className="text-sm font-medium text-slate-700">Incentive Paid</label>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Incentive Paid (Amount/Details)</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.incentivePaid || ''} onChange={e => setFormData({...formData, incentivePaid: e.target.value})} />
               </div>
               <div className="flex items-center gap-2 mt-6">
                 <input disabled type="checkbox" id="qualifier" className="w-4 h-4 accent-green-600"

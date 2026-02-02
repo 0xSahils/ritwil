@@ -1,8 +1,8 @@
-import React from 'react'
+import React, { memo } from 'react'
 import PieChart from './PieChart'
 import CalculationService from '../utils/calculationService'
 
-const RecursiveMemberNode = ({ member, expandedMembers, toggleMember, handleMemberClick, colorClasses, lead, team, depth = 0 }) => {
+const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handleMemberClick, colorClasses, lead, team, depth = 0 }) => {
   const hasChildren = member.members && member.members.length > 0
   const isExpanded = expandedMembers[member.id]
   const level = member.level || 'L4'
@@ -128,6 +128,6 @@ const RecursiveMemberNode = ({ member, expandedMembers, toggleMember, handleMemb
       </div>
     </div>
   )
-}
+})
 
 export default RecursiveMemberNode

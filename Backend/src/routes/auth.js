@@ -198,11 +198,19 @@ router.post("/refresh", async (req, res, next) => {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) return res.status(401).json({ error: "No refresh token" });
 
-    const payload = verifyRefreshToken(refreshToken);
-    if (!payload) return res.status(401).json({ error: "Invalid refresh token" });
+    let payload;
+    try {
+      payload = verifyRefreshToken(refreshToken);
+    } catch (err) {
+      return res.status(401).json({ error: "Session expired. Please login again." });
+    }
+
+    if (!payload || !payload.jti) {
+      return res.status(401).json({ error: "Invalid refresh token payload" });
+    }
 
     const tokenRecord = await prisma.refreshToken.findUnique({
-      where: { id: payload.tokenId },
+      where: { id: payload.jti },
     });
 
     if (!tokenRecord || tokenRecord.token !== refreshToken) {
@@ -212,7 +220,7 @@ router.post("/refresh", async (req, res, next) => {
     // Check if revoked? (Optional, if we had revokedAt)
     
     const user = await prisma.user.findUnique({
-        where: { id: payload.userId },
+        where: { id: payload.sub },
     });
 
     if (!user || !user.isActive) {

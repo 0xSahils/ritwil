@@ -58,6 +58,8 @@ export async function apiRequest(path, options = {}, { skipAuth } = {}) {
   try {
     token = await refreshAccessToken();
   } catch {
+    // Dispatch session expired event so AuthContext can handle it (logout + message)
+    window.dispatchEvent(new CustomEvent("auth:session-expired"));
     return initialResponse;
   }
 

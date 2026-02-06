@@ -8,6 +8,7 @@ import CalculationService from '../utils/calculationService';
 import RecursiveMemberNode from './RecursiveMemberNode';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Skeleton, CardSkeleton, TableRowSkeleton } from './common/Skeleton';
+import UserCreationModal from './UserCreationModal';
 // Pie Chart Component
 const PieChart = ({ percentage, size = 50, colorClass }) => {
   const radius = size / 2 - 4
@@ -929,6 +930,34 @@ const MembersTab = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [teams, setTeams] = useState([]);
+
+  useEffect(() => {
+    fetchTeams();
+  }, []);
+
+  const fetchTeams = async () => {
+    try {
+      const response = await apiRequest("/teams");
+      if (response.ok) {
+        const data = await response.json();
+        setTeams(data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch teams:", err);
+    }
+  };
+
+  const openEditModal = (user) => {
+    setEditingUser(user);
+    setShowModal(true);
+  };
+
+  const handleSuccess = () => {
+    queryClient.invalidateQueries(['members']);
+  };
 
   const { data: { data: members = [], pagination } = {}, isLoading: loading } = useQuery({
     queryKey: ['members', { page, roleFilter }],
@@ -1059,6 +1088,7 @@ const MembersTab = () => {
                       </td>
                       <td className="py-4 text-right pr-6">
                          <button onClick={() => navigate(`/employee/${member.id}`)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">View</button>
+                         <button onClick={() => openEditModal(member)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">Edit</button>
                          <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
                       </td>
                    </tr>
@@ -1094,6 +1124,14 @@ const MembersTab = () => {
             </div>
           </div>
        )}
+       
+       <UserCreationModal 
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          editingUser={editingUser}
+          onSuccess={handleSuccess}
+          teams={teams}
+       />
     </div>
   );
 };

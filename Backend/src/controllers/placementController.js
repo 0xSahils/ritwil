@@ -175,10 +175,20 @@ export async function updatePlacement(id, data, actorId) {
   if (updates.placementType) updates.placementType = mapPlacementType(updates.placementType);
 
   // Handle dates
-  if (updates.doi) updates.doi = new Date(updates.doi);
-  if (updates.doj) updates.doj = new Date(updates.doj);
-  if (updates.doq) updates.doq = new Date(updates.doq);
-  if (updates.incentivePayoutEta) updates.incentivePayoutEta = new Date(updates.incentivePayoutEta);
+  const parseDate = (val) => (val ? new Date(val) : null);
+
+  if (updates.doi !== undefined) updates.doi = parseDate(updates.doi);
+  if (updates.doq !== undefined) updates.doq = parseDate(updates.doq);
+  if (updates.incentivePayoutEta !== undefined) updates.incentivePayoutEta = parseDate(updates.incentivePayoutEta);
+  
+  // DOJ is mandatory, so if invalid/empty, remove from updates to retain existing
+  if (updates.doj !== undefined) {
+    if (updates.doj) {
+      updates.doj = new Date(updates.doj);
+    } else {
+      delete updates.doj;
+    }
+  }
 
   // Auto-calc fields if DOJ or relevant fields are present
   // We need to fetch existing if partial update? 

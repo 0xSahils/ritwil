@@ -30,6 +30,7 @@ const AdminEmployeePlacements = () => {
     jpcId: "",
     clientName: "",
     doi: "",
+    doq: "",
     doj: "",
     daysCompleted: 0,
     placementType: "PERMANENT",
@@ -138,6 +139,7 @@ const AdminEmployeePlacements = () => {
       jpcId: placement.jpcId || "",
       clientName: placement.clientName,
       doi: placement.doi ? placement.doi.split('T')[0] : "",
+      doq: placement.doq ? placement.doq.split('T')[0] : "",
       doj: placement.doj ? placement.doj.split('T')[0] : "",
       daysCompleted: placement.daysCompleted,
       placementType: placement.placementType,
@@ -752,20 +754,20 @@ const AdminEmployeePlacements = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">DOI</label>
-                <input required type="date" className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={formData.doi} onChange={e => setFormData({...formData, doi: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">DOQ (DOJ)</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Date of Joining (DOJ)</label>
                 <input required type="date" className="w-full px-3 py-2 border rounded-lg text-sm"
                   value={formData.doj} onChange={e => setFormData({...formData, doj: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Date of Quit (DOQ)</label>
+                <input type="date" className="w-full px-3 py-2 border rounded-lg text-sm"
+                  value={formData.doq} onChange={e => setFormData({...formData, doq: e.target.value})} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Days Completed</label>
                 <input disabled type="number" className="w-full px-3 py-2 border rounded-lg bg-slate-100 text-sm"
                   value={formData.daysCompleted} />
-                <p className="text-[10px] text-slate-500">Auto-calculated from DOQ</p>
+                <p className="text-[10px] text-slate-500">Auto-calculated from DOJ</p>
               </div>
 
               {!isVantageL4 && (

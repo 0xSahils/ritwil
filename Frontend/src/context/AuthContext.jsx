@@ -20,6 +20,16 @@ export function AuthProvider({ children }) {
       }
     }
     setLoading(false);
+
+    const handleSessionExpired = () => {
+      clearAuthStorage();
+      setUser(null);
+      localStorage.removeItem("user");
+      alert("Session expired. Please login again.");
+    };
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+    return () => window.removeEventListener("auth:session-expired", handleSessionExpired);
   }, []);
 
   const login = async (email, password) => {

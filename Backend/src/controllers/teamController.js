@@ -96,9 +96,9 @@ export async function listTeamsWithMembers(currentUser) {
       yearlyTarget: aggregatedTarget, // Use aggregated target from leads
       targetType,
       totalRevenue: aggregatedRevenue, // Add calculated revenue
-      totalPlacements: aggregatedPlacementsCount,
-      leads: leads.map((p) => ({
-        id: p.id,
+    totalPlacements: aggregatedPlacementsCount,
+    leads: leads.map((p) => ({
+      id: p.id,
         userId: p.user.id,
         name: p.user.name,
         level: p.level,
@@ -293,7 +293,7 @@ export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId, option
   });
 }
 
-export async function getTeamDetails(id) {
+export async function getTeamDetails(id, year) {
   const team = await prisma.team.findUnique({
     where: { id },
     include: {
@@ -317,6 +317,30 @@ export async function getTeamDetails(id) {
     throw error;
   }
 
+  // Collect available years from all placements in the team
+  const availableYears = new Set();
+  availableYears.add(new Date().getFullYear()); // Always include current year
+
+  team.employees.forEach(emp => {
+    if (emp.user.placements) {
+      emp.user.placements.forEach(p => {
+        if (p.doj) {
+          const y = new Date(p.doj).getFullYear();
+          if (!isNaN(y)) availableYears.add(y);
+        }
+      });
+    }
+  });
+
+  const filterPlacements = (placements) => {
+    if (!year || year === 'All') return placements;
+    const targetYear = Number(year);
+    return placements.filter(p => {
+      if (!p.doj) return false;
+      return new Date(p.doj).getFullYear() === targetYear;
+    });
+  };
+
   const leads = team.employees.filter(
     (p) => p.user.role === Role.TEAM_LEAD
   );
@@ -330,7 +354,8 @@ export async function getTeamDetails(id) {
   );
 
   const aggregatedRevenue = team.employees.reduce((total, member) => {
-    const memberRevenue = member.user.placements.reduce(
+    const filteredPlacements = filterPlacements(member.user.placements || []);
+    const memberRevenue = filteredPlacements.reduce(
       (sum, entry) => sum + Number(entry.revenue || 0),
       0
     );
@@ -338,7 +363,8 @@ export async function getTeamDetails(id) {
   }, 0);
 
   const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
-    return total + (member.user.placements?.length || 0);
+    const filteredPlacements = filterPlacements(member.user.placements || []);
+    return total + filteredPlacements.length;
   }, 0);
 
   // Determine team target type from members (default to REVENUE)
@@ -352,42 +378,49 @@ export async function getTeamDetails(id) {
     targetType,
     totalRevenue: aggregatedRevenue,
     totalPlacements: aggregatedPlacementsCount,
-    leads: leads.map((p) => ({
-      id: p.id,
-      userId: p.user.id,
-      name: p.user.name,
-      email: p.user.email,
-      role: p.user.role,
-      level: p.level,
-      target: Number(p.yearlyTarget || 0),
-      targetType: p.targetType,
-      slabQualified: p.slabQualified,
-      revenue: p.user.placements.reduce(
-        (sum, e) => sum + Number(e.revenue || 0),
-        0
-      ),
-      placementsCount: p.user.placements.length,
-      joinedAt: p.createdAt,
-    })),
-    members: members.map((p) => ({
-      id: p.id,
-      userId: p.user.id,
-      name: p.user.name,
-      email: p.user.email,
-      role: p.user.role,
-      level: p.level,
-      target: Number(p.yearlyTarget || 0),
-      targetType: p.targetType,
-      slabQualified: p.slabQualified,
-      managerName: p.manager?.name || null,
-      managerId: p.managerId,
-      revenue: p.user.placements.reduce(
-        (sum, e) => sum + Number(e.revenue || 0),
-        0
-      ),
-      placementsCount: p.user.placements.length,
-      joinedAt: p.createdAt,
-    })),
+    availableYears: Array.from(availableYears).sort((a, b) => b - a),
+    leads: leads.map((p) => {
+      const filteredPlacements = filterPlacements(p.user.placements || []);
+      return {
+        id: p.id,
+        userId: p.user.id,
+        name: p.user.name,
+        email: p.user.email,
+        role: p.user.role,
+        level: p.level,
+        target: Number(p.yearlyTarget || 0),
+        targetType: p.targetType,
+        slabQualified: p.slabQualified,
+        revenue: filteredPlacements.reduce(
+          (sum, e) => sum + Number(e.revenue || 0),
+          0
+        ),
+        placementsCount: filteredPlacements.length,
+        joinedAt: p.createdAt,
+      };
+    }),
+    members: members.map((p) => {
+      const filteredPlacements = filterPlacements(p.user.placements || []);
+      return {
+        id: p.id,
+        userId: p.user.id,
+        name: p.user.name,
+        email: p.user.email,
+        role: p.user.role,
+        level: p.level,
+        target: Number(p.yearlyTarget || 0),
+        targetType: p.targetType,
+        slabQualified: p.slabQualified,
+        managerName: p.manager?.name || null,
+        managerId: p.managerId,
+        revenue: filteredPlacements.reduce(
+          (sum, e) => sum + Number(e.revenue || 0),
+          0
+        ),
+        placementsCount: filteredPlacements.length,
+        joinedAt: p.createdAt,
+      };
+    }),
   };
 }
 

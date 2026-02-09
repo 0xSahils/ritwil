@@ -29,10 +29,11 @@ router.get("/", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), cacheMiddleware(60
   }
 });
 
-router.get("/:id", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
+router.get("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const data = await getTeamDetails(id);
+    const { year } = req.query;
+    const data = await getTeamDetails(id, year);
     res.json(data);
   } catch (err) {
     if (err.statusCode) {

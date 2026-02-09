@@ -13,13 +13,15 @@ const TeamLeadPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expandedMembers, setExpandedMembers] = useState({})
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [availableYears, setAvailableYears] = useState([])
 
   useEffect(() => {
     let isMounted = true
 
     const fetchData = async () => {
       try {
-        const response = await apiRequest('/dashboard/team-lead')
+        const response = await apiRequest(`/dashboard/team-lead?year=${selectedYear}`)
         if (!response.ok) {
           const data = await response.json().catch(() => ({}))
           throw new Error(data.error || 'Failed to load team lead data')
@@ -63,6 +65,7 @@ const TeamLeadPage = () => {
         if (isMounted) {
           setTeamData(team)
           setTeamLeadData(lead)
+          setAvailableYears(data.availableYears || [])
         }
       } catch (err) {
         if (isMounted) {
@@ -80,7 +83,7 @@ const TeamLeadPage = () => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [selectedYear])
 
   const toggleMember = (memberId) => {
     setExpandedMembers(prev => ({
@@ -262,6 +265,21 @@ const TeamLeadPage = () => {
 
           {/* Right: Stats & Actions */}
           <div className="flex flex-wrap items-center gap-3 relative z-10">
+             <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-4 py-2 flex items-center gap-2 backdrop-blur-md">
+                 <select
+                     value={selectedYear}
+                     onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                     className="bg-transparent text-white text-sm font-medium focus:outline-none cursor-pointer appearance-none pr-4 relative z-10"
+                     style={{ backgroundImage: 'none' }}
+                 >
+                     <option value="All" className="text-slate-800">All Years</option>
+                     {(availableYears.length > 0 ? availableYears : [new Date().getFullYear()]).map(year => (
+                         <option key={year} value={year} className="text-slate-800">{year}</option>
+                     ))}
+                 </select>
+                 <svg className="w-3 h-3 text-slate-300 -ml-2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+             </div>
+
              <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 flex items-center gap-2 backdrop-blur-md">
                 <svg className="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />

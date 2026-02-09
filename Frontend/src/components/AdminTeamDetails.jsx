@@ -13,6 +13,7 @@ const AdminTeamDetails = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const canEditTarget = currentUser?.role === "S1_ADMIN";
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
   const { 
     team, 
@@ -22,7 +23,7 @@ const AdminTeamDetails = () => {
     updateTeam, 
     removeMember, 
     updateMemberTarget 
-  } = useTeamDetails(id);
+  } = useTeamDetails(id, selectedYear);
 
   const [activeTab, setActiveTab] = useState("leads");
   
@@ -241,45 +242,41 @@ const AdminTeamDetails = () => {
                else if (val.includes("candidate")) cols.candidateName = cols.candidateName ?? idx; // Fallback
                
                else if (val.includes("client") && (val.includes("name") || val === "client")) cols.clientName = idx;
-               else if (val.includes("client") && val.includes("id")) cols.clientId = idx;
-               else if (val.includes("client")) cols.clientName = cols.clientName ?? idx; // Fallback for just "Client"
-               
-               else if (val.includes("jpc")) cols.jpcId = idx;
-               else if (val.includes("doj")) cols.doj = idx;
-               else if (val.includes("doi")) cols.doi = idx;
+              else if (val.includes("client")) cols.clientName = cols.clientName ?? idx; // Fallback for just "Client"
+              
+              else if (val.includes("doj")) cols.doj = idx;
+              else if (val.includes("doi")) cols.doi = idx;
                
                // Check Total Revenue FIRST to avoid it being caught by generic "revenue"
-               else if (val.includes("total revenue")) cols.totalRevenue = idx;
-               
-               else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) {
-                   if (val.includes("lead")) {
-                       cols.revenueAsLead = idx;
-                       // Also map standard revenue to revenueAsLead for calculations
-                       cols.revenue = idx;
-                   }
-                   else cols.revenue = idx;
-               }
-               else if (val.includes("target")) cols.yearlyTarget = idx;
-               else if (val.includes("slab") || val.includes("qualifier")) cols.slabQualified = idx;
-               else if (val.includes("margin")) cols.marginPercent = idx;
+              else if (val.includes("total revenue")) cols.totalRevenue = idx;
+              
+              else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) {
+                  if (val.includes("lead")) {
+                      cols.revenueAsLead = idx;
+                      // Also map standard revenue to revenueAsLead for calculations
+                      cols.revenue = idx;
+                  }
+                  else cols.revenue = idx;
+              }
+              else if (val.includes("target")) cols.yearlyTarget = idx;
+              else if (val.includes("slab") || val.includes("qualifier")) cols.slabQualified = idx;
               else if (val.includes("billed hours") || val.includes("hours")) cols.billedHours = idx;
-               else if (val.includes("billing")) cols.billingStatus = idx;
-               else if (val.includes("days")) cols.daysCompleted = idx;
+              else if (val.includes("billing")) cols.billingStatus = idx;
               else if (val.includes("incentive") && (val.includes("amount") || val.includes("inr"))) cols.incentiveAmountInr = idx; 
-              else if (val.includes("paid") || (val.includes("incentive") && val.includes("paid"))) cols.incentivePaid = idx;
+              else if (val.includes("paid") || (val.includes("incentive") && val.includes("paid"))) cols.incentivePaidInr = idx;
               else if (val.includes("target") && val.includes("type")) cols.targetType = idx;
-               else if (val.includes("type")) cols.placementType = idx;
-               
-               else if (val.includes("sourcer")) cols.sourcer = idx;
-               else if (val.includes("account") || val.includes("manager")) cols.accountManager = idx;
-               else if (val.includes("tl") || val.includes("team lead")) cols.teamLead = idx;
-               else if (val.includes("sharing") || val.includes("split")) cols.placementSharing = idx;
-               else if (val.includes("credit")) cols.placementCredit = idx;
-             });
-             console.log("Columns Mapped:", cols);
-             continue;
-           }
-        }
+              else if (val.includes("type")) cols.placementType = idx;
+              
+              else if (val.includes("sourcer")) cols.sourcer = idx;
+              else if (val.includes("account") || val.includes("manager")) cols.accountManager = idx;
+              else if (val.includes("tl") || val.includes("team lead")) cols.teamLead = idx;
+              else if (val.includes("sharing") || val.includes("split")) cols.placementSharing = idx;
+              else if (val.includes("credit")) cols.placementCredit = idx;
+            });
+            console.log("Columns Mapped:", cols);
+            continue;
+          }
+       }
 
         if (mode === 'READING_PLACEMENTS') {
           if (firstCell === "Team") {
@@ -340,13 +337,7 @@ const AdminTeamDetails = () => {
              continue;
           }
 
-          // Clean JPC ID
-          let jpcId = cols.jpcId !== undefined ? String(row[cols.jpcId] || "") : null;
-          if (jpcId && jpcId.toUpperCase().startsWith("JPC - ")) {
-              jpcId = jpcId.substring(6).trim();
-          }
-
-          // Handle Date of Quit and Days Completed
+          // Handle Date of Quit
           let doq = cols.doq !== undefined ? row[cols.doq] : "NA";
           if (String(doq).trim().toUpperCase() === "NA" || !doq) {
              doq = null;
@@ -355,26 +346,7 @@ const AdminTeamDetails = () => {
           }
 
           let doj = CalculationService.parseExcelDate(row[cols.doj]);
-          let daysCompleted = cols.daysCompleted !== undefined ? row[cols.daysCompleted] : null;
           
-          // Recalculate days completed if needed or if it looks wrong (NA handling)
-          if (doj) {
-             const dojDate = new Date(doj);
-             const now = new Date();
-             let endDate = now;
-             
-             if (doq) {
-                endDate = new Date(doq);
-             }
-             
-             // If calculation is required (e.g. if sheet has "NA" or invalid number)
-             // But usually we trust the sheet unless it's explicitly "NA" or missing
-             if (!daysCompleted || String(daysCompleted).toUpperCase() === "NA" || String(daysCompleted).trim() === "-") {
-                 const diffTime = Math.abs(endDate - dojDate);
-                 daysCompleted = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-             }
-          }
-
           placementsToUpload.push({
             employeeId: null, 
             recruiterName: String(recruiterName).trim(),
@@ -382,19 +354,15 @@ const AdminTeamDetails = () => {
             candidateName: candidateName,
             candidateId: cols.candidateId !== undefined ? String(row[cols.candidateId] || "") : null,
             clientName: String(row[cols.clientName] || row[cols.client] || ""), // Use clientName col, fallback to generic client
-            clientId: cols.clientId !== undefined ? String(row[cols.clientId] || "") : null,
-            jpcId: jpcId,
             doj: doj,
             doq: doq,
             doi: cols.doi !== undefined ? CalculationService.parseExcelDate(row[cols.doi]) : CalculationService.parseExcelDate(row[cols.doj]), 
             revenue: row[cols.revenue],
             revenueAsLead: cols.revenueAsLead !== undefined ? row[cols.revenueAsLead] : null,
-            daysCompleted: daysCompleted,
             billedHours: cols.billedHours !== undefined ? row[cols.billedHours] : null,
-            marginPercent: cols.marginPercent !== undefined ? row[cols.marginPercent] : null,
             billingStatus: row[cols.billingStatus],
             incentiveAmountInr: row[cols.incentiveAmountInr],
-            incentivePaid: String(row[cols.incentivePaid]).toLowerCase() === 'yes',
+            incentivePaidInr: row[cols.incentivePaidInr],
             placementType: cols.placementType !== undefined ? String(row[cols.placementType] || "PERMANENT").toUpperCase() : "PERMANENT",
             yearlyTarget: cols.yearlyTarget !== undefined ? row[cols.yearlyTarget] : null,
             targetType: cols.targetType !== undefined ? String(row[cols.targetType]).toUpperCase() : null,
@@ -487,6 +455,21 @@ const AdminTeamDetails = () => {
               <span className={`px-3 py-1 rounded-full text-sm font-medium bg-${team.color}-100 text-${team.color}-700 capitalize`}>
                 {team.color}
               </span>
+              
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto py-1.5 px-3 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors ml-4"
+              >
+                <option value="All">All Years</option>
+                {(team.availableYears && team.availableYears.length > 0 
+                    ? team.availableYears 
+                    : [new Date().getFullYear()]
+                ).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+
               <button 
                 onClick={() => setShowSettingsModal(true)}
                 className="ml-2 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -782,6 +765,7 @@ const AdminTeamDetails = () => {
                   <li>Recruiters in the file must be members of <strong>{team.name}</strong>.</li>
                   <li>Data for recruiters not in this team will be skipped.</li>
                 </ul>
+                <p className="text-xs text-slate-500 mt-1">Headers: candidateName, clientName, doi, doj, revenue, revenueAsLead, placementType, billedHours, billingStatus, incentivePayoutEta, incentiveAmountInr, incentivePaid, plcId, placementYear, collectionStatus</p>
               </div>
               
               <div>

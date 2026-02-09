@@ -209,74 +209,119 @@ const HierarchyTab = ({ user }) => {
     const [expandedAdmins, setExpandedAdmins] = useState({});
     const [expandedTeams, setExpandedTeams] = useState({});
     const [expandedLeads, setExpandedLeads] = useState({});
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-    const { data: hierarchyData = { superAdmins: [], unassignedTeams: [] }, isLoading: loading } = useQuery({
-        queryKey: ['hierarchyData'],
+    const { 
+        data: hierarchyData = { superAdmins: [], unassignedTeams: [], availableYears: [] }, 
+        isLoading: loading,
+        isError,
+        error
+    } = useQuery({
+        queryKey: ['hierarchyData', selectedYear],
         queryFn: async () => {
-            // 1. Fetch Super Admins (L1)
-            const adminsRes = await getUsers({ role: 'SUPER_ADMIN', pageSize: 100 });
-            const superAdmins = adminsRes.data || [];
+            try {
+                // 1. Fetch Super Admins (L1)
+                const adminsRes = await getUsers({ role: 'SUPER_ADMIN', pageSize: 100 });
+                const superAdmins = adminsRes.data || [];
 
-            // 2. Fetch All Teams Data (Full Hierarchy)
-            const teamsRes = await apiRequest('/dashboard/super-admin');
-            if (!teamsRes.ok) throw new Error('Failed to fetch teams');
-            const teamsData = await teamsRes.json();
-            const allTeams = teamsData.teams || [];
-
-            // 3. Fetch Team Leads to map to Super Admins
-            const leadsRes = await getUsers({ role: 'TEAM_LEAD', pageSize: 1000 });
-            const leads = leadsRes.data || [];
-            
-            // Map Lead ID -> Manager ID (Super Admin ID)
-            const leadManagerMap = {};
-            leads.forEach(lead => {
-                if (lead.manager) {
-                    leadManagerMap[lead.id] = lead.manager.id;
+                // 2. Fetch All Teams Data (Full Hierarchy)
+                const teamsRes = await apiRequest(`/dashboard/super-admin?year=${selectedYear}`);
+                if (!teamsRes.ok) {
+                    const errorText = await teamsRes.text();
+                    console.error('Failed to fetch teams:', teamsRes.status, errorText);
+                    throw new Error(`Failed to fetch teams: ${teamsRes.status}`);
                 }
-            });
+                const teamsData = await teamsRes.json();
 
-            // 4. Assign Teams to Super Admins
-            const adminTeamsMap = {}; // AdminID -> [Teams]
-            
-            // Initialize map for all admins
-            superAdmins.forEach(admin => {
-                adminTeamsMap[admin.id] = [];
-            });
-            
-            const unassignedTeams = [];
-
-            allTeams.forEach(team => {
-                let assignedAdminId = null;
+                // 3. Fetch Team Leads to map to Super Admins
+                const leadsRes = await getUsers({ role: 'TEAM_LEAD', pageSize: 1000 });
+                const leads = leadsRes.data || [];
                 
-                if (team.teamLeads && team.teamLeads.length > 0) {
-                    for (const lead of team.teamLeads) {
-                        const managerId = leadManagerMap[lead.id];
-                        if (managerId && adminTeamsMap[managerId]) {
-                            assignedAdminId = managerId;
-                            break;
+                // Map Lead ID -> Manager ID (Super Admin ID)
+                const leadManagerMap = {};
+                leads.forEach(lead => {
+                    if (lead.manager) {
+                        leadManagerMap[lead.id] = lead.manager.id;
+                    }
+                });
+
+                // 4. Assign Teams to Super Admins
+                const adminTeamsMap = {}; // AdminID -> [Teams]
+                
+                // Initialize map for all admins
+                superAdmins.forEach(admin => {
+                    adminTeamsMap[admin.id] = [];
+                });
+                
+                const unassignedTeams = [];
+                const allTeams = teamsData.teams || [];
+
+                allTeams.forEach(team => {
+                    let assignedAdminId = null;
+                    
+                    if (team.teamLeads && team.teamLeads.length > 0) {
+                        for (const lead of team.teamLeads) {
+                            const managerId = leadManagerMap[lead.id];
+                            if (managerId && adminTeamsMap[managerId]) {
+                                assignedAdminId = managerId;
+                                break;
+                            }
                         }
                     }
+
+                    if (assignedAdminId) {
+                        adminTeamsMap[assignedAdminId].push(team);
+                    } else {
+                        unassignedTeams.push(team);
+                    }
+                });
+
+                const adminsWithTeams = superAdmins.map(admin => ({
+                    ...admin,
+                    teams: adminTeamsMap[admin.id] || []
+                }));
+
+                // Ensure availableYears is always valid and sorted
+                const rawYears = teamsData.availableYears || [];
+                const uniqueYears = [...new Set(rawYears.map(y => Number(y)).filter(y => !isNaN(y)))];
+                
+                // Always include current year if not present
+                const currentYear = new Date().getFullYear();
+                if (!uniqueYears.includes(currentYear)) {
+                    uniqueYears.push(currentYear);
                 }
+                
+                // Sort descending
+                uniqueYears.sort((a, b) => b - a);
 
-                if (assignedAdminId) {
-                    adminTeamsMap[assignedAdminId].push(team);
-                } else {
-                    unassignedTeams.push(team);
-                }
-            });
-
-            const adminsWithTeams = superAdmins.map(admin => ({
-                ...admin,
-                teams: adminTeamsMap[admin.id] || []
-            }));
-
-            return {
-                superAdmins: adminsWithTeams,
-                unassignedTeams
-            };
+                return {
+                    superAdmins: adminsWithTeams,
+                    unassignedTeams,
+                    availableYears: uniqueYears
+                };
+            } catch (err) {
+                console.error("Error in S1AdminDashboard queryFn:", err);
+                throw err;
+            }
         },
-        placeholderData: keepPreviousData
+        placeholderData: keepPreviousData,
+        retry: 1
     });
+
+    if (isError) {
+        return (
+            <div className="p-8 text-center">
+                <div className="text-red-500 text-xl font-bold mb-4">Error loading dashboard data</div>
+                <div className="text-slate-600 mb-4">{error?.message || 'Unknown error'}</div>
+                <button 
+                    onClick={() => window.location.reload()} 
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
 
     const toggleAdmin = (adminId) => {
         setExpandedAdmins(prev => ({ ...prev, [adminId]: !prev[adminId] }));
@@ -354,6 +399,7 @@ const HierarchyTab = ({ user }) => {
                 </div>
                 
                 <div className="flex gap-3 relative z-10 mt-4 md:mt-0">
+                    
                 </div>
             </div>
 

@@ -72,6 +72,7 @@ export async function apiRequest(path, options = {}, { skipAuth } = {}) {
     ...options,
     headers: retryHeaders,
     credentials: "include",
+    cache: "no-store",
   });
 }
 

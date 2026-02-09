@@ -59,13 +59,13 @@ export const useTeams = () => {
   }
 }
 
-export const useTeamDetails = (teamId) => {
+export const useTeamDetails = (teamId, year) => {
   const queryClient = useQueryClient()
 
   const teamQuery = useQuery({
-    queryKey: ['team', teamId],
+    queryKey: ['team', teamId, year],
     queryFn: async () => {
-      const response = await apiRequest(`/teams/${teamId}`)
+      const response = await apiRequest(`/teams/${teamId}?year=${year}`)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || `Failed to fetch team details (${response.status})`)

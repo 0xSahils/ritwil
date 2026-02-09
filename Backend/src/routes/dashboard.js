@@ -9,19 +9,6 @@ const { Role } = pkg;
 const router = express.Router();
 // const prisma = new PrismaClient();
 
-// Helper to calculate days completed
-function calculateDaysCompleted(doj) {
-  if (!doj) return 0;
-  const start = new Date(doj);
-  const now = new Date();
-  // If future, return 0
-  if (start > now) return 0;
-  
-  const diffTime = now - start;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-  return diffDays;
-}
-
 // Helper to process employee data with year filtering
 const processEmployeeData = (employee, year) => {
   if (!employee || !employee.employeeProfile) return null;
@@ -32,7 +19,8 @@ const processEmployeeData = (employee, year) => {
   if (employee.placements) {
     employee.placements.forEach(p => {
       if (p.doj) {
-        availableYears.add(new Date(p.doj).getFullYear());
+        const y = new Date(p.doj).getFullYear();
+        if (!isNaN(y)) availableYears.add(y);
       }
     });
   }
@@ -40,7 +28,8 @@ const processEmployeeData = (employee, year) => {
   if (employee.incentives) {
     employee.incentives.forEach(i => {
       if (i.periodEnd) {
-        availableYears.add(new Date(i.periodEnd).getFullYear());
+        const y = new Date(i.periodEnd).getFullYear();
+        if (!isNaN(y)) availableYears.add(y);
       }
     });
   }
@@ -128,8 +117,8 @@ const processEmployeeData = (employee, year) => {
       id: p.id,
       candidateName: p.candidateName,
       candidateId: p.candidateId,
-      clientId: p.clientId,
-      jpcId: p.jpcId,
+      placementYear: p.placementYear,
+      plcId: p.plcId,
       sourcer: p.sourcer,
       accountManager: p.accountManager,
       teamLead: p.teamLead,
@@ -140,17 +129,15 @@ const processEmployeeData = (employee, year) => {
       doi: p.doi,
       doj: p.doj,
       doq: p.doq,
-      daysCompleted: calculateDaysCompleted(p.doj),
       client: p.clientName,
       placementType: p.placementType,
       billedHours: p.billedHours,
-      marginPercent: Number(p.marginPercent),
       revenue: Number(p.revenue),
       billingStatus: p.billingStatus,
+      collectionStatus: p.collectionStatus,
       incentivePayoutEta: p.incentivePayoutEta,
       incentiveAmountInr: Number(p.incentiveAmountInr),
-      incentivePaid: p.incentivePaid,
-      qualifier: p.qualifier,
+      incentivePaidInr: Number(p.incentivePaidInr || 0),
       monthlyBilling: p.monthlyBillings.map((mb) => ({
         id: mb.id,
         month: mb.month,
@@ -163,16 +150,18 @@ const processEmployeeData = (employee, year) => {
 
 router.use(authenticate);
 
+// Route for Super Admin Dashboard
 router.get(
   "/super-admin",
-  requireRole(Role.SUPER_ADMIN),
-  // cacheMiddleware(60), // Disabled to ensure fresh data
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
-      const data = await getSuperAdminOverview(req.user);
+      const year = req.query.year || 'All';
+      console.log(`[Dashboard Route] /super-admin called by ${req.user.id}, year=${year}`);
+      const data = await getSuperAdminOverview(req.user, year);
       res.json(data);
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      next(error);
     }
   }
 );
@@ -183,7 +172,8 @@ router.get(
   cacheMiddleware(60),
   async (req, res, next) => {
     try {
-      const data = await getTeamLeadOverview(req.user);
+      const { year } = req.query;
+      const data = await getTeamLeadOverview(req.user, year);
       res.json(data);
     } catch (err) {
       next(err);
@@ -194,7 +184,7 @@ router.get(
 router.get(
   "/employee",
   requireRole(Role.EMPLOYEE),
-  cacheMiddleware(60),
+  // cacheMiddleware(60),
   async (req, res, next) => {
     try {
       const userId = req.user.id;

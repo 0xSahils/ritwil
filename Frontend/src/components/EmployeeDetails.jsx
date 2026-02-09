@@ -14,7 +14,7 @@ const EmployeeDetails = () => {
   const { employeeId: stateEmployeeId } = location.state || {}
 
   const employeeIdToFetch = stateEmployeeId || params.id
-  const [selectedYear, setSelectedYear] = useState('All')
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const { data: rawData, isLoading, error, refetch } = useEmployeeDetails(employeeIdToFetch, user?.role, user?.id, selectedYear)
   const updateVbidMutation = useUpdateVbid()
 
@@ -33,12 +33,12 @@ const EmployeeDetails = () => {
     const placements = (rawData.placements || []).map((p) => ({
       candidateName: p.candidateName,
       candidateId: p.candidateId || '-',
-      clientId: p.clientId || '-',
-      jpcId: p.jpcId || '-',
+      placementYear: p.placementYear || '-',
+      plcId: p.plcId || '-',
+      collectionStatus: p.collectionStatus || '-',
       doj: p.doj?.slice(0, 10),
       doq: p.doq ? p.doq.slice(0, 10) : '-',
       recruiter: p.recruiter || '-',
-      daysCompleted: (p.daysCompleted !== undefined && p.daysCompleted !== null) ? String(p.daysCompleted) : '-',
       client: p.clientName || p.client,
       sourcer: p.sourcer || '-',
       accountManager: p.accountManager || '-',
@@ -46,15 +46,14 @@ const EmployeeDetails = () => {
       placementSharing: p.placementSharing || '-',
       placementCredit: p.placementCredit ? String(Number(p.placementCredit)) : '-',
       totalRevenue: p.totalRevenue ? CalculationService.formatCurrency(p.totalRevenue) : '-',
+      revenue: p.revenue ? CalculationService.formatCurrency(p.revenue) : '-',
       revenueAsLead: p.revenueAsLead ? CalculationService.formatCurrency(p.revenueAsLead) : '-',
       placementType: p.placementType === 'PERMANENT' ? 'FTE' : 'Contract',
       billedHours: p.billedHours ? String(p.billedHours) : '',
-      margin: CalculationService.formatPercentage(p.marginPercent),
       billingStatus: p.billingStatus === 'BILLED' ? 'Done' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
       incentivePayoutETA: p.incentivePayoutEta ? p.incentivePayoutEta.slice(0, 10) : '',
-      placementQualifier: p.qualifier ? 'Yes' : 'No',
       incentiveAmountINR: CalculationService.formatCurrency(p.incentiveAmountInr, 'INR'),
-      incentivePaid: p.incentivePaid,
+      incentivePaidInr: p.incentivePaidInr,
       monthlyBilling: (p.monthlyBilling || []).map((mb) => ({
         month: mb.month,
         hours: mb.hours || 0,
@@ -100,6 +99,7 @@ const EmployeeDetails = () => {
       incentiveUSD: CalculationService.formatCurrency(calculatedIncentiveUsd),
       incentiveINR: CalculationService.formatCurrency(totalPlacementIncentiveInr, 'INR'),
       placements,
+      availableYears: rawData.availableYears,
     }
   }, [rawData])
 
@@ -125,7 +125,7 @@ const EmployeeDetails = () => {
   const showMargin = user?.role === 'S1_ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'TEAM_LEAD';
   const isVantageL4 = employeeData?.teamName && employeeData.teamName.toLowerCase().includes('vant') && 
                       ['L3', 'L4'].includes(employeeData?.level?.toUpperCase());
-  const isL2 = employeeData?.level?.toUpperCase() === 'L2';
+  const isL2 = ['L2', 'L3'].includes(employeeData?.level?.toUpperCase());
 
   const handleBack = () => {
     if (user?.role === 'SUPER_ADMIN') {
@@ -433,25 +433,7 @@ const EmployeeDetails = () => {
             
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-end gap-3">
-                <div className="relative group">
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="appearance-none bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white pl-4 pr-10 py-2.5 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 font-medium focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
-                    disabled={isLoading}
-                  >
-                    {(employeeData?.availableYears || [new Date().getFullYear()]).map(year => (
-                      <option key={year} value={year} className="text-slate-800 bg-white">
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/80">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
+
 
                 {user?.id === employeeData?.id && user?.role !== 'EMPLOYEE' && (
                   <button
@@ -674,13 +656,39 @@ const EmployeeDetails = () => {
 
           {/* Placements Section */}
           <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-              </svg>
-              Details of placements and billing status
-            </h2>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <svg className="w-6 h-6 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                </svg>
+                Details of placements and billing status
+              </h2>
+              
+              <div className="relative group">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedYear(val === 'All' ? 'All' : Number(val));
+                  }}
+                  className="appearance-none bg-white border border-slate-200 text-slate-700 pl-4 pr-10 py-2 rounded-xl shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all duration-200 cursor-pointer text-sm font-medium"
+                  disabled={isLoading}
+                >
+                  <option value="All">All Years</option>
+                  {(employeeData?.availableYears || [new Date().getFullYear()]).map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
@@ -688,50 +696,35 @@ const EmployeeDetails = () => {
                     {isL2 ? (
                       <>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Recruiter Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Lead</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Split With</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Year</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOJ</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Revenue</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billing status</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sourcer</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">TL</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days Completed</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement sharing</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Credit</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue as Lead</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue Qualifier</th>
-                      </>
-                    ) : isVantageL4 ? (
-                      <>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOJ</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Revenue</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billing status</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">JPC ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">PLC ID</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days Completed</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue Qualifier</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billing Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Collection Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Billed Hours</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue -Lead (USD)</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive amount (INR)</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Paid</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Paid (INR)</th>
                       </>
                     ) : (
                       <>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Year</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOJ</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">JPC ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">PLC ID</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue Generated</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Margin</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billed Hours</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billing Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Days Completed</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue Qualifier</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Collection Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Billed Hours</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue (USD)</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive amount (INR)</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Paid (INR)</th>
                       </>
@@ -744,92 +737,15 @@ const EmployeeDetails = () => {
                       {isL2 ? (
                         <>
                           <td className="px-4 py-4 text-sm text-slate-700 font-medium">{placement.candidateName}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.totalRevenue}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">
-                             <div className="relative inline-block">
-                               {placement.placementType === 'FTE' ? (
-                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                   placement.billingStatus === 'Done' ? 'bg-green-100 text-green-700' : 
-                                   placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                                 }`}>
-                                   {placement.billingStatus}
-                                 </span>
-                               ) : (
-                                 <>
-                                   <InfoIcon
-                                     onClick={handleInfoIconClick}
-                                     placementIdx={idx}
-                                     columnType="billingStatus"
-                                     currentMonthHours={getCurrentMonthHours(placement.monthlyBilling)}
-                                     currentMonthStatus={getCurrentMonthStatus(placement.monthlyBilling)}
-                                   />
-                                   <MonthlyBillingTooltip
-                                     placement={placement}
-                                     placementIdx={idx}
-                                     columnType="billingStatus"
-                                     onClose={() => setOpenTooltip(null)}
-                                   />
-                                 </>
-                               )}
-                             </div>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.sourcer || '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.recruiter}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.teamLead || '-'}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.placementType === 'FTE' ? placement.daysCompleted : ''}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.placementSharing || '-'}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.placementCredit || '-'}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.revenueAsLead || '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.placementYear}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.plcId}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
-                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                               placement.placementQualifier === 'Yes' 
-                                 ? 'bg-emerald-100 text-emerald-700' 
-                                 : 'bg-red-100 text-red-700'
-                             }`}>
-                               {placement.placementQualifier}
-                             </span>
-                          </td>
-                        </>
-                      ) : isVantageL4 ? (
-                        <>
-                           <td className="px-4 py-4 text-sm text-slate-700 font-medium">{placement.candidateName}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.totalRevenue}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">
-                             <div className="relative inline-block">
-                               {placement.placementType === 'FTE' ? (
-                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                   placement.billingStatus === 'Done' ? 'bg-green-100 text-green-700' : 
-                                   placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                                 }`}>
-                                   {placement.billingStatus}
-                                 </span>
-                               ) : (
-                                 <>
-                                   <InfoIcon
-                                     onClick={handleInfoIconClick}
-                                     placementIdx={idx}
-                                     columnType="billingStatus"
-                                     currentMonthHours={getCurrentMonthHours(placement.monthlyBilling)}
-                                     currentMonthStatus={getCurrentMonthStatus(placement.monthlyBilling)}
-                                   />
-                                   <MonthlyBillingTooltip
-                                     placement={placement}
-                                     placementIdx={idx}
-                                     columnType="billingStatus"
-                                     onClose={() => setOpenTooltip(null)}
-                                   />
-                                 </>
-                               )}
-                             </div>
-                           </td>
-                           <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">{placement.clientId}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">{placement.jpcId}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">
                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                                placement.placementType === 'FTE' 
                                  ? 'bg-blue-100 text-blue-700' 
@@ -837,46 +753,36 @@ const EmployeeDetails = () => {
                              }`}>
                                {placement.placementType}
                              </span>
-                           </td>
-                           <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.placementType === 'FTE' ? placement.daysCompleted : ''}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">
-                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                               placement.placementQualifier === 'Yes' 
-                                 ? 'bg-emerald-100 text-emerald-700' 
-                                 : 'bg-red-100 text-red-700'
-                             }`}>
-                               {placement.placementQualifier}
-                             </span>
-                           </td>
-                           <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.incentiveAmountINR}</td>
-                           <td className="px-4 py-4 text-sm text-slate-600">
-                             <span className="text-slate-700 font-medium">
-                               {placement.incentivePaid || '-'}
-                             </span>
-                           </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-4 py-4 text-sm text-slate-700 font-medium">
-                            <div>{placement.candidateName}</div>
-                            {placement.candidateId && placement.candidateId !== '-' && <div className="text-xs text-slate-500">{placement.candidateId}</div>}
                           </td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.clientId}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.jpcId}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              placement.placementType === 'FTE' 
-                                ? 'bg-blue-100 text-blue-700' 
-                                : 'bg-purple-100 text-purple-700'
-                            }`}>
-                              {placement.placementType}
-                            </span>
+                             <div className="relative inline-block">
+                               {placement.placementType === 'FTE' ? (
+                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                   placement.billingStatus === 'Done' ? 'bg-green-100 text-green-700' : 
+                                   placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                 }`}>
+                                   {placement.billingStatus}
+                                 </span>
+                               ) : (
+                                 <>
+                                   <InfoIcon
+                                     onClick={handleInfoIconClick}
+                                     placementIdx={idx}
+                                     columnType="billingStatus"
+                                     currentMonthHours={getCurrentMonthHours(placement.monthlyBilling)}
+                                     currentMonthStatus={getCurrentMonthStatus(placement.monthlyBilling)}
+                                   />
+                                   <MonthlyBillingTooltip
+                                     placement={placement}
+                                     placementIdx={idx}
+                                     columnType="billingStatus"
+                                     onClose={() => setOpenTooltip(null)}
+                                   />
+                                 </>
+                               )}
+                             </div>
                           </td>
-                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.totalRevenue}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.margin}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.collectionStatus}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
                             <div className="relative inline-block">
                               {placement.placementType === 'FTE' ? (
@@ -902,6 +808,30 @@ const EmployeeDetails = () => {
                                 )
                               )}
                             </div>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.revenueAsLead || '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.incentiveAmountINR}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.incentivePaidInr || '-'}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-4 text-sm text-slate-700 font-medium">
+                            <div>{placement.candidateName}</div>
+                            {placement.candidateId && placement.candidateId !== '-' && <div className="text-xs text-slate-500">{placement.candidateId}</div>}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.placementYear}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.plcId}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                              placement.placementType === 'FTE' 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {placement.placementType}
+                            </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600">
                             <div className="relative inline-block">
@@ -931,26 +861,56 @@ const EmployeeDetails = () => {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.placementType === 'FTE' ? placement.daysCompleted : ''}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.collectionStatus}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              placement.placementQualifier === 'Yes' 
-                                ? 'bg-emerald-100 text-emerald-700' 
-                                : 'bg-red-100 text-red-700'
-                            }`}>
-                              {placement.placementQualifier}
-                            </span>
+                            <div className="relative inline-block">
+                              {placement.placementType === 'FTE' ? (
+                                <span className="text-slate-600 font-medium">-</span>
+                              ) : (
+                                placement.monthlyBilling && placement.monthlyBilling.length > 0 ? (
+                                <>
+                                  <InfoIcon
+                                    onClick={handleInfoIconClick}
+                                    placementIdx={idx}
+                                    columnType="billedHours"
+                                    currentMonthHours={getCurrentMonthHours(placement.monthlyBilling)}
+                                  />
+                                  <MonthlyBillingTooltip
+                                    placement={placement}
+                                    placementIdx={idx}
+                                    columnType="billedHours"
+                                    onClose={() => setOpenTooltip(null)}
+                                  />
+                                </>
+                                ) : (
+                                    <span className="text-slate-600 font-medium">{placement.billedHours || ''}</span>
+                                )
+                              )}
+                            </div>
                           </td>
+                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">{placement.revenue}</td>
                           <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">{placement.incentiveAmountINR}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
                             <span className="text-slate-700 font-medium">
-                              {placement.incentivePaid || '-'}
+                              {placement.incentivePaidInr || '-'}
                             </span>
                           </td>
                         </>
                       )}
                     </tr>
                   ))}
+                  {employeeData.placements.length === 0 && (
+                    <tr>
+                      <td colSpan="100%" className="px-6 py-12 text-center text-slate-500 bg-slate-50/50">
+                        <div className="flex flex-col items-center gap-3">
+                          <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          <span className="font-medium">No placements found for {selectedYear === 'All' ? 'any year' : selectedYear}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

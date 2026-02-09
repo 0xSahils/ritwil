@@ -41,60 +41,61 @@ model Team {
   employees    EmployeeProfile[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  
+
   @@index([isActive])
 }
 
 model User {
-  id             String            @id @default(cuid())
-  email          String            @unique
-  passwordHash   String
-  name           String
-  role           Role
-  isActive       Boolean           @default(true)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id              String           @id @default(cuid())
+  email           String           @unique
+  passwordHash    String
+  name            String
+  vbid            String?
+  role            Role
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   employeeProfile EmployeeProfile?
-  refreshTokens  RefreshToken[]
-  dailyEntries   DailyEntry[]
-  placements     Placement[]
-  incentives     Incentive[]
+  refreshTokens   RefreshToken[]
+  dailyEntries    DailyEntry[]
+  placements      Placement[]
+  incentives      Incentive[]
 
   leadEmployees EmployeeProfile[] @relation("LeadEmployees")
 
   // Security
-  mfaSecret    String?
-  mfaEnabled   Boolean           @default(false)
-  
+  mfaSecret  String?
+  mfaEnabled Boolean @default(false)
+
   // Hierarchy
   managerId    String?
-  manager      User?             @relation("UserHierarchy", fields: [managerId], references: [id])
-  subordinates User[]            @relation("UserHierarchy")
+  manager      User?   @relation("UserHierarchy", fields: [managerId], references: [id])
+  subordinates User[]  @relation("UserHierarchy")
 
-  auditLogs     AuditLog[]
+  auditLogs AuditLog[]
 
   @@index([role])
   @@index([isActive])
 }
 
 model EmployeeProfile {
-  id           String  @id
-  user         User    @relation(fields: [id], references: [id])
-  teamId       String?
-  team         Team?   @relation(fields: [teamId], references: [id])
-  managerId    String?
-  manager      User?   @relation("LeadEmployees", fields: [managerId], references: [id])
-  level        String?
-  vbid         String?
-  yearlyTarget  Decimal        @db.Decimal(14, 2)
-  yearlyRevenueTarget Decimal? @db.Decimal(14, 2)
-  yearlyPlacementTarget Decimal? @db.Decimal(14, 2)
-  slabQualified String?
-  targetType    TargetType     @default(REVENUE)
-  isActive      Boolean        @default(true)
-  deletedAt    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                    String     @id
+  user                  User       @relation(fields: [id], references: [id])
+  teamId                String?
+  team                  Team?      @relation(fields: [teamId], references: [id])
+  managerId             String?
+  manager               User?      @relation("LeadEmployees", fields: [managerId], references: [id])
+  level                 String?
+  vbid                  String?
+  yearlyTarget          Decimal    @db.Decimal(14, 2)
+  yearlyRevenueTarget   Decimal?   @db.Decimal(14, 2)
+  yearlyPlacementTarget Decimal?   @db.Decimal(14, 2)
+  slabQualified         String?
+  targetType            TargetType @default(REVENUE)
+  isActive              Boolean    @default(true)
+  deletedAt             DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
 
   @@index([teamId])
   @@index([managerId])
@@ -102,55 +103,55 @@ model EmployeeProfile {
 }
 
 model DailyEntry {
-  id            String         @id @default(cuid())
+  id            String        @id @default(cuid())
   employeeId    String
-  employee      User           @relation(fields: [employeeId], references: [id])
+  employee      User          @relation(fields: [employeeId], references: [id])
   date          DateTime
   clientName    String
   placementType PlacementType
-  revenue       Decimal        @db.Decimal(14, 2)
-  marginPercent Decimal        @db.Decimal(5, 2)
+  revenue       Decimal       @db.Decimal(14, 2)
+  marginPercent Decimal       @db.Decimal(5, 2)
   billingStatus BillingStatus
   doi           DateTime
   doj           DateTime
   remarks       String?
-  createdAt     DateTime       @default(now())
+  createdAt     DateTime      @default(now())
 
   @@index([employeeId, date])
   @@index([billingStatus])
 }
 
 model Placement {
-  id                 String         @id @default(cuid())
+  id                 String        @id @default(cuid())
   employeeId         String
-  employee           User           @relation(fields: [employeeId], references: [id])
+  employee           User          @relation(fields: [employeeId], references: [id])
   candidateName      String
   candidateId        String?
-  clientId           String?
-  jpcId              String?
-  clientName         String
-  recruiter          String?
-  sourcer            String?
-  accountManager     String?
-  teamLead           String?
-  placementSharing   String?
-  placementCredit    Decimal?       @db.Decimal(5, 2)
-  totalRevenue       Decimal?       @db.Decimal(14, 2)
-  revenueAsLead      Decimal?       @db.Decimal(14, 2)
+  placementYear      Int?
   doi                DateTime?
   doj                DateTime
   doq                DateTime?
-  daysCompleted      Int?
+  clientName         String
+  plcId              String?
   placementType      PlacementType
-  billedHours        Int?
-  marginPercent      Decimal        @db.Decimal(5, 2)
-  revenue            Decimal        @db.Decimal(14, 2)
   billingStatus      BillingStatus
+  collectionStatus   String?
+  billedHours        Int?
+  revenue            Decimal       @db.Decimal(14, 2)
+  incentiveAmountInr Decimal       @db.Decimal(14, 2)
+  incentivePaidInr   Decimal?      @db.Decimal(14, 2)
   incentivePayoutEta DateTime?
-  incentiveAmountInr Decimal        @db.Decimal(14, 2)
-  incentivePaid      String?
-  qualifier          Boolean
-  createdAt          DateTime       @default(now())
+
+  // L2 Fields Restored
+  sourcer          String?
+  accountManager   String?
+  teamLead         String?
+  placementSharing String?
+  placementCredit  Decimal? @db.Decimal(14, 2)
+  totalRevenue     Decimal? @db.Decimal(14, 2)
+  revenueAsLead    Decimal? @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
 
   monthlyBillings MonthlyBilling[]
 
@@ -199,25 +200,23 @@ model RefreshToken {
   @@index([token])
 }
 
-
-
 model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String?
-  actor      User?    @relation(fields: [actorId], references: [id])
-  action     String
-  module     String?
-  entityType String?
-  entityId   String?
-  changes    Json?
-  status     String   @default("SUCCESS")
-  ipAddress  String?
-  userAgent  String?
+  id          String   @id @default(cuid())
+  actorId     String?
+  actor       User?    @relation(fields: [actorId], references: [id])
+  action      String
+  module      String?
+  entityType  String?
+  entityId    String?
+  changes     Json?
+  status      String   @default("SUCCESS")
+  ipAddress   String?
+  userAgent   String?
   geoLocation String?
-  createdAt  DateTime @default(now())
-  
+  createdAt   DateTime @default(now())
+
   // Security
-  isTampered Boolean  @default(false)
+  isTampered Boolean @default(false)
   hash       String?
 
   @@index([actorId])
@@ -225,4 +224,3 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
-

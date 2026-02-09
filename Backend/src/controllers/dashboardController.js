@@ -8,12 +8,14 @@ function toCurrency(value) {
   return Number(value || 0);
 }
 
-export async function getSuperAdminOverview(currentUser) {
+export async function getSuperAdminOverview(currentUser, year) {
+  console.log(`[getSuperAdminOverview] Called for ${currentUser.id} (${currentUser.role}) with year: ${year}`);
   // Fetch current user details to get the name (since req.user only has id/role)
   const userDetails = await prisma.user.findUnique({
       where: { id: currentUser.id },
       select: { name: true }
   });
+  console.log(`[getSuperAdminOverview] User name: ${userDetails?.name}`);
   const currentUserName = userDetails?.name || "Super Admin";
 
   let whereClause = { isActive: true };
@@ -84,30 +86,57 @@ export async function getSuperAdminOverview(currentUser) {
       placements: {
         select: {
           revenue: true,
+          doj: true,
         },
       },
     },
   });
 
+  console.log(`[getSuperAdminOverview] Found ${employeesWithRevenue.length} employees with revenue potential`);
+
   const revenueByEmployee = new Map();
   const placementsByEmployee = new Map();
+  const availableYears = new Set();
+  availableYears.add(new Date().getFullYear());
   
   for (const emp of employeesWithRevenue) {
     if (emp.employeeProfile) {
-      const totalRev = emp.placements.reduce(
+      let filteredPlacements = emp.placements || [];
+
+      // Collect available years from all placements
+      if (emp.placements && emp.placements.length > 0) {
+        emp.placements.forEach(p => {
+          if (p.doj) {
+            const year = new Date(p.doj).getFullYear();
+            if (!isNaN(year)) {
+              availableYears.add(year);
+            }
+          }
+        });
+      }
+      
+      if (year && year !== 'All') {
+         const targetYear = Number(year);
+         filteredPlacements = filteredPlacements.filter(p => {
+             if (!p.doj) return false;
+             return new Date(p.doj).getFullYear() === targetYear;
+         });
+      }
+
+      const totalRev = filteredPlacements.reduce(
         (sum, p) => sum + Number(p.revenue || 0),
         0
       );
       // Count placements (assuming each entry in placements array is one placement)
-      // Filter out cancelled? The query doesn't filter status.
-      // Assuming all fetched placements count, or maybe filter by qualified?
-      // For now, count all.
-      const totalCount = emp.placements.length; 
+      const totalCount = filteredPlacements.length; 
 
       revenueByEmployee.set(emp.employeeProfile.id, totalRev);
       placementsByEmployee.set(emp.employeeProfile.id, totalCount);
     }
   }
+
+  const yearList = Array.from(availableYears).sort((a, b) => b - a);
+  console.log(`[getSuperAdminOverview] User: ${currentUser.role}, Available Years Count: ${yearList.length}, Years: ${yearList}`);
 
   const responseTeams = teams.map((team) => {
     // Build manager -> employees map for this team
@@ -293,11 +322,12 @@ export async function getSuperAdminOverview(currentUser) {
       totalRevenue: [...revenueByEmployee.values()].reduce((a, b) => a + b, 0),
       overallTarget: teams.reduce((sum, t) => sum + (Number(t.yearlyTarget) || 0), 0), // Approximation
     },
+    availableYears: yearList,
     teams: responseTeams,
   };
 }
 
-export async function getTeamLeadOverview(currentUser) {
+export async function getTeamLeadOverview(currentUser, year) {
   const userId = currentUser.id;
 
   const leadProfile = await prisma.employeeProfile.findUnique({
@@ -343,6 +373,8 @@ export async function getTeamLeadOverview(currentUser) {
   const employeesByManager = new Map();
   const revenueByEmployee = new Map();
   const placementsByEmployee = new Map();
+  const availableYears = new Set();
+  availableYears.add(new Date().getFullYear());
 
   allTeamMembers.forEach((emp) => {
     // Build Manager Map
@@ -354,11 +386,30 @@ export async function getTeamLeadOverview(currentUser) {
     }
 
     // Build Revenue Map
-    const totalRev = (emp.placements || []).reduce(
+    let filteredPlacements = emp.placements || [];
+
+    // Collect available years
+    if (emp.placements) {
+        emp.placements.forEach(p => {
+            if (p.doj) {
+                availableYears.add(new Date(p.doj).getFullYear());
+            }
+        });
+    }
+
+    if (year && year !== 'All') {
+        const targetYear = Number(year);
+        filteredPlacements = filteredPlacements.filter(p => {
+            if (!p.doj) return false;
+            return new Date(p.doj).getFullYear() === targetYear;
+        });
+    }
+
+    const totalRev = filteredPlacements.reduce(
         (sum, p) => sum + Number(p.revenueAsLead || p.revenue || 0),
         0
     );
-    const totalCount = (emp.placements || []).length;
+    const totalCount = filteredPlacements.length;
 
     revenueByEmployee.set(emp.id, totalRev);
     placementsByEmployee.set(emp.id, totalCount);
@@ -462,6 +513,7 @@ export async function getTeamLeadOverview(currentUser) {
       totalPlacements: leadTotalPlacements,
     },
     members, // Hierarchical
+    availableYears: Array.from(availableYears).sort((a, b) => b - a),
   };
 }
 

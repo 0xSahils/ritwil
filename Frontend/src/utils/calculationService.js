@@ -63,12 +63,12 @@ export const calculateDaysDifference = (startDate, endDate = new Date()) => {
 };
 
 /**
- * Determines if a placement qualifies based on duration
+ * Checks if qualifier period is completed
  * @param {number} daysCompleted 
  * @returns {boolean}
  */
 export const checkQualifierStatus = (daysCompleted) => {
-  return (daysCompleted || 0) >= QUALIFIER_DAYS;
+  return (Number(daysCompleted) || 0) >= QUALIFIER_DAYS;
 };
 
 /**
@@ -328,7 +328,7 @@ export const CalculationService = {
   formatCurrency,
   formatPercentage,
   calculateDaysDifference,
-  checkQualifierStatus,
+  checkQualifierStatus, // Checks if qualifier period (90 days) is completed
   calculateTargetAchievement,
   calculateAchievedValue,
   safeParseNumber,

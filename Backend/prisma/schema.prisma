@@ -272,6 +272,7 @@ model PersonalPlacement {
   batch   PlacementImportBatch? @relation(fields: [batchId], references: [id])
 
   // Core placement fields (per row)
+  level            String?  // L1, L2, L3, L4 - for data separation
   candidateName    String
   placementYear    Int?
   doj              DateTime
@@ -321,6 +322,7 @@ model TeamPlacement {
   batch   PlacementImportBatch? @relation(fields: [batchId], references: [id])
 
   // Core placement fields (per row)
+  level            String?  // L1, L2, L3, L4 - for data separation
   candidateName    String
   recruiterName    String?
   leadName         String?

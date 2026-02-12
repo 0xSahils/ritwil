@@ -164,6 +164,7 @@ exports.Prisma.EmployeeProfileScalarFieldEnum = {
   revenueTargetAchievedPercent: 'revenueTargetAchievedPercent',
   totalIncentiveAmount: 'totalIncentiveAmount',
   totalIncentivePaid: 'totalIncentivePaid',
+  individualSynopsis: 'individualSynopsis',
   targetType: 'targetType',
   isActive: 'isActive',
   deletedAt: 'deletedAt',
@@ -272,6 +273,7 @@ exports.Prisma.PersonalPlacementScalarFieldEnum = {
   id: 'id',
   employeeId: 'employeeId',
   batchId: 'batchId',
+  level: 'level',
   candidateName: 'candidateName',
   placementYear: 'placementYear',
   doj: 'doj',
@@ -298,6 +300,7 @@ exports.Prisma.PersonalPlacementScalarFieldEnum = {
   slabQualified: 'slabQualified',
   totalIncentiveInr: 'totalIncentiveInr',
   totalIncentivePaidInr: 'totalIncentivePaidInr',
+  individualSynopsis: 'individualSynopsis',
   createdAt: 'createdAt'
 };
 
@@ -305,6 +308,7 @@ exports.Prisma.TeamPlacementScalarFieldEnum = {
   id: 'id',
   leadId: 'leadId',
   batchId: 'batchId',
+  level: 'level',
   candidateName: 'candidateName',
   recruiterName: 'recruiterName',
   leadName: 'leadName',
@@ -332,6 +336,7 @@ exports.Prisma.TeamPlacementScalarFieldEnum = {
   slabQualified: 'slabQualified',
   totalIncentiveInr: 'totalIncentiveInr',
   totalIncentivePaidInr: 'totalIncentivePaidInr',
+  individualSynopsis: 'individualSynopsis',
   createdAt: 'createdAt'
 };
 

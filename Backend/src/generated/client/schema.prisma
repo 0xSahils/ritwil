@@ -104,6 +104,7 @@ model EmployeeProfile {
   revenueTargetAchievedPercent Decimal?   @db.Decimal(5, 2)
   totalIncentiveAmount         Decimal?   @db.Decimal(14, 2)
   totalIncentivePaid           Decimal?   @db.Decimal(14, 2)
+  individualSynopsis           String?
   targetType                   TargetType @default(REVENUE)
   isActive                     Boolean    @default(true)
   deletedAt                    DateTime?
@@ -271,6 +272,7 @@ model PersonalPlacement {
   batch   PlacementImportBatch? @relation(fields: [batchId], references: [id])
 
   // Core placement fields (per row)
+  level            String? // L1, L2, L3, L4 - for data separation
   candidateName    String
   placementYear    Int?
   doj              DateTime
@@ -299,6 +301,7 @@ model PersonalPlacement {
   slabQualified                String?
   totalIncentiveInr            Decimal? @db.Decimal(14, 2)
   totalIncentivePaidInr        Decimal? @db.Decimal(14, 2)
+  individualSynopsis           String?
 
   createdAt DateTime @default(now())
 
@@ -319,6 +322,7 @@ model TeamPlacement {
   batch   PlacementImportBatch? @relation(fields: [batchId], references: [id])
 
   // Core placement fields (per row)
+  level            String? // L1, L2, L3, L4 - for data separation
   candidateName    String
   recruiterName    String?
   leadName         String?
@@ -348,6 +352,7 @@ model TeamPlacement {
   slabQualified                String?
   totalIncentiveInr            Decimal? @db.Decimal(14, 2)
   totalIncentivePaidInr        Decimal? @db.Decimal(14, 2)
+  individualSynopsis           String?
 
   createdAt DateTime @default(now())
 

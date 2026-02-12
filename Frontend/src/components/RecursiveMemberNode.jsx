@@ -43,8 +43,8 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
                 <div className="text-xs text-slate-500 mt-1 flex items-center">
                    <span className="font-medium text-slate-600">Total Target: <span className="text-slate-900">
                       {isPlacementTeam 
-                        ? (teamSummary.yearlyPlacementTarget || member.target) 
-                        : CalculationService.formatCurrency(teamSummary.yearlyRevenueTarget || member.target)}
+                        ? (teamSummary.yearlyPlacementTarget || member.target || 0) 
+                        : CalculationService.formatCurrency(teamSummary.yearlyRevenueTarget || member.target || 0)}
                    </span></span>
                    <span className="mx-2 text-slate-300">|</span>
                    <span className="font-medium text-slate-600">Achieved: <span className="text-green-600">
@@ -114,26 +114,24 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
                   )}
                 </div>
 
-                {(member.personalSummary || member.target) && (
-                  <div className="space-y-1.5 border-t border-blue-100/50 pt-2">
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-blue-600/70 font-medium">Personal Target:</span>
-                      <span className="font-semibold text-blue-800">
-                        {isPlacementTeam 
-                          ? (member.personalSummary?.yearlyPlacementTarget || member.target) 
-                          : CalculationService.formatCurrency(member.personalSummary?.yearlyRevenueTarget || member.target)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-blue-600/70 font-medium">Achieved:</span>
-                      <span className="font-semibold text-green-600">
-                        {isPlacementTeam 
-                          ? (member.personalSummary?.placementDone || member.placements || 0) 
-                          : CalculationService.formatCurrency(member.personalSummary?.totalRevenueGenerated || member.revenue || 0)}
-                      </span>
-                    </div>
+                <div className="space-y-1.5 border-t border-blue-100/50 pt-2">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-blue-600/70 font-medium">Personal Target:</span>
+                    <span className="font-semibold text-blue-800">
+                      {isPlacementTeam 
+                        ? (member.personalSummary?.yearlyPlacementTarget || member.target || 0) 
+                        : CalculationService.formatCurrency(member.personalSummary?.yearlyRevenueTarget || member.target || 0)}
+                    </span>
                   </div>
-                )}
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-blue-600/70 font-medium">Achieved:</span>
+                    <span className="font-semibold text-green-600">
+                      {isPlacementTeam 
+                        ? (member.personalSummary?.placementDone || member.placements || 0) 
+                        : CalculationService.formatCurrency(member.personalSummary?.totalRevenueGenerated || member.revenue || 0)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -188,22 +186,20 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
         </div>
         
         <div className="space-y-1.5 border-t border-slate-100/50 pt-2">
-          {(hasPersonalSummary || member.target) && (
-             <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">Target:</span>
-                <span className="font-semibold text-slate-700">
-                  {isPlacementTeam 
-                    ? (hasPersonalSummary ? personalSummary.yearlyPlacementTarget : member.target) 
-                    : CalculationService.formatCurrency(hasPersonalSummary ? (personalSummary.yearlyRevenueTarget || member.target) : member.target)}
-                </span>
-             </div>
-          )}
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-500 font-medium">Target:</span>
+            <span className="font-semibold text-slate-700">
+              {isPlacementTeam 
+                ? (hasPersonalSummary ? personalSummary.yearlyPlacementTarget : (member.target || 0)) 
+                : CalculationService.formatCurrency(hasPersonalSummary ? (personalSummary.yearlyRevenueTarget || member.target || 0) : (member.target || 0))}
+            </span>
+          </div>
           <div className="flex justify-between items-center text-xs">
              <span className="text-slate-500 font-medium">Achieved:</span>
              <span className="font-semibold text-green-600">
                 {isPlacementTeam 
                   ? (hasPersonalSummary ? personalSummary.placementDone : (member.totalPlacements || member.placements || 0)) 
-                  : CalculationService.formatCurrency(hasPersonalSummary ? personalSummary.totalRevenueGenerated : (member.totalRevenue || member.revenue || 0))}
+                  : CalculationService.formatCurrency(hasPersonalSummary ? (personalSummary.totalRevenueGenerated || 0) : (member.totalRevenue || member.revenue || 0))}
              </span>
           </div>
         </div>

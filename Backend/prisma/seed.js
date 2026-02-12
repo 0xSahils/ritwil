@@ -60,22 +60,6 @@ const generateRandomDataForUser = async (userId, userName) => {
             },
         });
 
-        // Create Incentive
-        const incentiveAmountUsd = revenue * 0.1;
-        const incentiveAmountInr = incentiveAmountUsd * 83; // Approx rate
-
-        await prisma.incentive.create({
-            data: {
-                employeeId: userId,
-                periodStart: new Date(doi.getFullYear(), doi.getMonth(), 1),
-                periodEnd: new Date(doi.getFullYear(), doi.getMonth() + 1, 0),
-                revenueTotal: revenue,
-                slabName: "Standard",
-                amountUsd: incentiveAmountUsd,
-                amountInr: incentiveAmountInr,
-            },
-        });
-
         // Create Placement
         const placement = await prisma.placement.create({
             data: {
@@ -175,7 +159,6 @@ const deleteHierarchy = async (l1Email, teamNames) => {
     await prisma.monthlyBilling.deleteMany({ where: { placement: { employeeId: { in: allUserIds } } } });
     await prisma.placement.deleteMany({ where: { employeeId: { in: allUserIds } } });
     await prisma.dailyEntry.deleteMany({ where: { employeeId: { in: allUserIds } } });
-    await prisma.incentive.deleteMany({ where: { employeeId: { in: allUserIds } } });
     await prisma.refreshToken.deleteMany({ where: { userId: { in: allUserIds } } });
     await prisma.auditLog.deleteMany({ where: { actorId: { in: allUserIds } } });
     await prisma.campaignTask.deleteMany({ where: { completedById: { in: allUserIds } } });

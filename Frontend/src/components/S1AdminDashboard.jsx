@@ -209,15 +209,14 @@ const HierarchyTab = ({ user }) => {
     const [expandedAdmins, setExpandedAdmins] = useState({});
     const [expandedTeams, setExpandedTeams] = useState({});
     const [expandedLeads, setExpandedLeads] = useState({});
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
     const { 
-        data: hierarchyData = { superAdmins: [], unassignedTeams: [], availableYears: [] }, 
+        data: hierarchyData = { superAdmins: [], unassignedTeams: [] }, 
         isLoading: loading,
         isError,
         error
     } = useQuery({
-        queryKey: ['hierarchyData', selectedYear],
+        queryKey: ['hierarchyData'],
         queryFn: async () => {
             try {
                 // 1. Fetch Super Admins (L1)
@@ -225,7 +224,7 @@ const HierarchyTab = ({ user }) => {
                 const superAdmins = adminsRes.data || [];
 
                 // 2. Fetch All Teams Data (Full Hierarchy)
-                const teamsRes = await apiRequest(`/dashboard/super-admin?year=${selectedYear}`);
+                const teamsRes = await apiRequest('/dashboard/super-admin');
                 if (!teamsRes.ok) {
                     const errorText = await teamsRes.text();
                     console.error('Failed to fetch teams:', teamsRes.status, errorText);
@@ -281,23 +280,9 @@ const HierarchyTab = ({ user }) => {
                     teams: adminTeamsMap[admin.id] || []
                 }));
 
-                // Ensure availableYears is always valid and sorted
-                const rawYears = teamsData.availableYears || [];
-                const uniqueYears = [...new Set(rawYears.map(y => Number(y)).filter(y => !isNaN(y)))];
-                
-                // Always include current year if not present
-                const currentYear = new Date().getFullYear();
-                if (!uniqueYears.includes(currentYear)) {
-                    uniqueYears.push(currentYear);
-                }
-                
-                // Sort descending
-                uniqueYears.sort((a, b) => b - a);
-
                 return {
                     superAdmins: adminsWithTeams,
-                    unassignedTeams,
-                    availableYears: uniqueYears
+                    unassignedTeams
                 };
             } catch (err) {
                 console.error("Error in S1AdminDashboard queryFn:", err);

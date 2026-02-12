@@ -60,7 +60,6 @@ model User {
   refreshTokens   RefreshToken[]
   dailyEntries    DailyEntry[]
   placements      Placement[]
-  incentives      Incentive[]
 
   leadEmployees EmployeeProfile[] @relation("LeadEmployees")
 
@@ -186,21 +185,6 @@ model MonthlyBilling {
   @@index([status])
 }
 
-model Incentive {
-  id           String   @id @default(cuid())
-  employeeId   String
-  employee     User     @relation(fields: [employeeId], references: [id])
-  periodStart  DateTime
-  periodEnd    DateTime
-  revenueTotal Decimal  @db.Decimal(14, 2)
-  slabName     String
-  amountUsd    Decimal  @db.Decimal(14, 2)
-  amountInr    Decimal  @db.Decimal(14, 2)
-  createdAt    DateTime @default(now())
-
-  @@index([employeeId, periodStart, periodEnd])
-}
-
 model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique
@@ -294,14 +278,10 @@ model PersonalPlacement {
   yearlyPlacementTarget  Decimal? @db.Decimal(14, 2)
   placementDone          Int?
   targetAchievedPercent  Decimal? @db.Decimal(5, 2)
-  yearlyRevenueTarget    Decimal? @db.Decimal(14, 2)
-  revenueAch             Decimal? @db.Decimal(14, 2)
-  revenueTargetAchievedPercent Decimal? @db.Decimal(5, 2)
   totalRevenueGenerated  Decimal? @db.Decimal(14, 2)
   slabQualified          String?
   totalIncentiveInr      Decimal? @db.Decimal(14, 2)
   totalIncentivePaidInr  Decimal? @db.Decimal(14, 2)
-  individualSynopsis     String?
 
   createdAt DateTime @default(now())
 
@@ -352,7 +332,6 @@ model TeamPlacement {
   slabQualified             String?
   totalIncentiveInr         Decimal? @db.Decimal(14, 2)
   totalIncentivePaidInr     Decimal? @db.Decimal(14, 2)
-  individualSynopsis        String?
 
   createdAt DateTime @default(now())
 

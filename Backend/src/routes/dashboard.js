@@ -13,8 +13,8 @@ import {
 const router = express.Router();
 // const prisma = new PrismaClient();
 
-// Helper to process employee data with year filtering (now includes PersonalPlacement and TeamPlacement)
-const processEmployeeData = async (employee, year) => {
+// Helper to process employee data
+const processEmployeeData = async (employee) => {
   if (!employee || !employee.employeeProfile) return null;
 
   // Fetch personal and team placements
@@ -23,111 +23,16 @@ const processEmployeeData = async (employee, year) => {
     prisma.personalPlacement.findMany({
       where: {
         employeeId: employee.id,
-        ...(year && year !== 'All' ? { placementYear: Number(year) } : {}),
       },
     }),
     employee.role === Role.TEAM_LEAD
       ? prisma.teamPlacement.findMany({
           where: {
             leadId: employee.id,
-            ...(year && year !== 'All' ? { placementYear: Number(year) } : {}),
           },
         })
       : Promise.resolve([]),
   ]);
-
-  // Calculate available years from all data before filtering
-  const availableYears = new Set();
-  
-  if (employee.placements) {
-    employee.placements.forEach(p => {
-      if (p.doj) {
-        const y = new Date(p.doj).getFullYear();
-        if (!isNaN(y)) availableYears.add(y);
-      }
-      if (p.placementYear) {
-        availableYears.add(p.placementYear);
-      }
-    });
-  }
-
-  // Add years from personal placements
-  personalPlacements.forEach(p => {
-    if (p.placementYear) availableYears.add(p.placementYear);
-    if (p.doj) {
-      const y = new Date(p.doj).getFullYear();
-      if (!isNaN(y)) availableYears.add(y);
-    }
-  });
-
-  // Add years from team placements
-  teamPlacements.forEach(p => {
-    if (p.placementYear) availableYears.add(p.placementYear);
-    if (p.doj) {
-      const y = new Date(p.doj).getFullYear();
-      if (!isNaN(y)) availableYears.add(y);
-    }
-  });
-  
-  if (employee.incentives) {
-    employee.incentives.forEach(i => {
-      if (i.periodEnd) {
-        const y = new Date(i.periodEnd).getFullYear();
-        if (!isNaN(y)) availableYears.add(y);
-      }
-    });
-  }
-  
-  // Ensure current year is always available
-  availableYears.add(new Date().getFullYear());
-  
-  const sortedAvailableYears = Array.from(availableYears).sort((a, b) => b - a);
-
-  let targetYear = null;
-  if (year && year !== 'All') {
-    targetYear = parseInt(year);
-  }
-
-  // Filter old placements by DOJ year or placementYear
-  const filteredPlacements = (employee.placements || []).filter(p => {
-    if (!targetYear) return true;
-    if (p.placementYear) return p.placementYear === targetYear;
-    if (p.doj) {
-      const pDate = new Date(p.doj);
-      return pDate.getFullYear() === targetYear;
-    }
-    return false;
-  });
-
-  // Filter personal placements by year
-  const filteredPersonalPlacements = personalPlacements.filter(p => {
-    if (!targetYear) return true;
-    if (p.placementYear) return p.placementYear === targetYear;
-    if (p.doj) {
-      const pDate = new Date(p.doj);
-      return pDate.getFullYear() === targetYear;
-    }
-    return false;
-  });
-
-  // Filter team placements by year
-  const filteredTeamPlacements = teamPlacements.filter(p => {
-    if (!targetYear) return true;
-    if (p.placementYear) return p.placementYear === targetYear;
-    if (p.doj) {
-      const pDate = new Date(p.doj);
-      return pDate.getFullYear() === targetYear;
-    }
-    return false;
-  });
-
-  // Filter incentives by periodEnd year
-  const filteredIncentives = (employee.incentives || []).filter(i => {
-    if (!targetYear) return true;
-    if (!i.periodEnd) return false;
-    const iDate = new Date(i.periodEnd);
-    return iDate.getFullYear() === targetYear;
-  });
 
   const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
   const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
@@ -136,21 +41,21 @@ const processEmployeeData = async (employee, year) => {
   const slabQualified = employee.employeeProfile.slabQualified || false;
   
   // Calculate revenue from all sources
-  const oldPlacementRevenue = filteredPlacements.reduce(
+  const oldPlacementRevenue = (employee.placements || []).reduce(
     (sum, p) => sum + Number(p.revenue || 0),
     0
   );
-  const personalPlacementRevenue = filteredPersonalPlacements.reduce(
+  const personalPlacementRevenue = personalPlacements.reduce(
     (sum, p) => sum + Number(p.revenueUsd || 0),
     0
   );
-  const teamPlacementRevenue = filteredTeamPlacements.reduce(
+  const teamPlacementRevenue = teamPlacements.reduce(
     (sum, p) => sum + Number(p.revenueLeadUsd || 0),
     0
   );
   const revenueGenerated = oldPlacementRevenue + personalPlacementRevenue + teamPlacementRevenue;
   
-  const placementsCount = filteredPlacements.length + filteredPersonalPlacements.length + filteredTeamPlacements.length;
+  const placementsCount = (employee.placements || []).length + personalPlacements.length + teamPlacements.length;
 
   let percentage = 0;
   if (targetType === "PLACEMENTS") {
@@ -159,6 +64,7 @@ const processEmployeeData = async (employee, year) => {
     percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
   }
 
+  const filteredIncentives = employee.incentives || [];
   const latestIncentive =
     filteredIncentives.length > 0
       ? filteredIncentives.reduce((a, b) =>
@@ -166,22 +72,22 @@ const processEmployeeData = async (employee, year) => {
         )
       : null;
 
-  const oldPlacementIncentive = filteredPlacements.reduce(
+  const oldPlacementIncentive = (employee.placements || []).reduce(
     (sum, p) => sum + Number(p.incentiveAmountInr || 0),
     0
   );
-  const personalPlacementIncentive = filteredPersonalPlacements.reduce(
+  const personalPlacementIncentive = personalPlacements.reduce(
     (sum, p) => sum + Number(p.incentiveInr || 0),
     0
   );
-  const teamPlacementIncentive = filteredTeamPlacements.reduce(
+  const teamPlacementIncentive = teamPlacements.reduce(
     (sum, p) => sum + Number(p.incentiveInr || 0),
     0
   );
   const totalIncentiveInr = oldPlacementIncentive + personalPlacementIncentive + teamPlacementIncentive;
 
   // Convert personal placements to same format
-  const convertedPersonalPlacements = filteredPersonalPlacements.map(p => ({
+  const convertedPersonalPlacements = personalPlacements.map(p => ({
     id: p.id,
     candidateName: p.candidateName,
     candidateId: null,
@@ -297,8 +203,6 @@ const processEmployeeData = async (employee, year) => {
     revenueGenerated,
     placementsCount,
     percentage,
-    selectedYear: targetYear,
-    availableYears: sortedAvailableYears,
     incentive: {
       slabName: latestIncentive?.slabName || null,
       amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
@@ -316,9 +220,8 @@ router.get(
   requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
-      const year = req.query.year || 'All';
-      console.log(`[Dashboard Route] /super-admin called by ${req.user.id}, year=${year}`);
-      const data = await getSuperAdminOverview(req.user, year);
+      console.log(`[Dashboard Route] /super-admin called by ${req.user.id}`);
+      const data = await getSuperAdminOverview(req.user);
       res.json(data);
     } catch (error) {
       next(error);
@@ -332,8 +235,7 @@ router.get(
   cacheMiddleware(60),
   async (req, res, next) => {
     try {
-      const { year } = req.query;
-      const data = await getTeamLeadOverview(req.user, year);
+      const data = await getTeamLeadOverview(req.user);
       res.json(data);
     } catch (err) {
       next(err);
@@ -348,7 +250,6 @@ router.get(
   async (req, res, next) => {
     try {
       const userId = req.user.id;
-      const { year } = req.query;
 
       const employee = await prisma.user.findUnique({
         where: { id: userId },
@@ -367,7 +268,7 @@ router.get(
         },
       });
 
-      const processedData = await processEmployeeData(employee, year);
+      const processedData = await processEmployeeData(employee);
       
       if (!processedData) {
         return res.status(404).json({ error: "Employee not configured" });
@@ -386,7 +287,6 @@ router.get(
   async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { year } = req.query;
 
       const viewerId = req.user.id;
       const viewer = await prisma.user.findUnique({
@@ -429,7 +329,7 @@ router.get(
         }
       }
 
-      const processedData = await processEmployeeData(employee, year);
+      const processedData = await processEmployeeData(employee);
       res.json(processedData);
     } catch (err) {
       next(err);
@@ -437,34 +337,30 @@ router.get(
   }
 );
 
-// Sheet-backed personal placements overview (for dashboards)
 router.get(
   "/personal-placements",
-  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN, Role.TEAM_LEAD, Role.EMPLOYEE),
+  requireRole(Role.EMPLOYEE, Role.TEAM_LEAD, Role.S1_ADMIN, Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
-      const { userId, year } = req.query;
-      const targetUserId = userId || req.user.id;
-      const data = await getPersonalPlacementOverview(targetUserId, year || "All");
+      const { userId } = req.query;
+      const data = await getPersonalPlacementOverview(req.user, userId);
       res.json(data);
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      next(error);
     }
   }
 );
 
-// Sheet-backed team placements overview (for dashboards)
 router.get(
   "/team-placements",
-  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN, Role.TEAM_LEAD),
+  requireRole(Role.TEAM_LEAD, Role.S1_ADMIN, Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
-      const { leadId, year } = req.query;
-      const targetLeadId = leadId || req.user.id;
-      const data = await getTeamPlacementOverview(targetLeadId, year || "All");
+      const { leadId } = req.query;
+      const data = await getTeamPlacementOverview(req.user, leadId);
       res.json(data);
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      next(error);
     }
   }
 );

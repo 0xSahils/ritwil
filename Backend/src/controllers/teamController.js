@@ -307,7 +307,7 @@ export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId, option
   });
 }
 
-export async function getTeamDetails(id, year) {
+export async function getTeamDetails(id) {
   const team = await prisma.team.findUnique({
     where: { id },
     include: {
@@ -346,67 +346,13 @@ export async function getTeamDetails(id, year) {
     return false;
   });
 
-  // Fetch team placements for all leads (before filtering so we can collect years)
+  // Fetch team placements for all leads
   const leadIds = leads.map(l => l.user.id);
-  const allTeamPlacements = leadIds.length > 0 ? await prisma.teamPlacement.findMany({
+  const teamPlacements = leadIds.length > 0 ? await prisma.teamPlacement.findMany({
     where: {
       leadId: { in: leadIds },
     },
   }) : [];
-
-  // Collect available years from all placements in the team
-  const availableYears = new Set();
-  availableYears.add(new Date().getFullYear()); // Always include current year
-
-  team.employees.forEach(emp => {
-    if (emp.user.placements) {
-      emp.user.placements.forEach(p => {
-        if (p.doj) {
-          const y = new Date(p.doj).getFullYear();
-          if (!isNaN(y)) availableYears.add(y);
-        }
-      });
-    }
-    if (emp.user.personalPlacements) {
-      emp.user.personalPlacements.forEach(p => {
-        if (p.doj) {
-          const y = new Date(p.doj).getFullYear();
-          if (!isNaN(y)) availableYears.add(y);
-        } else if (p.placementYear) {
-          availableYears.add(p.placementYear);
-        }
-      });
-    }
-  });
-
-  // Also add years from team placements
-  allTeamPlacements.forEach(tp => {
-    if (tp.placementYear) {
-      availableYears.add(tp.placementYear);
-    } else if (tp.doj) {
-      const y = new Date(tp.doj).getFullYear();
-      if (!isNaN(y)) availableYears.add(y);
-    }
-  });
-
-  // Filter team placements by year
-  const teamPlacements = year && year !== 'All' 
-    ? allTeamPlacements.filter(tp => {
-        if (tp.placementYear) return tp.placementYear === Number(year);
-        if (tp.doj) return new Date(tp.doj).getFullYear() === Number(year);
-        return false;
-      })
-    : allTeamPlacements;
-
-  const filterPlacements = (placements) => {
-    if (!year || year === 'All') return placements;
-    const targetYear = Number(year);
-    return placements.filter(p => {
-      if (p.placementYear) return p.placementYear === targetYear;
-      if (!p.doj) return false;
-      return new Date(p.doj).getFullYear() === targetYear;
-    });
-  };
 
   // Group team placements by leadId
   const teamPlacementsByLead = new Map();
@@ -427,8 +373,7 @@ export async function getTeamDetails(id, year) {
       ...(member.user.placements || []),
       ...(member.user.personalPlacements || [])
     ];
-    const filteredPlacements = filterPlacements(combinedPlacements);
-    const memberRevenue = filteredPlacements.reduce(
+    const memberRevenue = combinedPlacements.reduce(
       (sum, entry) => sum + Number(entry.revenue || entry.revenueUsd || 0),
       0
     );
@@ -451,8 +396,7 @@ export async function getTeamDetails(id, year) {
       ...(member.user.placements || []),
       ...(member.user.personalPlacements || [])
     ];
-    const filteredPlacements = filterPlacements(combinedPlacements);
-    let count = filteredPlacements.length;
+    let count = combinedPlacements.length;
     
     // For leads, also add team placement count
     if (member.user.role === Role.TEAM_LEAD) {
@@ -474,18 +418,16 @@ export async function getTeamDetails(id, year) {
     targetType,
     totalRevenue: aggregatedRevenue,
     totalPlacements: aggregatedPlacementsCount,
-    availableYears: Array.from(availableYears).sort((a, b) => b - a),
     leads: leads.map((p) => {
       const combinedPlacements = [
         ...(p.user.placements || []),
         ...(p.user.personalPlacements || [])
       ];
-      const filteredPlacements = filterPlacements(combinedPlacements);
-      const personalRevenue = filteredPlacements.reduce(
+      const personalRevenue = combinedPlacements.reduce(
         (sum, e) => sum + Number(e.revenue || e.revenueUsd || 0),
         0
       );
-      const personalPlacementsCount = filteredPlacements.length;
+      const personalPlacementsCount = combinedPlacements.length;
       
       // Add team placements for this lead
       const leadTeamPlacements = teamPlacementsByLead.get(p.user.id) || [];
@@ -515,7 +457,6 @@ export async function getTeamDetails(id, year) {
         ...(p.user.placements || []),
         ...(p.user.personalPlacements || [])
       ];
-      const filteredPlacements = filterPlacements(combinedPlacements);
       return {
         id: p.id,
         userId: p.user.id,
@@ -528,11 +469,11 @@ export async function getTeamDetails(id, year) {
         slabQualified: p.slabQualified,
         managerName: p.manager?.name || null,
         managerId: p.managerId,
-        revenue: filteredPlacements.reduce(
+        revenue: combinedPlacements.reduce(
           (sum, e) => sum + Number(e.revenue || e.revenueUsd || 0),
           0
         ),
-        placementsCount: filteredPlacements.length,
+        placementsCount: combinedPlacements.length,
         joinedAt: p.createdAt,
       };
     }),

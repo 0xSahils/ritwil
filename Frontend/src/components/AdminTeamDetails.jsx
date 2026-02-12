@@ -13,7 +13,6 @@ const AdminTeamDetails = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const canEditTarget = currentUser?.role === "S1_ADMIN";
-  const [selectedYear, setSelectedYear] = useState("All");
   
   const { 
     team, 
@@ -23,7 +22,7 @@ const AdminTeamDetails = () => {
     updateTeam, 
     removeMember, 
     updateMemberTarget 
-  } = useTeamDetails(id, selectedYear);
+  } = useTeamDetails(id);
 
   const [activeTab, setActiveTab] = useState("leads");
   
@@ -343,19 +342,6 @@ const AdminTeamDetails = () => {
                 <h3 className="text-lg font-bold text-slate-800">
                   {activeTab === "leads" ? "Team Leads" : "Team Members"}
                 </h3>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : Number(e.target.value))}
-                  className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto py-1.5 px-3 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
-                >
-                  <option value="All">All Years</option>
-                  {(team.availableYears && team.availableYears.length > 0 
-                      ? team.availableYears 
-                      : [new Date().getFullYear()]
-                  ).map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
               </div>
               <div className="flex gap-3">
                 {activeTab === "leads" ? (

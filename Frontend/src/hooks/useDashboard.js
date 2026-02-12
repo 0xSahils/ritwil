@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../api/client'
 
-export const useSuperAdminDashboard = (year) => {
+export const useSuperAdminDashboard = () => {
   return useQuery({
-    queryKey: ['superAdminDashboard', year],
+    queryKey: ['superAdminDashboard'],
     queryFn: async () => {
-      const response = await apiRequest(`/dashboard/super-admin?year=${year}`)
+      const response = await apiRequest('/dashboard/super-admin')
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to load teams')
@@ -33,7 +33,6 @@ export const useSuperAdminDashboard = (year) => {
         superUser: data.superUser,
         summary: data.summary,
         teams: mappedTeams,
-        availableYears: data.availableYears || [],
       }
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -41,11 +40,11 @@ export const useSuperAdminDashboard = (year) => {
   })
 }
 
-export const useTeamLeadDashboard = (year) => {
+export const useTeamLeadDashboard = () => {
   return useQuery({
-    queryKey: ['teamLeadDashboard', year],
+    queryKey: ['teamLeadDashboard'],
     queryFn: async () => {
-      const response = await apiRequest(`/dashboard/team-lead?year=${year}`)
+      const response = await apiRequest('/dashboard/team-lead')
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to load team lead data')
@@ -82,7 +81,7 @@ export const useTeamLeadDashboard = (year) => {
         teamLeads: [lead],
       }
 
-      return { team, lead, availableYears: data.availableYears || [] }
+      return { team, lead }
     },
     staleTime: 1000 * 60 * 5,
   })

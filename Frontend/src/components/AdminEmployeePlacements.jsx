@@ -19,37 +19,10 @@ const AdminEmployeePlacements = () => {
   const [bulkText, setBulkText] = useState("");
   const [csvFile, setCsvFile] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedYear, setSelectedYear] = useState("All");
 
-  // Derived state for filtering
-  const availableYears = (() => {
-    const years = new Set(placements
-      .map(p => {
-        // Prefer placementYear if available, otherwise use doj year
-        if (p.placementYear) return p.placementYear;
-        if (p.doj) return new Date(p.doj).getFullYear();
-        return null;
-      })
-      .filter(y => y !== null && !isNaN(y))
-    );
-    // Always include current year
-    years.add(new Date().getFullYear());
-    return [...years].sort((a, b) => b - a);
-  })();
+  // Derived state for filtering - REMOVED year filtering
 
-  // Ensure current year is in list if not present, but only if we want to show it explicitly.
-  // Actually, for placement history, we only show what exists. 
-  // But for consistency with dashboard, maybe show current year? 
-  // Let's stick to what exists for history.
-
-  const filteredPlacements = placements.filter(p => {
-    if (selectedYear === 'All') return true;
-    // Prefer placementYear if available, otherwise use doj year
-    const year = p.placementYear || (p.doj ? new Date(p.doj).getFullYear() : null);
-    if (!year) return false;
-    return year === Number(selectedYear);
-  });
-
+  const filteredPlacements = placements;
 
   // Result Modal State
   const [showResultModal, setShowResultModal] = useState(false);
@@ -503,16 +476,6 @@ const AdminEmployeePlacements = () => {
             <h1 className="text-3xl font-bold text-slate-900">Placement Management</h1>
           </div>
           <div className="flex gap-3">
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto py-2 px-3 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <option value="All">All Years</option>
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
             {selectedIds.length > 0 && (
               <button
                 onClick={handleBulkDelete}
@@ -609,7 +572,7 @@ const AdminEmployeePlacements = () => {
                           <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                           </svg>
-                          <span className="font-medium">No placements found for {selectedYear === 'All' ? 'any year' : selectedYear}</span>
+                          <span className="font-medium">No placements found</span>
                         </div>
                       </td>
                     </tr>

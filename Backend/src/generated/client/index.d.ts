@@ -44,11 +44,6 @@ export type Placement = $Result.DefaultSelection<Prisma.$PlacementPayload>
  */
 export type MonthlyBilling = $Result.DefaultSelection<Prisma.$MonthlyBillingPayload>
 /**
- * Model Incentive
- * 
- */
-export type Incentive = $Result.DefaultSelection<Prisma.$IncentivePayload>
-/**
  * Model RefreshToken
  * 
  */
@@ -326,16 +321,6 @@ export class PrismaClient<
     * ```
     */
   get monthlyBilling(): Prisma.MonthlyBillingDelegate<ExtArgs>;
-
-  /**
-   * `prisma.incentive`: Exposes CRUD operations for the **Incentive** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more Incentives
-    * const incentives = await prisma.incentive.findMany()
-    * ```
-    */
-  get incentive(): Prisma.IncentiveDelegate<ExtArgs>;
 
   /**
    * `prisma.refreshToken`: Exposes CRUD operations for the **RefreshToken** model.
@@ -833,7 +818,6 @@ export namespace Prisma {
     DailyEntry: 'DailyEntry',
     Placement: 'Placement',
     MonthlyBilling: 'MonthlyBilling',
-    Incentive: 'Incentive',
     RefreshToken: 'RefreshToken',
     AuditLog: 'AuditLog',
     PlacementImportBatch: 'PlacementImportBatch',
@@ -854,7 +838,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "team" | "user" | "employeeProfile" | "dailyEntry" | "placement" | "monthlyBilling" | "incentive" | "refreshToken" | "auditLog" | "placementImportBatch" | "personalPlacement" | "teamPlacement"
+      modelProps: "team" | "user" | "employeeProfile" | "dailyEntry" | "placement" | "monthlyBilling" | "refreshToken" | "auditLog" | "placementImportBatch" | "personalPlacement" | "teamPlacement"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1275,76 +1259,6 @@ export namespace Prisma {
           count: {
             args: Prisma.MonthlyBillingCountArgs<ExtArgs>
             result: $Utils.Optional<MonthlyBillingCountAggregateOutputType> | number
-          }
-        }
-      }
-      Incentive: {
-        payload: Prisma.$IncentivePayload<ExtArgs>
-        fields: Prisma.IncentiveFieldRefs
-        operations: {
-          findUnique: {
-            args: Prisma.IncentiveFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload> | null
-          }
-          findUniqueOrThrow: {
-            args: Prisma.IncentiveFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>
-          }
-          findFirst: {
-            args: Prisma.IncentiveFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload> | null
-          }
-          findFirstOrThrow: {
-            args: Prisma.IncentiveFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>
-          }
-          findMany: {
-            args: Prisma.IncentiveFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>[]
-          }
-          create: {
-            args: Prisma.IncentiveCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>
-          }
-          createMany: {
-            args: Prisma.IncentiveCreateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          createManyAndReturn: {
-            args: Prisma.IncentiveCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>[]
-          }
-          delete: {
-            args: Prisma.IncentiveDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>
-          }
-          update: {
-            args: Prisma.IncentiveUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>
-          }
-          deleteMany: {
-            args: Prisma.IncentiveDeleteManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateMany: {
-            args: Prisma.IncentiveUpdateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          upsert: {
-            args: Prisma.IncentiveUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$IncentivePayload>
-          }
-          aggregate: {
-            args: Prisma.IncentiveAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateIncentive>
-          }
-          groupBy: {
-            args: Prisma.IncentiveGroupByArgs<ExtArgs>
-            result: $Utils.Optional<IncentiveGroupByOutputType>[]
-          }
-          count: {
-            args: Prisma.IncentiveCountArgs<ExtArgs>
-            result: $Utils.Optional<IncentiveCountAggregateOutputType> | number
           }
         }
       }
@@ -1893,7 +1807,6 @@ export namespace Prisma {
     refreshTokens: number
     dailyEntries: number
     placements: number
-    incentives: number
     leadEmployees: number
     subordinates: number
     auditLogs: number
@@ -1906,7 +1819,6 @@ export namespace Prisma {
     refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
     dailyEntries?: boolean | UserCountOutputTypeCountDailyEntriesArgs
     placements?: boolean | UserCountOutputTypeCountPlacementsArgs
-    incentives?: boolean | UserCountOutputTypeCountIncentivesArgs
     leadEmployees?: boolean | UserCountOutputTypeCountLeadEmployeesArgs
     subordinates?: boolean | UserCountOutputTypeCountSubordinatesArgs
     auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
@@ -1945,13 +1857,6 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountPlacementsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: PlacementWhereInput
-  }
-
-  /**
-   * UserCountOutputType without action
-   */
-  export type UserCountOutputTypeCountIncentivesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: IncentiveWhereInput
   }
 
   /**
@@ -3302,7 +3207,6 @@ export namespace Prisma {
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     dailyEntries?: boolean | User$dailyEntriesArgs<ExtArgs>
     placements?: boolean | User$placementsArgs<ExtArgs>
-    incentives?: boolean | User$incentivesArgs<ExtArgs>
     leadEmployees?: boolean | User$leadEmployeesArgs<ExtArgs>
     manager?: boolean | User$managerArgs<ExtArgs>
     subordinates?: boolean | User$subordinatesArgs<ExtArgs>
@@ -3349,7 +3253,6 @@ export namespace Prisma {
     refreshTokens?: boolean | User$refreshTokensArgs<ExtArgs>
     dailyEntries?: boolean | User$dailyEntriesArgs<ExtArgs>
     placements?: boolean | User$placementsArgs<ExtArgs>
-    incentives?: boolean | User$incentivesArgs<ExtArgs>
     leadEmployees?: boolean | User$leadEmployeesArgs<ExtArgs>
     manager?: boolean | User$managerArgs<ExtArgs>
     subordinates?: boolean | User$subordinatesArgs<ExtArgs>
@@ -3370,7 +3273,6 @@ export namespace Prisma {
       refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
       dailyEntries: Prisma.$DailyEntryPayload<ExtArgs>[]
       placements: Prisma.$PlacementPayload<ExtArgs>[]
-      incentives: Prisma.$IncentivePayload<ExtArgs>[]
       leadEmployees: Prisma.$EmployeeProfilePayload<ExtArgs>[]
       manager: Prisma.$UserPayload<ExtArgs> | null
       subordinates: Prisma.$UserPayload<ExtArgs>[]
@@ -3760,7 +3662,6 @@ export namespace Prisma {
     refreshTokens<T extends User$refreshTokensArgs<ExtArgs> = {}>(args?: Subset<T, User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany"> | Null>
     dailyEntries<T extends User$dailyEntriesArgs<ExtArgs> = {}>(args?: Subset<T, User$dailyEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DailyEntryPayload<ExtArgs>, T, "findMany"> | Null>
     placements<T extends User$placementsArgs<ExtArgs> = {}>(args?: Subset<T, User$placementsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PlacementPayload<ExtArgs>, T, "findMany"> | Null>
-    incentives<T extends User$incentivesArgs<ExtArgs> = {}>(args?: Subset<T, User$incentivesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "findMany"> | Null>
     leadEmployees<T extends User$leadEmployeesArgs<ExtArgs> = {}>(args?: Subset<T, User$leadEmployeesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$EmployeeProfilePayload<ExtArgs>, T, "findMany"> | Null>
     manager<T extends User$managerArgs<ExtArgs> = {}>(args?: Subset<T, User$managerArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     subordinates<T extends User$subordinatesArgs<ExtArgs> = {}>(args?: Subset<T, User$subordinatesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany"> | Null>
@@ -4199,26 +4100,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: PlacementScalarFieldEnum | PlacementScalarFieldEnum[]
-  }
-
-  /**
-   * User.incentives
-   */
-  export type User$incentivesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    where?: IncentiveWhereInput
-    orderBy?: IncentiveOrderByWithRelationInput | IncentiveOrderByWithRelationInput[]
-    cursor?: IncentiveWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: IncentiveScalarFieldEnum | IncentiveScalarFieldEnum[]
   }
 
   /**
@@ -8912,1029 +8793,6 @@ export namespace Prisma {
 
 
   /**
-   * Model Incentive
-   */
-
-  export type AggregateIncentive = {
-    _count: IncentiveCountAggregateOutputType | null
-    _avg: IncentiveAvgAggregateOutputType | null
-    _sum: IncentiveSumAggregateOutputType | null
-    _min: IncentiveMinAggregateOutputType | null
-    _max: IncentiveMaxAggregateOutputType | null
-  }
-
-  export type IncentiveAvgAggregateOutputType = {
-    revenueTotal: Decimal | null
-    amountUsd: Decimal | null
-    amountInr: Decimal | null
-  }
-
-  export type IncentiveSumAggregateOutputType = {
-    revenueTotal: Decimal | null
-    amountUsd: Decimal | null
-    amountInr: Decimal | null
-  }
-
-  export type IncentiveMinAggregateOutputType = {
-    id: string | null
-    employeeId: string | null
-    periodStart: Date | null
-    periodEnd: Date | null
-    revenueTotal: Decimal | null
-    slabName: string | null
-    amountUsd: Decimal | null
-    amountInr: Decimal | null
-    createdAt: Date | null
-  }
-
-  export type IncentiveMaxAggregateOutputType = {
-    id: string | null
-    employeeId: string | null
-    periodStart: Date | null
-    periodEnd: Date | null
-    revenueTotal: Decimal | null
-    slabName: string | null
-    amountUsd: Decimal | null
-    amountInr: Decimal | null
-    createdAt: Date | null
-  }
-
-  export type IncentiveCountAggregateOutputType = {
-    id: number
-    employeeId: number
-    periodStart: number
-    periodEnd: number
-    revenueTotal: number
-    slabName: number
-    amountUsd: number
-    amountInr: number
-    createdAt: number
-    _all: number
-  }
-
-
-  export type IncentiveAvgAggregateInputType = {
-    revenueTotal?: true
-    amountUsd?: true
-    amountInr?: true
-  }
-
-  export type IncentiveSumAggregateInputType = {
-    revenueTotal?: true
-    amountUsd?: true
-    amountInr?: true
-  }
-
-  export type IncentiveMinAggregateInputType = {
-    id?: true
-    employeeId?: true
-    periodStart?: true
-    periodEnd?: true
-    revenueTotal?: true
-    slabName?: true
-    amountUsd?: true
-    amountInr?: true
-    createdAt?: true
-  }
-
-  export type IncentiveMaxAggregateInputType = {
-    id?: true
-    employeeId?: true
-    periodStart?: true
-    periodEnd?: true
-    revenueTotal?: true
-    slabName?: true
-    amountUsd?: true
-    amountInr?: true
-    createdAt?: true
-  }
-
-  export type IncentiveCountAggregateInputType = {
-    id?: true
-    employeeId?: true
-    periodStart?: true
-    periodEnd?: true
-    revenueTotal?: true
-    slabName?: true
-    amountUsd?: true
-    amountInr?: true
-    createdAt?: true
-    _all?: true
-  }
-
-  export type IncentiveAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which Incentive to aggregate.
-     */
-    where?: IncentiveWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of Incentives to fetch.
-     */
-    orderBy?: IncentiveOrderByWithRelationInput | IncentiveOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the start position
-     */
-    cursor?: IncentiveWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` Incentives from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` Incentives.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Count returned Incentives
-    **/
-    _count?: true | IncentiveCountAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to average
-    **/
-    _avg?: IncentiveAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: IncentiveSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the minimum value
-    **/
-    _min?: IncentiveMinAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the maximum value
-    **/
-    _max?: IncentiveMaxAggregateInputType
-  }
-
-  export type GetIncentiveAggregateType<T extends IncentiveAggregateArgs> = {
-        [P in keyof T & keyof AggregateIncentive]: P extends '_count' | 'count'
-      ? T[P] extends true
-        ? number
-        : GetScalarType<T[P], AggregateIncentive[P]>
-      : GetScalarType<T[P], AggregateIncentive[P]>
-  }
-
-
-
-
-  export type IncentiveGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: IncentiveWhereInput
-    orderBy?: IncentiveOrderByWithAggregationInput | IncentiveOrderByWithAggregationInput[]
-    by: IncentiveScalarFieldEnum[] | IncentiveScalarFieldEnum
-    having?: IncentiveScalarWhereWithAggregatesInput
-    take?: number
-    skip?: number
-    _count?: IncentiveCountAggregateInputType | true
-    _avg?: IncentiveAvgAggregateInputType
-    _sum?: IncentiveSumAggregateInputType
-    _min?: IncentiveMinAggregateInputType
-    _max?: IncentiveMaxAggregateInputType
-  }
-
-  export type IncentiveGroupByOutputType = {
-    id: string
-    employeeId: string
-    periodStart: Date
-    periodEnd: Date
-    revenueTotal: Decimal
-    slabName: string
-    amountUsd: Decimal
-    amountInr: Decimal
-    createdAt: Date
-    _count: IncentiveCountAggregateOutputType | null
-    _avg: IncentiveAvgAggregateOutputType | null
-    _sum: IncentiveSumAggregateOutputType | null
-    _min: IncentiveMinAggregateOutputType | null
-    _max: IncentiveMaxAggregateOutputType | null
-  }
-
-  type GetIncentiveGroupByPayload<T extends IncentiveGroupByArgs> = Prisma.PrismaPromise<
-    Array<
-      PickEnumerable<IncentiveGroupByOutputType, T['by']> &
-        {
-          [P in ((keyof T) & (keyof IncentiveGroupByOutputType))]: P extends '_count'
-            ? T[P] extends boolean
-              ? number
-              : GetScalarType<T[P], IncentiveGroupByOutputType[P]>
-            : GetScalarType<T[P], IncentiveGroupByOutputType[P]>
-        }
-      >
-    >
-
-
-  export type IncentiveSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    employeeId?: boolean
-    periodStart?: boolean
-    periodEnd?: boolean
-    revenueTotal?: boolean
-    slabName?: boolean
-    amountUsd?: boolean
-    amountInr?: boolean
-    createdAt?: boolean
-    employee?: boolean | UserDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["incentive"]>
-
-  export type IncentiveSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    employeeId?: boolean
-    periodStart?: boolean
-    periodEnd?: boolean
-    revenueTotal?: boolean
-    slabName?: boolean
-    amountUsd?: boolean
-    amountInr?: boolean
-    createdAt?: boolean
-    employee?: boolean | UserDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["incentive"]>
-
-  export type IncentiveSelectScalar = {
-    id?: boolean
-    employeeId?: boolean
-    periodStart?: boolean
-    periodEnd?: boolean
-    revenueTotal?: boolean
-    slabName?: boolean
-    amountUsd?: boolean
-    amountInr?: boolean
-    createdAt?: boolean
-  }
-
-  export type IncentiveInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    employee?: boolean | UserDefaultArgs<ExtArgs>
-  }
-  export type IncentiveIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    employee?: boolean | UserDefaultArgs<ExtArgs>
-  }
-
-  export type $IncentivePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "Incentive"
-    objects: {
-      employee: Prisma.$UserPayload<ExtArgs>
-    }
-    scalars: $Extensions.GetPayloadResult<{
-      id: string
-      employeeId: string
-      periodStart: Date
-      periodEnd: Date
-      revenueTotal: Prisma.Decimal
-      slabName: string
-      amountUsd: Prisma.Decimal
-      amountInr: Prisma.Decimal
-      createdAt: Date
-    }, ExtArgs["result"]["incentive"]>
-    composites: {}
-  }
-
-  type IncentiveGetPayload<S extends boolean | null | undefined | IncentiveDefaultArgs> = $Result.GetResult<Prisma.$IncentivePayload, S>
-
-  type IncentiveCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
-    Omit<IncentiveFindManyArgs, 'select' | 'include' | 'distinct'> & {
-      select?: IncentiveCountAggregateInputType | true
-    }
-
-  export interface IncentiveDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Incentive'], meta: { name: 'Incentive' } }
-    /**
-     * Find zero or one Incentive that matches the filter.
-     * @param {IncentiveFindUniqueArgs} args - Arguments to find a Incentive
-     * @example
-     * // Get one Incentive
-     * const incentive = await prisma.incentive.findUnique({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUnique<T extends IncentiveFindUniqueArgs>(args: SelectSubset<T, IncentiveFindUniqueArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
-
-    /**
-     * Find one Incentive that matches the filter or throw an error with `error.code='P2025'` 
-     * if no matches were found.
-     * @param {IncentiveFindUniqueOrThrowArgs} args - Arguments to find a Incentive
-     * @example
-     * // Get one Incentive
-     * const incentive = await prisma.incentive.findUniqueOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUniqueOrThrow<T extends IncentiveFindUniqueOrThrowArgs>(args: SelectSubset<T, IncentiveFindUniqueOrThrowArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
-
-    /**
-     * Find the first Incentive that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {IncentiveFindFirstArgs} args - Arguments to find a Incentive
-     * @example
-     * // Get one Incentive
-     * const incentive = await prisma.incentive.findFirst({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirst<T extends IncentiveFindFirstArgs>(args?: SelectSubset<T, IncentiveFindFirstArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
-
-    /**
-     * Find the first Incentive that matches the filter or
-     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {IncentiveFindFirstOrThrowArgs} args - Arguments to find a Incentive
-     * @example
-     * // Get one Incentive
-     * const incentive = await prisma.incentive.findFirstOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirstOrThrow<T extends IncentiveFindFirstOrThrowArgs>(args?: SelectSubset<T, IncentiveFindFirstOrThrowArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
-
-    /**
-     * Find zero or more Incentives that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {IncentiveFindManyArgs} args - Arguments to filter and select certain fields only.
-     * @example
-     * // Get all Incentives
-     * const incentives = await prisma.incentive.findMany()
-     * 
-     * // Get first 10 Incentives
-     * const incentives = await prisma.incentive.findMany({ take: 10 })
-     * 
-     * // Only select the `id`
-     * const incentiveWithIdOnly = await prisma.incentive.findMany({ select: { id: true } })
-     * 
-     */
-    findMany<T extends IncentiveFindManyArgs>(args?: SelectSubset<T, IncentiveFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "findMany">>
-
-    /**
-     * Create a Incentive.
-     * @param {IncentiveCreateArgs} args - Arguments to create a Incentive.
-     * @example
-     * // Create one Incentive
-     * const Incentive = await prisma.incentive.create({
-     *   data: {
-     *     // ... data to create a Incentive
-     *   }
-     * })
-     * 
-     */
-    create<T extends IncentiveCreateArgs>(args: SelectSubset<T, IncentiveCreateArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "create">, never, ExtArgs>
-
-    /**
-     * Create many Incentives.
-     * @param {IncentiveCreateManyArgs} args - Arguments to create many Incentives.
-     * @example
-     * // Create many Incentives
-     * const incentive = await prisma.incentive.createMany({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     *     
-     */
-    createMany<T extends IncentiveCreateManyArgs>(args?: SelectSubset<T, IncentiveCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Create many Incentives and returns the data saved in the database.
-     * @param {IncentiveCreateManyAndReturnArgs} args - Arguments to create many Incentives.
-     * @example
-     * // Create many Incentives
-     * const incentive = await prisma.incentive.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Incentives and only return the `id`
-     * const incentiveWithIdOnly = await prisma.incentive.createManyAndReturn({ 
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends IncentiveCreateManyAndReturnArgs>(args?: SelectSubset<T, IncentiveCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "createManyAndReturn">>
-
-    /**
-     * Delete a Incentive.
-     * @param {IncentiveDeleteArgs} args - Arguments to delete one Incentive.
-     * @example
-     * // Delete one Incentive
-     * const Incentive = await prisma.incentive.delete({
-     *   where: {
-     *     // ... filter to delete one Incentive
-     *   }
-     * })
-     * 
-     */
-    delete<T extends IncentiveDeleteArgs>(args: SelectSubset<T, IncentiveDeleteArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "delete">, never, ExtArgs>
-
-    /**
-     * Update one Incentive.
-     * @param {IncentiveUpdateArgs} args - Arguments to update one Incentive.
-     * @example
-     * // Update one Incentive
-     * const incentive = await prisma.incentive.update({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    update<T extends IncentiveUpdateArgs>(args: SelectSubset<T, IncentiveUpdateArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "update">, never, ExtArgs>
-
-    /**
-     * Delete zero or more Incentives.
-     * @param {IncentiveDeleteManyArgs} args - Arguments to filter Incentives to delete.
-     * @example
-     * // Delete a few Incentives
-     * const { count } = await prisma.incentive.deleteMany({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     * 
-     */
-    deleteMany<T extends IncentiveDeleteManyArgs>(args?: SelectSubset<T, IncentiveDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Incentives.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {IncentiveUpdateManyArgs} args - Arguments to update one or more rows.
-     * @example
-     * // Update many Incentives
-     * const incentive = await prisma.incentive.updateMany({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    updateMany<T extends IncentiveUpdateManyArgs>(args: SelectSubset<T, IncentiveUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Create or update one Incentive.
-     * @param {IncentiveUpsertArgs} args - Arguments to update or create a Incentive.
-     * @example
-     * // Update or create a Incentive
-     * const incentive = await prisma.incentive.upsert({
-     *   create: {
-     *     // ... data to create a Incentive
-     *   },
-     *   update: {
-     *     // ... in case it already exists, update
-     *   },
-     *   where: {
-     *     // ... the filter for the Incentive we want to update
-     *   }
-     * })
-     */
-    upsert<T extends IncentiveUpsertArgs>(args: SelectSubset<T, IncentiveUpsertArgs<ExtArgs>>): Prisma__IncentiveClient<$Result.GetResult<Prisma.$IncentivePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
-
-
-    /**
-     * Count the number of Incentives.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {IncentiveCountArgs} args - Arguments to filter Incentives to count.
-     * @example
-     * // Count the number of Incentives
-     * const count = await prisma.incentive.count({
-     *   where: {
-     *     // ... the filter for the Incentives we want to count
-     *   }
-     * })
-    **/
-    count<T extends IncentiveCountArgs>(
-      args?: Subset<T, IncentiveCountArgs>,
-    ): Prisma.PrismaPromise<
-      T extends $Utils.Record<'select', any>
-        ? T['select'] extends true
-          ? number
-          : GetScalarType<T['select'], IncentiveCountAggregateOutputType>
-        : number
-    >
-
-    /**
-     * Allows you to perform aggregations operations on a Incentive.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {IncentiveAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
-     * @example
-     * // Ordered by age ascending
-     * // Where email contains prisma.io
-     * // Limited to the 10 users
-     * const aggregations = await prisma.user.aggregate({
-     *   _avg: {
-     *     age: true,
-     *   },
-     *   where: {
-     *     email: {
-     *       contains: "prisma.io",
-     *     },
-     *   },
-     *   orderBy: {
-     *     age: "asc",
-     *   },
-     *   take: 10,
-     * })
-    **/
-    aggregate<T extends IncentiveAggregateArgs>(args: Subset<T, IncentiveAggregateArgs>): Prisma.PrismaPromise<GetIncentiveAggregateType<T>>
-
-    /**
-     * Group by Incentive.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {IncentiveGroupByArgs} args - Group by arguments.
-     * @example
-     * // Group by city, order by createdAt, get count
-     * const result = await prisma.user.groupBy({
-     *   by: ['city', 'createdAt'],
-     *   orderBy: {
-     *     createdAt: true
-     *   },
-     *   _count: {
-     *     _all: true
-     *   },
-     * })
-     * 
-    **/
-    groupBy<
-      T extends IncentiveGroupByArgs,
-      HasSelectOrTake extends Or<
-        Extends<'skip', Keys<T>>,
-        Extends<'take', Keys<T>>
-      >,
-      OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: IncentiveGroupByArgs['orderBy'] }
-        : { orderBy?: IncentiveGroupByArgs['orderBy'] },
-      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
-      ByFields extends MaybeTupleToUnion<T['by']>,
-      ByValid extends Has<ByFields, OrderFields>,
-      HavingFields extends GetHavingFields<T['having']>,
-      HavingValid extends Has<ByFields, HavingFields>,
-      ByEmpty extends T['by'] extends never[] ? True : False,
-      InputErrors extends ByEmpty extends True
-      ? `Error: "by" must not be empty.`
-      : HavingValid extends False
-      ? {
-          [P in HavingFields]: P extends ByFields
-            ? never
-            : P extends string
-            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
-            : [
-                Error,
-                'Field ',
-                P,
-                ` in "having" needs to be provided in "by"`,
-              ]
-        }[HavingFields]
-      : 'take' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "take", you also need to provide "orderBy"'
-      : 'skip' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "skip", you also need to provide "orderBy"'
-      : ByValid extends True
-      ? {}
-      : {
-          [P in OrderFields]: P extends ByFields
-            ? never
-            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-        }[OrderFields]
-    >(args: SubsetIntersection<T, IncentiveGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetIncentiveGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
-  /**
-   * Fields of the Incentive model
-   */
-  readonly fields: IncentiveFieldRefs;
-  }
-
-  /**
-   * The delegate class that acts as a "Promise-like" for Incentive.
-   * Why is this prefixed with `Prisma__`?
-   * Because we want to prevent naming conflicts as mentioned in
-   * https://github.com/prisma/prisma-client-js/issues/707
-   */
-  export interface Prisma__IncentiveClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
-    readonly [Symbol.toStringTag]: "PrismaPromise"
-    employee<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
-    /**
-     * Attaches callbacks for the resolution and/or rejection of the Promise.
-     * @param onfulfilled The callback to execute when the Promise is resolved.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of which ever callback is executed.
-     */
-    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
-    /**
-     * Attaches a callback for only the rejection of the Promise.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of the callback.
-     */
-    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
-    /**
-     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
-     * resolved value cannot be modified from the callback.
-     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
-     * @returns A Promise for the completion of the callback.
-     */
-    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
-  }
-
-
-
-
-  /**
-   * Fields of the Incentive model
-   */ 
-  interface IncentiveFieldRefs {
-    readonly id: FieldRef<"Incentive", 'String'>
-    readonly employeeId: FieldRef<"Incentive", 'String'>
-    readonly periodStart: FieldRef<"Incentive", 'DateTime'>
-    readonly periodEnd: FieldRef<"Incentive", 'DateTime'>
-    readonly revenueTotal: FieldRef<"Incentive", 'Decimal'>
-    readonly slabName: FieldRef<"Incentive", 'String'>
-    readonly amountUsd: FieldRef<"Incentive", 'Decimal'>
-    readonly amountInr: FieldRef<"Incentive", 'Decimal'>
-    readonly createdAt: FieldRef<"Incentive", 'DateTime'>
-  }
-    
-
-  // Custom InputTypes
-  /**
-   * Incentive findUnique
-   */
-  export type IncentiveFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * Filter, which Incentive to fetch.
-     */
-    where: IncentiveWhereUniqueInput
-  }
-
-  /**
-   * Incentive findUniqueOrThrow
-   */
-  export type IncentiveFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * Filter, which Incentive to fetch.
-     */
-    where: IncentiveWhereUniqueInput
-  }
-
-  /**
-   * Incentive findFirst
-   */
-  export type IncentiveFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * Filter, which Incentive to fetch.
-     */
-    where?: IncentiveWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of Incentives to fetch.
-     */
-    orderBy?: IncentiveOrderByWithRelationInput | IncentiveOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for Incentives.
-     */
-    cursor?: IncentiveWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` Incentives from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` Incentives.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of Incentives.
-     */
-    distinct?: IncentiveScalarFieldEnum | IncentiveScalarFieldEnum[]
-  }
-
-  /**
-   * Incentive findFirstOrThrow
-   */
-  export type IncentiveFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * Filter, which Incentive to fetch.
-     */
-    where?: IncentiveWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of Incentives to fetch.
-     */
-    orderBy?: IncentiveOrderByWithRelationInput | IncentiveOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for Incentives.
-     */
-    cursor?: IncentiveWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` Incentives from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` Incentives.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of Incentives.
-     */
-    distinct?: IncentiveScalarFieldEnum | IncentiveScalarFieldEnum[]
-  }
-
-  /**
-   * Incentive findMany
-   */
-  export type IncentiveFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * Filter, which Incentives to fetch.
-     */
-    where?: IncentiveWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of Incentives to fetch.
-     */
-    orderBy?: IncentiveOrderByWithRelationInput | IncentiveOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for listing Incentives.
-     */
-    cursor?: IncentiveWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` Incentives from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` Incentives.
-     */
-    skip?: number
-    distinct?: IncentiveScalarFieldEnum | IncentiveScalarFieldEnum[]
-  }
-
-  /**
-   * Incentive create
-   */
-  export type IncentiveCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * The data needed to create a Incentive.
-     */
-    data: XOR<IncentiveCreateInput, IncentiveUncheckedCreateInput>
-  }
-
-  /**
-   * Incentive createMany
-   */
-  export type IncentiveCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to create many Incentives.
-     */
-    data: IncentiveCreateManyInput | IncentiveCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
-   * Incentive createManyAndReturn
-   */
-  export type IncentiveCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * The data used to create many Incentives.
-     */
-    data: IncentiveCreateManyInput | IncentiveCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * Incentive update
-   */
-  export type IncentiveUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * The data needed to update a Incentive.
-     */
-    data: XOR<IncentiveUpdateInput, IncentiveUncheckedUpdateInput>
-    /**
-     * Choose, which Incentive to update.
-     */
-    where: IncentiveWhereUniqueInput
-  }
-
-  /**
-   * Incentive updateMany
-   */
-  export type IncentiveUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update Incentives.
-     */
-    data: XOR<IncentiveUpdateManyMutationInput, IncentiveUncheckedUpdateManyInput>
-    /**
-     * Filter which Incentives to update
-     */
-    where?: IncentiveWhereInput
-  }
-
-  /**
-   * Incentive upsert
-   */
-  export type IncentiveUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * The filter to search for the Incentive to update in case it exists.
-     */
-    where: IncentiveWhereUniqueInput
-    /**
-     * In case the Incentive found by the `where` argument doesn't exist, create a new Incentive with this data.
-     */
-    create: XOR<IncentiveCreateInput, IncentiveUncheckedCreateInput>
-    /**
-     * In case the Incentive was found with the provided `where` argument, update it with this data.
-     */
-    update: XOR<IncentiveUpdateInput, IncentiveUncheckedUpdateInput>
-  }
-
-  /**
-   * Incentive delete
-   */
-  export type IncentiveDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-    /**
-     * Filter which Incentive to delete.
-     */
-    where: IncentiveWhereUniqueInput
-  }
-
-  /**
-   * Incentive deleteMany
-   */
-  export type IncentiveDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which Incentives to delete
-     */
-    where?: IncentiveWhereInput
-  }
-
-  /**
-   * Incentive without action
-   */
-  export type IncentiveDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Incentive
-     */
-    select?: IncentiveSelect<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: IncentiveInclude<ExtArgs> | null
-  }
-
-
-  /**
    * Model RefreshToken
    */
 
@@ -12923,9 +11781,6 @@ export namespace Prisma {
     yearlyPlacementTarget: Decimal | null
     placementDone: number | null
     targetAchievedPercent: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
@@ -12940,9 +11795,6 @@ export namespace Prisma {
     yearlyPlacementTarget: Decimal | null
     placementDone: number | null
     targetAchievedPercent: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
@@ -12972,14 +11824,10 @@ export namespace Prisma {
     yearlyPlacementTarget: Decimal | null
     placementDone: number | null
     targetAchievedPercent: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     slabQualified: string | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
-    individualSynopsis: string | null
     createdAt: Date | null
   }
 
@@ -13007,14 +11855,10 @@ export namespace Prisma {
     yearlyPlacementTarget: Decimal | null
     placementDone: number | null
     targetAchievedPercent: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     slabQualified: string | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
-    individualSynopsis: string | null
     createdAt: Date | null
   }
 
@@ -13042,14 +11886,10 @@ export namespace Prisma {
     yearlyPlacementTarget: number
     placementDone: number
     targetAchievedPercent: number
-    yearlyRevenueTarget: number
-    revenueAch: number
-    revenueTargetAchievedPercent: number
     totalRevenueGenerated: number
     slabQualified: number
     totalIncentiveInr: number
     totalIncentivePaidInr: number
-    individualSynopsis: number
     createdAt: number
     _all: number
   }
@@ -13064,9 +11904,6 @@ export namespace Prisma {
     yearlyPlacementTarget?: true
     placementDone?: true
     targetAchievedPercent?: true
-    yearlyRevenueTarget?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
     totalRevenueGenerated?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
@@ -13081,9 +11918,6 @@ export namespace Prisma {
     yearlyPlacementTarget?: true
     placementDone?: true
     targetAchievedPercent?: true
-    yearlyRevenueTarget?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
     totalRevenueGenerated?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
@@ -13113,14 +11947,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: true
     placementDone?: true
     targetAchievedPercent?: true
-    yearlyRevenueTarget?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
     totalRevenueGenerated?: true
     slabQualified?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
-    individualSynopsis?: true
     createdAt?: true
   }
 
@@ -13148,14 +11978,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: true
     placementDone?: true
     targetAchievedPercent?: true
-    yearlyRevenueTarget?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
     totalRevenueGenerated?: true
     slabQualified?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
-    individualSynopsis?: true
     createdAt?: true
   }
 
@@ -13183,14 +12009,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: true
     placementDone?: true
     targetAchievedPercent?: true
-    yearlyRevenueTarget?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
     totalRevenueGenerated?: true
     slabQualified?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
-    individualSynopsis?: true
     createdAt?: true
     _all?: true
   }
@@ -13305,14 +12127,10 @@ export namespace Prisma {
     yearlyPlacementTarget: Decimal | null
     placementDone: number | null
     targetAchievedPercent: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     slabQualified: string | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
-    individualSynopsis: string | null
     createdAt: Date
     _count: PersonalPlacementCountAggregateOutputType | null
     _avg: PersonalPlacementAvgAggregateOutputType | null
@@ -13359,14 +12177,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: boolean
     placementDone?: boolean
     targetAchievedPercent?: boolean
-    yearlyRevenueTarget?: boolean
-    revenueAch?: boolean
-    revenueTargetAchievedPercent?: boolean
     totalRevenueGenerated?: boolean
     slabQualified?: boolean
     totalIncentiveInr?: boolean
     totalIncentivePaidInr?: boolean
-    individualSynopsis?: boolean
     createdAt?: boolean
     employee?: boolean | UserDefaultArgs<ExtArgs>
     batch?: boolean | PersonalPlacement$batchArgs<ExtArgs>
@@ -13396,14 +12210,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: boolean
     placementDone?: boolean
     targetAchievedPercent?: boolean
-    yearlyRevenueTarget?: boolean
-    revenueAch?: boolean
-    revenueTargetAchievedPercent?: boolean
     totalRevenueGenerated?: boolean
     slabQualified?: boolean
     totalIncentiveInr?: boolean
     totalIncentivePaidInr?: boolean
-    individualSynopsis?: boolean
     createdAt?: boolean
     employee?: boolean | UserDefaultArgs<ExtArgs>
     batch?: boolean | PersonalPlacement$batchArgs<ExtArgs>
@@ -13433,14 +12243,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: boolean
     placementDone?: boolean
     targetAchievedPercent?: boolean
-    yearlyRevenueTarget?: boolean
-    revenueAch?: boolean
-    revenueTargetAchievedPercent?: boolean
     totalRevenueGenerated?: boolean
     slabQualified?: boolean
     totalIncentiveInr?: boolean
     totalIncentivePaidInr?: boolean
-    individualSynopsis?: boolean
     createdAt?: boolean
   }
 
@@ -13483,14 +12289,10 @@ export namespace Prisma {
       yearlyPlacementTarget: Prisma.Decimal | null
       placementDone: number | null
       targetAchievedPercent: Prisma.Decimal | null
-      yearlyRevenueTarget: Prisma.Decimal | null
-      revenueAch: Prisma.Decimal | null
-      revenueTargetAchievedPercent: Prisma.Decimal | null
       totalRevenueGenerated: Prisma.Decimal | null
       slabQualified: string | null
       totalIncentiveInr: Prisma.Decimal | null
       totalIncentivePaidInr: Prisma.Decimal | null
-      individualSynopsis: string | null
       createdAt: Date
     }, ExtArgs["result"]["personalPlacement"]>
     composites: {}
@@ -13910,14 +12712,10 @@ export namespace Prisma {
     readonly yearlyPlacementTarget: FieldRef<"PersonalPlacement", 'Decimal'>
     readonly placementDone: FieldRef<"PersonalPlacement", 'Int'>
     readonly targetAchievedPercent: FieldRef<"PersonalPlacement", 'Decimal'>
-    readonly yearlyRevenueTarget: FieldRef<"PersonalPlacement", 'Decimal'>
-    readonly revenueAch: FieldRef<"PersonalPlacement", 'Decimal'>
-    readonly revenueTargetAchievedPercent: FieldRef<"PersonalPlacement", 'Decimal'>
     readonly totalRevenueGenerated: FieldRef<"PersonalPlacement", 'Decimal'>
     readonly slabQualified: FieldRef<"PersonalPlacement", 'String'>
     readonly totalIncentiveInr: FieldRef<"PersonalPlacement", 'Decimal'>
     readonly totalIncentivePaidInr: FieldRef<"PersonalPlacement", 'Decimal'>
-    readonly individualSynopsis: FieldRef<"PersonalPlacement", 'String'>
     readonly createdAt: FieldRef<"PersonalPlacement", 'DateTime'>
   }
     
@@ -14344,7 +13142,6 @@ export namespace Prisma {
     slabQualified: string | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
-    individualSynopsis: string | null
     createdAt: Date | null
   }
 
@@ -14380,7 +13177,6 @@ export namespace Prisma {
     slabQualified: string | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
-    individualSynopsis: string | null
     createdAt: Date | null
   }
 
@@ -14416,7 +13212,6 @@ export namespace Prisma {
     slabQualified: number
     totalIncentiveInr: number
     totalIncentivePaidInr: number
-    individualSynopsis: number
     createdAt: number
     _all: number
   }
@@ -14488,7 +13283,6 @@ export namespace Prisma {
     slabQualified?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
-    individualSynopsis?: true
     createdAt?: true
   }
 
@@ -14524,7 +13318,6 @@ export namespace Prisma {
     slabQualified?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
-    individualSynopsis?: true
     createdAt?: true
   }
 
@@ -14560,7 +13353,6 @@ export namespace Prisma {
     slabQualified?: true
     totalIncentiveInr?: true
     totalIncentivePaidInr?: true
-    individualSynopsis?: true
     createdAt?: true
     _all?: true
   }
@@ -14683,7 +13475,6 @@ export namespace Prisma {
     slabQualified: string | null
     totalIncentiveInr: Decimal | null
     totalIncentivePaidInr: Decimal | null
-    individualSynopsis: string | null
     createdAt: Date
     _count: TeamPlacementCountAggregateOutputType | null
     _avg: TeamPlacementAvgAggregateOutputType | null
@@ -14738,7 +13529,6 @@ export namespace Prisma {
     slabQualified?: boolean
     totalIncentiveInr?: boolean
     totalIncentivePaidInr?: boolean
-    individualSynopsis?: boolean
     createdAt?: boolean
     lead?: boolean | UserDefaultArgs<ExtArgs>
     batch?: boolean | TeamPlacement$batchArgs<ExtArgs>
@@ -14776,7 +13566,6 @@ export namespace Prisma {
     slabQualified?: boolean
     totalIncentiveInr?: boolean
     totalIncentivePaidInr?: boolean
-    individualSynopsis?: boolean
     createdAt?: boolean
     lead?: boolean | UserDefaultArgs<ExtArgs>
     batch?: boolean | TeamPlacement$batchArgs<ExtArgs>
@@ -14814,7 +13603,6 @@ export namespace Prisma {
     slabQualified?: boolean
     totalIncentiveInr?: boolean
     totalIncentivePaidInr?: boolean
-    individualSynopsis?: boolean
     createdAt?: boolean
   }
 
@@ -14865,7 +13653,6 @@ export namespace Prisma {
       slabQualified: string | null
       totalIncentiveInr: Prisma.Decimal | null
       totalIncentivePaidInr: Prisma.Decimal | null
-      individualSynopsis: string | null
       createdAt: Date
     }, ExtArgs["result"]["teamPlacement"]>
     composites: {}
@@ -15293,7 +14080,6 @@ export namespace Prisma {
     readonly slabQualified: FieldRef<"TeamPlacement", 'String'>
     readonly totalIncentiveInr: FieldRef<"TeamPlacement", 'Decimal'>
     readonly totalIncentivePaidInr: FieldRef<"TeamPlacement", 'Decimal'>
-    readonly individualSynopsis: FieldRef<"TeamPlacement", 'String'>
     readonly createdAt: FieldRef<"TeamPlacement", 'DateTime'>
   }
     
@@ -15776,21 +14562,6 @@ export namespace Prisma {
   export type MonthlyBillingScalarFieldEnum = (typeof MonthlyBillingScalarFieldEnum)[keyof typeof MonthlyBillingScalarFieldEnum]
 
 
-  export const IncentiveScalarFieldEnum: {
-    id: 'id',
-    employeeId: 'employeeId',
-    periodStart: 'periodStart',
-    periodEnd: 'periodEnd',
-    revenueTotal: 'revenueTotal',
-    slabName: 'slabName',
-    amountUsd: 'amountUsd',
-    amountInr: 'amountInr',
-    createdAt: 'createdAt'
-  };
-
-  export type IncentiveScalarFieldEnum = (typeof IncentiveScalarFieldEnum)[keyof typeof IncentiveScalarFieldEnum]
-
-
   export const RefreshTokenScalarFieldEnum: {
     id: 'id',
     token: 'token',
@@ -15857,14 +14628,10 @@ export namespace Prisma {
     yearlyPlacementTarget: 'yearlyPlacementTarget',
     placementDone: 'placementDone',
     targetAchievedPercent: 'targetAchievedPercent',
-    yearlyRevenueTarget: 'yearlyRevenueTarget',
-    revenueAch: 'revenueAch',
-    revenueTargetAchievedPercent: 'revenueTargetAchievedPercent',
     totalRevenueGenerated: 'totalRevenueGenerated',
     slabQualified: 'slabQualified',
     totalIncentiveInr: 'totalIncentiveInr',
     totalIncentivePaidInr: 'totalIncentivePaidInr',
-    individualSynopsis: 'individualSynopsis',
     createdAt: 'createdAt'
   };
 
@@ -15903,7 +14670,6 @@ export namespace Prisma {
     slabQualified: 'slabQualified',
     totalIncentiveInr: 'totalIncentiveInr',
     totalIncentivePaidInr: 'totalIncentivePaidInr',
-    individualSynopsis: 'individualSynopsis',
     createdAt: 'createdAt'
   };
 
@@ -16200,7 +14966,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenListRelationFilter
     dailyEntries?: DailyEntryListRelationFilter
     placements?: PlacementListRelationFilter
-    incentives?: IncentiveListRelationFilter
     leadEmployees?: EmployeeProfileListRelationFilter
     manager?: XOR<UserNullableRelationFilter, UserWhereInput> | null
     subordinates?: UserListRelationFilter
@@ -16227,7 +14992,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenOrderByRelationAggregateInput
     dailyEntries?: DailyEntryOrderByRelationAggregateInput
     placements?: PlacementOrderByRelationAggregateInput
-    incentives?: IncentiveOrderByRelationAggregateInput
     leadEmployees?: EmployeeProfileOrderByRelationAggregateInput
     manager?: UserOrderByWithRelationInput
     subordinates?: UserOrderByRelationAggregateInput
@@ -16257,7 +15021,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenListRelationFilter
     dailyEntries?: DailyEntryListRelationFilter
     placements?: PlacementListRelationFilter
-    incentives?: IncentiveListRelationFilter
     leadEmployees?: EmployeeProfileListRelationFilter
     manager?: XOR<UserNullableRelationFilter, UserWhereInput> | null
     subordinates?: UserListRelationFilter
@@ -16766,83 +15529,6 @@ export namespace Prisma {
     status?: EnumBillingStatusWithAggregatesFilter<"MonthlyBilling"> | $Enums.BillingStatus
   }
 
-  export type IncentiveWhereInput = {
-    AND?: IncentiveWhereInput | IncentiveWhereInput[]
-    OR?: IncentiveWhereInput[]
-    NOT?: IncentiveWhereInput | IncentiveWhereInput[]
-    id?: StringFilter<"Incentive"> | string
-    employeeId?: StringFilter<"Incentive"> | string
-    periodStart?: DateTimeFilter<"Incentive"> | Date | string
-    periodEnd?: DateTimeFilter<"Incentive"> | Date | string
-    revenueTotal?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    slabName?: StringFilter<"Incentive"> | string
-    amountUsd?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFilter<"Incentive"> | Date | string
-    employee?: XOR<UserRelationFilter, UserWhereInput>
-  }
-
-  export type IncentiveOrderByWithRelationInput = {
-    id?: SortOrder
-    employeeId?: SortOrder
-    periodStart?: SortOrder
-    periodEnd?: SortOrder
-    revenueTotal?: SortOrder
-    slabName?: SortOrder
-    amountUsd?: SortOrder
-    amountInr?: SortOrder
-    createdAt?: SortOrder
-    employee?: UserOrderByWithRelationInput
-  }
-
-  export type IncentiveWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
-    AND?: IncentiveWhereInput | IncentiveWhereInput[]
-    OR?: IncentiveWhereInput[]
-    NOT?: IncentiveWhereInput | IncentiveWhereInput[]
-    employeeId?: StringFilter<"Incentive"> | string
-    periodStart?: DateTimeFilter<"Incentive"> | Date | string
-    periodEnd?: DateTimeFilter<"Incentive"> | Date | string
-    revenueTotal?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    slabName?: StringFilter<"Incentive"> | string
-    amountUsd?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFilter<"Incentive"> | Date | string
-    employee?: XOR<UserRelationFilter, UserWhereInput>
-  }, "id">
-
-  export type IncentiveOrderByWithAggregationInput = {
-    id?: SortOrder
-    employeeId?: SortOrder
-    periodStart?: SortOrder
-    periodEnd?: SortOrder
-    revenueTotal?: SortOrder
-    slabName?: SortOrder
-    amountUsd?: SortOrder
-    amountInr?: SortOrder
-    createdAt?: SortOrder
-    _count?: IncentiveCountOrderByAggregateInput
-    _avg?: IncentiveAvgOrderByAggregateInput
-    _max?: IncentiveMaxOrderByAggregateInput
-    _min?: IncentiveMinOrderByAggregateInput
-    _sum?: IncentiveSumOrderByAggregateInput
-  }
-
-  export type IncentiveScalarWhereWithAggregatesInput = {
-    AND?: IncentiveScalarWhereWithAggregatesInput | IncentiveScalarWhereWithAggregatesInput[]
-    OR?: IncentiveScalarWhereWithAggregatesInput[]
-    NOT?: IncentiveScalarWhereWithAggregatesInput | IncentiveScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"Incentive"> | string
-    employeeId?: StringWithAggregatesFilter<"Incentive"> | string
-    periodStart?: DateTimeWithAggregatesFilter<"Incentive"> | Date | string
-    periodEnd?: DateTimeWithAggregatesFilter<"Incentive"> | Date | string
-    revenueTotal?: DecimalWithAggregatesFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    slabName?: StringWithAggregatesFilter<"Incentive"> | string
-    amountUsd?: DecimalWithAggregatesFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalWithAggregatesFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeWithAggregatesFilter<"Incentive"> | Date | string
-  }
-
   export type RefreshTokenWhereInput = {
     AND?: RefreshTokenWhereInput | RefreshTokenWhereInput[]
     OR?: RefreshTokenWhereInput[]
@@ -17086,14 +15772,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementDone?: IntNullableFilter<"PersonalPlacement"> | number | null
     targetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableFilter<"PersonalPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"PersonalPlacement"> | string | null
     createdAt?: DateTimeFilter<"PersonalPlacement"> | Date | string
     employee?: XOR<UserRelationFilter, UserWhereInput>
     batch?: XOR<PlacementImportBatchNullableRelationFilter, PlacementImportBatchWhereInput> | null
@@ -17123,14 +15805,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: SortOrderInput | SortOrder
     placementDone?: SortOrderInput | SortOrder
     targetAchievedPercent?: SortOrderInput | SortOrder
-    yearlyRevenueTarget?: SortOrderInput | SortOrder
-    revenueAch?: SortOrderInput | SortOrder
-    revenueTargetAchievedPercent?: SortOrderInput | SortOrder
     totalRevenueGenerated?: SortOrderInput | SortOrder
     slabQualified?: SortOrderInput | SortOrder
     totalIncentiveInr?: SortOrderInput | SortOrder
     totalIncentivePaidInr?: SortOrderInput | SortOrder
-    individualSynopsis?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     employee?: UserOrderByWithRelationInput
     batch?: PlacementImportBatchOrderByWithRelationInput
@@ -17163,14 +15841,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementDone?: IntNullableFilter<"PersonalPlacement"> | number | null
     targetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableFilter<"PersonalPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"PersonalPlacement"> | string | null
     createdAt?: DateTimeFilter<"PersonalPlacement"> | Date | string
     employee?: XOR<UserRelationFilter, UserWhereInput>
     batch?: XOR<PlacementImportBatchNullableRelationFilter, PlacementImportBatchWhereInput> | null
@@ -17200,14 +15874,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: SortOrderInput | SortOrder
     placementDone?: SortOrderInput | SortOrder
     targetAchievedPercent?: SortOrderInput | SortOrder
-    yearlyRevenueTarget?: SortOrderInput | SortOrder
-    revenueAch?: SortOrderInput | SortOrder
-    revenueTargetAchievedPercent?: SortOrderInput | SortOrder
     totalRevenueGenerated?: SortOrderInput | SortOrder
     slabQualified?: SortOrderInput | SortOrder
     totalIncentiveInr?: SortOrderInput | SortOrder
     totalIncentivePaidInr?: SortOrderInput | SortOrder
-    individualSynopsis?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: PersonalPlacementCountOrderByAggregateInput
     _avg?: PersonalPlacementAvgOrderByAggregateInput
@@ -17243,14 +15913,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementDone?: IntNullableWithAggregatesFilter<"PersonalPlacement"> | number | null
     targetAchievedPercent?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableWithAggregatesFilter<"PersonalPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableWithAggregatesFilter<"PersonalPlacement"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"PersonalPlacement"> | Date | string
   }
 
@@ -17289,7 +15955,6 @@ export namespace Prisma {
     slabQualified?: StringNullableFilter<"TeamPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"TeamPlacement"> | string | null
     createdAt?: DateTimeFilter<"TeamPlacement"> | Date | string
     lead?: XOR<UserRelationFilter, UserWhereInput>
     batch?: XOR<PlacementImportBatchNullableRelationFilter, PlacementImportBatchWhereInput> | null
@@ -17327,7 +15992,6 @@ export namespace Prisma {
     slabQualified?: SortOrderInput | SortOrder
     totalIncentiveInr?: SortOrderInput | SortOrder
     totalIncentivePaidInr?: SortOrderInput | SortOrder
-    individualSynopsis?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     lead?: UserOrderByWithRelationInput
     batch?: PlacementImportBatchOrderByWithRelationInput
@@ -17368,7 +16032,6 @@ export namespace Prisma {
     slabQualified?: StringNullableFilter<"TeamPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"TeamPlacement"> | string | null
     createdAt?: DateTimeFilter<"TeamPlacement"> | Date | string
     lead?: XOR<UserRelationFilter, UserWhereInput>
     batch?: XOR<PlacementImportBatchNullableRelationFilter, PlacementImportBatchWhereInput> | null
@@ -17406,7 +16069,6 @@ export namespace Prisma {
     slabQualified?: SortOrderInput | SortOrder
     totalIncentiveInr?: SortOrderInput | SortOrder
     totalIncentivePaidInr?: SortOrderInput | SortOrder
-    individualSynopsis?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: TeamPlacementCountOrderByAggregateInput
     _avg?: TeamPlacementAvgOrderByAggregateInput
@@ -17450,7 +16112,6 @@ export namespace Prisma {
     slabQualified?: StringNullableWithAggregatesFilter<"TeamPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableWithAggregatesFilter<"TeamPlacement"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"TeamPlacement"> | Date | string
   }
 
@@ -17544,7 +16205,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -17571,7 +16231,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -17596,7 +16255,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -17623,7 +16281,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -18213,89 +16870,6 @@ export namespace Prisma {
     status?: EnumBillingStatusFieldUpdateOperationsInput | $Enums.BillingStatus
   }
 
-  export type IncentiveCreateInput = {
-    id?: string
-    periodStart: Date | string
-    periodEnd: Date | string
-    revenueTotal: Decimal | DecimalJsLike | number | string
-    slabName: string
-    amountUsd: Decimal | DecimalJsLike | number | string
-    amountInr: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-    employee: UserCreateNestedOneWithoutIncentivesInput
-  }
-
-  export type IncentiveUncheckedCreateInput = {
-    id?: string
-    employeeId: string
-    periodStart: Date | string
-    periodEnd: Date | string
-    revenueTotal: Decimal | DecimalJsLike | number | string
-    slabName: string
-    amountUsd: Decimal | DecimalJsLike | number | string
-    amountInr: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type IncentiveUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
-    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
-    revenueTotal?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    slabName?: StringFieldUpdateOperationsInput | string
-    amountUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    employee?: UserUpdateOneRequiredWithoutIncentivesNestedInput
-  }
-
-  export type IncentiveUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    employeeId?: StringFieldUpdateOperationsInput | string
-    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
-    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
-    revenueTotal?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    slabName?: StringFieldUpdateOperationsInput | string
-    amountUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type IncentiveCreateManyInput = {
-    id?: string
-    employeeId: string
-    periodStart: Date | string
-    periodEnd: Date | string
-    revenueTotal: Decimal | DecimalJsLike | number | string
-    slabName: string
-    amountUsd: Decimal | DecimalJsLike | number | string
-    amountInr: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type IncentiveUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
-    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
-    revenueTotal?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    slabName?: StringFieldUpdateOperationsInput | string
-    amountUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type IncentiveUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    employeeId?: StringFieldUpdateOperationsInput | string
-    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
-    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
-    revenueTotal?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    slabName?: StringFieldUpdateOperationsInput | string
-    amountUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
   export type RefreshTokenCreateInput = {
     id?: string
     token: string
@@ -18554,14 +17128,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
     employee: UserCreateNestedOneWithoutPersonalPlacementsInput
     batch?: PlacementImportBatchCreateNestedOneWithoutPersonalPlacementsInput
@@ -18591,14 +17161,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -18624,14 +17190,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     employee?: UserUpdateOneRequiredWithoutPersonalPlacementsNestedInput
     batch?: PlacementImportBatchUpdateOneWithoutPersonalPlacementsNestedInput
@@ -18661,14 +17223,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -18696,14 +17254,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -18729,14 +17283,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -18764,14 +17314,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -18805,7 +17351,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
     lead: UserCreateNestedOneWithoutTeamPlacementsInput
     batch?: PlacementImportBatchCreateNestedOneWithoutTeamPlacementsInput
@@ -18843,7 +17388,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -18877,7 +17421,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lead?: UserUpdateOneRequiredWithoutTeamPlacementsNestedInput
     batch?: PlacementImportBatchUpdateOneWithoutTeamPlacementsNestedInput
@@ -18915,7 +17458,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -18951,7 +17493,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -18985,7 +17526,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -19021,7 +17561,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -19239,12 +17778,6 @@ export namespace Prisma {
     none?: PlacementWhereInput
   }
 
-  export type IncentiveListRelationFilter = {
-    every?: IncentiveWhereInput
-    some?: IncentiveWhereInput
-    none?: IncentiveWhereInput
-  }
-
   export type UserNullableRelationFilter = {
     is?: UserWhereInput | null
     isNot?: UserWhereInput | null
@@ -19289,10 +17822,6 @@ export namespace Prisma {
   }
 
   export type PlacementOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type IncentiveOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -19828,54 +18357,6 @@ export namespace Prisma {
     hours?: SortOrder
   }
 
-  export type IncentiveCountOrderByAggregateInput = {
-    id?: SortOrder
-    employeeId?: SortOrder
-    periodStart?: SortOrder
-    periodEnd?: SortOrder
-    revenueTotal?: SortOrder
-    slabName?: SortOrder
-    amountUsd?: SortOrder
-    amountInr?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type IncentiveAvgOrderByAggregateInput = {
-    revenueTotal?: SortOrder
-    amountUsd?: SortOrder
-    amountInr?: SortOrder
-  }
-
-  export type IncentiveMaxOrderByAggregateInput = {
-    id?: SortOrder
-    employeeId?: SortOrder
-    periodStart?: SortOrder
-    periodEnd?: SortOrder
-    revenueTotal?: SortOrder
-    slabName?: SortOrder
-    amountUsd?: SortOrder
-    amountInr?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type IncentiveMinOrderByAggregateInput = {
-    id?: SortOrder
-    employeeId?: SortOrder
-    periodStart?: SortOrder
-    periodEnd?: SortOrder
-    revenueTotal?: SortOrder
-    slabName?: SortOrder
-    amountUsd?: SortOrder
-    amountInr?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type IncentiveSumOrderByAggregateInput = {
-    revenueTotal?: SortOrder
-    amountUsd?: SortOrder
-    amountInr?: SortOrder
-  }
-
   export type RefreshTokenCountOrderByAggregateInput = {
     id?: SortOrder
     token?: SortOrder
@@ -20066,14 +18547,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: SortOrder
     placementDone?: SortOrder
     targetAchievedPercent?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
     totalRevenueGenerated?: SortOrder
     slabQualified?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
-    individualSynopsis?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -20086,9 +18563,6 @@ export namespace Prisma {
     yearlyPlacementTarget?: SortOrder
     placementDone?: SortOrder
     targetAchievedPercent?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
     totalRevenueGenerated?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
@@ -20118,14 +18592,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: SortOrder
     placementDone?: SortOrder
     targetAchievedPercent?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
     totalRevenueGenerated?: SortOrder
     slabQualified?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
-    individualSynopsis?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -20153,14 +18623,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: SortOrder
     placementDone?: SortOrder
     targetAchievedPercent?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
     totalRevenueGenerated?: SortOrder
     slabQualified?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
-    individualSynopsis?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -20173,9 +18639,6 @@ export namespace Prisma {
     yearlyPlacementTarget?: SortOrder
     placementDone?: SortOrder
     targetAchievedPercent?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
     totalRevenueGenerated?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
@@ -20213,7 +18676,6 @@ export namespace Prisma {
     slabQualified?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
-    individualSynopsis?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -20266,7 +18728,6 @@ export namespace Prisma {
     slabQualified?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
-    individualSynopsis?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -20302,7 +18763,6 @@ export namespace Prisma {
     slabQualified?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
-    individualSynopsis?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -20416,13 +18876,6 @@ export namespace Prisma {
     connect?: PlacementWhereUniqueInput | PlacementWhereUniqueInput[]
   }
 
-  export type IncentiveCreateNestedManyWithoutEmployeeInput = {
-    create?: XOR<IncentiveCreateWithoutEmployeeInput, IncentiveUncheckedCreateWithoutEmployeeInput> | IncentiveCreateWithoutEmployeeInput[] | IncentiveUncheckedCreateWithoutEmployeeInput[]
-    connectOrCreate?: IncentiveCreateOrConnectWithoutEmployeeInput | IncentiveCreateOrConnectWithoutEmployeeInput[]
-    createMany?: IncentiveCreateManyEmployeeInputEnvelope
-    connect?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-  }
-
   export type EmployeeProfileCreateNestedManyWithoutManagerInput = {
     create?: XOR<EmployeeProfileCreateWithoutManagerInput, EmployeeProfileUncheckedCreateWithoutManagerInput> | EmployeeProfileCreateWithoutManagerInput[] | EmployeeProfileUncheckedCreateWithoutManagerInput[]
     connectOrCreate?: EmployeeProfileCreateOrConnectWithoutManagerInput | EmployeeProfileCreateOrConnectWithoutManagerInput[]
@@ -20496,13 +18949,6 @@ export namespace Prisma {
     connectOrCreate?: PlacementCreateOrConnectWithoutEmployeeInput | PlacementCreateOrConnectWithoutEmployeeInput[]
     createMany?: PlacementCreateManyEmployeeInputEnvelope
     connect?: PlacementWhereUniqueInput | PlacementWhereUniqueInput[]
-  }
-
-  export type IncentiveUncheckedCreateNestedManyWithoutEmployeeInput = {
-    create?: XOR<IncentiveCreateWithoutEmployeeInput, IncentiveUncheckedCreateWithoutEmployeeInput> | IncentiveCreateWithoutEmployeeInput[] | IncentiveUncheckedCreateWithoutEmployeeInput[]
-    connectOrCreate?: IncentiveCreateOrConnectWithoutEmployeeInput | IncentiveCreateOrConnectWithoutEmployeeInput[]
-    createMany?: IncentiveCreateManyEmployeeInputEnvelope
-    connect?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
   }
 
   export type EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput = {
@@ -20601,20 +19047,6 @@ export namespace Prisma {
     update?: PlacementUpdateWithWhereUniqueWithoutEmployeeInput | PlacementUpdateWithWhereUniqueWithoutEmployeeInput[]
     updateMany?: PlacementUpdateManyWithWhereWithoutEmployeeInput | PlacementUpdateManyWithWhereWithoutEmployeeInput[]
     deleteMany?: PlacementScalarWhereInput | PlacementScalarWhereInput[]
-  }
-
-  export type IncentiveUpdateManyWithoutEmployeeNestedInput = {
-    create?: XOR<IncentiveCreateWithoutEmployeeInput, IncentiveUncheckedCreateWithoutEmployeeInput> | IncentiveCreateWithoutEmployeeInput[] | IncentiveUncheckedCreateWithoutEmployeeInput[]
-    connectOrCreate?: IncentiveCreateOrConnectWithoutEmployeeInput | IncentiveCreateOrConnectWithoutEmployeeInput[]
-    upsert?: IncentiveUpsertWithWhereUniqueWithoutEmployeeInput | IncentiveUpsertWithWhereUniqueWithoutEmployeeInput[]
-    createMany?: IncentiveCreateManyEmployeeInputEnvelope
-    set?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    disconnect?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    delete?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    connect?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    update?: IncentiveUpdateWithWhereUniqueWithoutEmployeeInput | IncentiveUpdateWithWhereUniqueWithoutEmployeeInput[]
-    updateMany?: IncentiveUpdateManyWithWhereWithoutEmployeeInput | IncentiveUpdateManyWithWhereWithoutEmployeeInput[]
-    deleteMany?: IncentiveScalarWhereInput | IncentiveScalarWhereInput[]
   }
 
   export type EmployeeProfileUpdateManyWithoutManagerNestedInput = {
@@ -20761,20 +19193,6 @@ export namespace Prisma {
     update?: PlacementUpdateWithWhereUniqueWithoutEmployeeInput | PlacementUpdateWithWhereUniqueWithoutEmployeeInput[]
     updateMany?: PlacementUpdateManyWithWhereWithoutEmployeeInput | PlacementUpdateManyWithWhereWithoutEmployeeInput[]
     deleteMany?: PlacementScalarWhereInput | PlacementScalarWhereInput[]
-  }
-
-  export type IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput = {
-    create?: XOR<IncentiveCreateWithoutEmployeeInput, IncentiveUncheckedCreateWithoutEmployeeInput> | IncentiveCreateWithoutEmployeeInput[] | IncentiveUncheckedCreateWithoutEmployeeInput[]
-    connectOrCreate?: IncentiveCreateOrConnectWithoutEmployeeInput | IncentiveCreateOrConnectWithoutEmployeeInput[]
-    upsert?: IncentiveUpsertWithWhereUniqueWithoutEmployeeInput | IncentiveUpsertWithWhereUniqueWithoutEmployeeInput[]
-    createMany?: IncentiveCreateManyEmployeeInputEnvelope
-    set?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    disconnect?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    delete?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    connect?: IncentiveWhereUniqueInput | IncentiveWhereUniqueInput[]
-    update?: IncentiveUpdateWithWhereUniqueWithoutEmployeeInput | IncentiveUpdateWithWhereUniqueWithoutEmployeeInput[]
-    updateMany?: IncentiveUpdateManyWithWhereWithoutEmployeeInput | IncentiveUpdateManyWithWhereWithoutEmployeeInput[]
-    deleteMany?: IncentiveScalarWhereInput | IncentiveScalarWhereInput[]
   }
 
   export type EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput = {
@@ -21021,20 +19439,6 @@ export namespace Prisma {
     upsert?: PlacementUpsertWithoutMonthlyBillingsInput
     connect?: PlacementWhereUniqueInput
     update?: XOR<XOR<PlacementUpdateToOneWithWhereWithoutMonthlyBillingsInput, PlacementUpdateWithoutMonthlyBillingsInput>, PlacementUncheckedUpdateWithoutMonthlyBillingsInput>
-  }
-
-  export type UserCreateNestedOneWithoutIncentivesInput = {
-    create?: XOR<UserCreateWithoutIncentivesInput, UserUncheckedCreateWithoutIncentivesInput>
-    connectOrCreate?: UserCreateOrConnectWithoutIncentivesInput
-    connect?: UserWhereUniqueInput
-  }
-
-  export type UserUpdateOneRequiredWithoutIncentivesNestedInput = {
-    create?: XOR<UserCreateWithoutIncentivesInput, UserUncheckedCreateWithoutIncentivesInput>
-    connectOrCreate?: UserCreateOrConnectWithoutIncentivesInput
-    upsert?: UserUpsertWithoutIncentivesInput
-    connect?: UserWhereUniqueInput
-    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutIncentivesInput, UserUpdateWithoutIncentivesInput>, UserUncheckedUpdateWithoutIncentivesInput>
   }
 
   export type UserCreateNestedOneWithoutRefreshTokensInput = {
@@ -21851,38 +20255,6 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type IncentiveCreateWithoutEmployeeInput = {
-    id?: string
-    periodStart: Date | string
-    periodEnd: Date | string
-    revenueTotal: Decimal | DecimalJsLike | number | string
-    slabName: string
-    amountUsd: Decimal | DecimalJsLike | number | string
-    amountInr: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type IncentiveUncheckedCreateWithoutEmployeeInput = {
-    id?: string
-    periodStart: Date | string
-    periodEnd: Date | string
-    revenueTotal: Decimal | DecimalJsLike | number | string
-    slabName: string
-    amountUsd: Decimal | DecimalJsLike | number | string
-    amountInr: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
-  export type IncentiveCreateOrConnectWithoutEmployeeInput = {
-    where: IncentiveWhereUniqueInput
-    create: XOR<IncentiveCreateWithoutEmployeeInput, IncentiveUncheckedCreateWithoutEmployeeInput>
-  }
-
-  export type IncentiveCreateManyEmployeeInputEnvelope = {
-    data: IncentiveCreateManyEmployeeInput | IncentiveCreateManyEmployeeInput[]
-    skipDuplicates?: boolean
-  }
-
   export type EmployeeProfileCreateWithoutManagerInput = {
     level?: string | null
     vbid?: string | null
@@ -21957,7 +20329,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     auditLogs?: AuditLogCreateNestedManyWithoutActorInput
@@ -21983,7 +20354,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
     placementImportBatches?: PlacementImportBatchUncheckedCreateNestedManyWithoutUploaderInput
@@ -22012,7 +20382,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogCreateNestedManyWithoutActorInput
@@ -22037,7 +20406,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -22146,14 +20514,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
     batch?: PlacementImportBatchCreateNestedOneWithoutPersonalPlacementsInput
   }
@@ -22181,14 +20545,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -22232,7 +20592,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
     batch?: PlacementImportBatchCreateNestedOneWithoutTeamPlacementsInput
   }
@@ -22268,7 +20627,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -22451,37 +20809,6 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Placement"> | Date | string
   }
 
-  export type IncentiveUpsertWithWhereUniqueWithoutEmployeeInput = {
-    where: IncentiveWhereUniqueInput
-    update: XOR<IncentiveUpdateWithoutEmployeeInput, IncentiveUncheckedUpdateWithoutEmployeeInput>
-    create: XOR<IncentiveCreateWithoutEmployeeInput, IncentiveUncheckedCreateWithoutEmployeeInput>
-  }
-
-  export type IncentiveUpdateWithWhereUniqueWithoutEmployeeInput = {
-    where: IncentiveWhereUniqueInput
-    data: XOR<IncentiveUpdateWithoutEmployeeInput, IncentiveUncheckedUpdateWithoutEmployeeInput>
-  }
-
-  export type IncentiveUpdateManyWithWhereWithoutEmployeeInput = {
-    where: IncentiveScalarWhereInput
-    data: XOR<IncentiveUpdateManyMutationInput, IncentiveUncheckedUpdateManyWithoutEmployeeInput>
-  }
-
-  export type IncentiveScalarWhereInput = {
-    AND?: IncentiveScalarWhereInput | IncentiveScalarWhereInput[]
-    OR?: IncentiveScalarWhereInput[]
-    NOT?: IncentiveScalarWhereInput | IncentiveScalarWhereInput[]
-    id?: StringFilter<"Incentive"> | string
-    employeeId?: StringFilter<"Incentive"> | string
-    periodStart?: DateTimeFilter<"Incentive"> | Date | string
-    periodEnd?: DateTimeFilter<"Incentive"> | Date | string
-    revenueTotal?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    slabName?: StringFilter<"Incentive"> | string
-    amountUsd?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFilter<"Incentive"> | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFilter<"Incentive"> | Date | string
-  }
-
   export type EmployeeProfileUpsertWithWhereUniqueWithoutManagerInput = {
     where: EmployeeProfileWhereUniqueInput
     update: XOR<EmployeeProfileUpdateWithoutManagerInput, EmployeeProfileUncheckedUpdateWithoutManagerInput>
@@ -22525,7 +20852,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     auditLogs?: AuditLogUpdateManyWithoutActorNestedInput
@@ -22551,7 +20877,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
     placementImportBatches?: PlacementImportBatchUncheckedUpdateManyWithoutUploaderNestedInput
@@ -22698,14 +21023,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementDone?: IntNullableFilter<"PersonalPlacement"> | number | null
     targetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableFilter<"PersonalPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"PersonalPlacement"> | string | null
     createdAt?: DateTimeFilter<"PersonalPlacement"> | Date | string
   }
 
@@ -22760,7 +21081,6 @@ export namespace Prisma {
     slabQualified?: StringNullableFilter<"TeamPlacement"> | string | null
     totalIncentiveInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"TeamPlacement"> | string | null
     createdAt?: DateTimeFilter<"TeamPlacement"> | Date | string
   }
 
@@ -22779,7 +21099,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -22805,7 +21124,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -22860,7 +21178,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogCreateNestedManyWithoutActorInput
@@ -22886,7 +21203,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
     placementImportBatches?: PlacementImportBatchUncheckedCreateNestedManyWithoutUploaderInput
@@ -22925,7 +21241,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -22951,7 +21266,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -23018,7 +21332,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUpdateManyWithoutActorNestedInput
@@ -23044,7 +21357,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
     placementImportBatches?: PlacementImportBatchUncheckedUpdateManyWithoutUploaderNestedInput
@@ -23067,7 +21379,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileCreateNestedOneWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -23093,7 +21404,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -23133,7 +21443,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUpdateOneWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -23159,7 +21468,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -23183,7 +21491,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileCreateNestedOneWithoutUserInput
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -23209,7 +21516,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -23273,7 +21579,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUpdateOneWithoutUserNestedInput
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -23299,7 +21604,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -23467,122 +21771,6 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type UserCreateWithoutIncentivesInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    name: string
-    vbid?: string | null
-    role: $Enums.Role
-    isActive?: boolean
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    mfaSecret?: string | null
-    mfaEnabled?: boolean
-    employeeProfile?: EmployeeProfileCreateNestedOneWithoutUserInput
-    refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
-    dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
-    placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
-    manager?: UserCreateNestedOneWithoutSubordinatesInput
-    subordinates?: UserCreateNestedManyWithoutManagerInput
-    auditLogs?: AuditLogCreateNestedManyWithoutActorInput
-    placementImportBatches?: PlacementImportBatchCreateNestedManyWithoutUploaderInput
-    personalPlacements?: PersonalPlacementCreateNestedManyWithoutEmployeeInput
-    teamPlacements?: TeamPlacementCreateNestedManyWithoutLeadInput
-  }
-
-  export type UserUncheckedCreateWithoutIncentivesInput = {
-    id?: string
-    email: string
-    passwordHash: string
-    name: string
-    vbid?: string | null
-    role: $Enums.Role
-    isActive?: boolean
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    mfaSecret?: string | null
-    mfaEnabled?: boolean
-    managerId?: string | null
-    employeeProfile?: EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
-    refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
-    dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
-    placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
-    subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
-    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
-    placementImportBatches?: PlacementImportBatchUncheckedCreateNestedManyWithoutUploaderInput
-    personalPlacements?: PersonalPlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    teamPlacements?: TeamPlacementUncheckedCreateNestedManyWithoutLeadInput
-  }
-
-  export type UserCreateOrConnectWithoutIncentivesInput = {
-    where: UserWhereUniqueInput
-    create: XOR<UserCreateWithoutIncentivesInput, UserUncheckedCreateWithoutIncentivesInput>
-  }
-
-  export type UserUpsertWithoutIncentivesInput = {
-    update: XOR<UserUpdateWithoutIncentivesInput, UserUncheckedUpdateWithoutIncentivesInput>
-    create: XOR<UserCreateWithoutIncentivesInput, UserUncheckedCreateWithoutIncentivesInput>
-    where?: UserWhereInput
-  }
-
-  export type UserUpdateToOneWithWhereWithoutIncentivesInput = {
-    where?: UserWhereInput
-    data: XOR<UserUpdateWithoutIncentivesInput, UserUncheckedUpdateWithoutIncentivesInput>
-  }
-
-  export type UserUpdateWithoutIncentivesInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
-    mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
-    employeeProfile?: EmployeeProfileUpdateOneWithoutUserNestedInput
-    refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
-    dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
-    placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
-    manager?: UserUpdateOneWithoutSubordinatesNestedInput
-    subordinates?: UserUpdateManyWithoutManagerNestedInput
-    auditLogs?: AuditLogUpdateManyWithoutActorNestedInput
-    placementImportBatches?: PlacementImportBatchUpdateManyWithoutUploaderNestedInput
-    personalPlacements?: PersonalPlacementUpdateManyWithoutEmployeeNestedInput
-    teamPlacements?: TeamPlacementUpdateManyWithoutLeadNestedInput
-  }
-
-  export type UserUncheckedUpdateWithoutIncentivesInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    email?: StringFieldUpdateOperationsInput | string
-    passwordHash?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumRoleFieldUpdateOperationsInput | $Enums.Role
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
-    mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
-    managerId?: NullableStringFieldUpdateOperationsInput | string | null
-    employeeProfile?: EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
-    refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
-    dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
-    placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
-    subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
-    auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
-    placementImportBatches?: PlacementImportBatchUncheckedUpdateManyWithoutUploaderNestedInput
-    personalPlacements?: PersonalPlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    teamPlacements?: TeamPlacementUncheckedUpdateManyWithoutLeadNestedInput
-  }
-
   export type UserCreateWithoutRefreshTokensInput = {
     id?: string
     email: string
@@ -23598,7 +21786,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileCreateNestedOneWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -23624,7 +21811,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUncheckedCreateNestedOneWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -23664,7 +21850,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUpdateOneWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -23690,7 +21875,6 @@ export namespace Prisma {
     employeeProfile?: EmployeeProfileUncheckedUpdateOneWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -23715,7 +21899,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -23741,7 +21924,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     placementImportBatches?: PlacementImportBatchUncheckedCreateNestedManyWithoutUploaderInput
@@ -23781,7 +21963,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -23807,7 +21988,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     placementImportBatches?: PlacementImportBatchUncheckedUpdateManyWithoutUploaderNestedInput
@@ -23831,7 +22011,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -23857,7 +22036,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -23892,14 +22070,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
     employee: UserCreateNestedOneWithoutPersonalPlacementsInput
   }
@@ -23927,14 +22101,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -23978,7 +22148,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
     lead: UserCreateNestedOneWithoutTeamPlacementsInput
   }
@@ -24014,7 +22183,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -24055,7 +22223,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -24081,7 +22248,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -24137,7 +22303,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -24163,7 +22328,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -24224,7 +22388,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -24250,7 +22413,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -24301,7 +22463,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryCreateNestedManyWithoutEmployeeInput
     placements?: PlacementCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileCreateNestedManyWithoutManagerInput
     manager?: UserCreateNestedOneWithoutSubordinatesInput
     subordinates?: UserCreateNestedManyWithoutManagerInput
@@ -24327,7 +22488,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
     dailyEntries?: DailyEntryUncheckedCreateNestedManyWithoutEmployeeInput
     placements?: PlacementUncheckedCreateNestedManyWithoutEmployeeInput
-    incentives?: IncentiveUncheckedCreateNestedManyWithoutEmployeeInput
     leadEmployees?: EmployeeProfileUncheckedCreateNestedManyWithoutManagerInput
     subordinates?: UserUncheckedCreateNestedManyWithoutManagerInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutActorInput
@@ -24388,7 +22548,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     manager?: UserUpdateOneWithoutSubordinatesNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
@@ -24414,7 +22573,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -24595,17 +22753,6 @@ export namespace Prisma {
     createdAt?: Date | string
   }
 
-  export type IncentiveCreateManyEmployeeInput = {
-    id?: string
-    periodStart: Date | string
-    periodEnd: Date | string
-    revenueTotal: Decimal | DecimalJsLike | number | string
-    slabName: string
-    amountUsd: Decimal | DecimalJsLike | number | string
-    amountInr: Decimal | DecimalJsLike | number | string
-    createdAt?: Date | string
-  }
-
   export type EmployeeProfileCreateManyManagerInput = {
     id: string
     teamId?: string | null
@@ -24689,14 +22836,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -24731,7 +22874,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -24887,39 +23029,6 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type IncentiveUpdateWithoutEmployeeInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
-    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
-    revenueTotal?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    slabName?: StringFieldUpdateOperationsInput | string
-    amountUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type IncentiveUncheckedUpdateWithoutEmployeeInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
-    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
-    revenueTotal?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    slabName?: StringFieldUpdateOperationsInput | string
-    amountUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type IncentiveUncheckedUpdateManyWithoutEmployeeInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    periodStart?: DateTimeFieldUpdateOperationsInput | Date | string
-    periodEnd?: DateTimeFieldUpdateOperationsInput | Date | string
-    revenueTotal?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    slabName?: StringFieldUpdateOperationsInput | string
-    amountUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    amountInr?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
   export type EmployeeProfileUpdateWithoutManagerInput = {
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
@@ -25008,7 +23117,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUpdateManyWithoutManagerNestedInput
     subordinates?: UserUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUpdateManyWithoutActorNestedInput
@@ -25033,7 +23141,6 @@ export namespace Prisma {
     refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
     dailyEntries?: DailyEntryUncheckedUpdateManyWithoutEmployeeNestedInput
     placements?: PlacementUncheckedUpdateManyWithoutEmployeeNestedInput
-    incentives?: IncentiveUncheckedUpdateManyWithoutEmployeeNestedInput
     leadEmployees?: EmployeeProfileUncheckedUpdateManyWithoutManagerNestedInput
     subordinates?: UserUncheckedUpdateManyWithoutManagerNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutActorNestedInput
@@ -25148,14 +23255,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     batch?: PlacementImportBatchUpdateOneWithoutPersonalPlacementsNestedInput
   }
@@ -25183,14 +23286,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25217,14 +23316,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25258,7 +23353,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     batch?: PlacementImportBatchUpdateOneWithoutTeamPlacementsNestedInput
   }
@@ -25294,7 +23388,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25329,7 +23422,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25384,14 +23476,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
     placementDone?: number | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -25426,7 +23514,6 @@ export namespace Prisma {
     slabQualified?: string | null
     totalIncentiveInr?: Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
     createdAt?: Date | string
   }
 
@@ -25452,14 +23539,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     employee?: UserUpdateOneRequiredWithoutPersonalPlacementsNestedInput
   }
@@ -25487,14 +23570,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25521,14 +23600,10 @@ export namespace Prisma {
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementDone?: NullableIntFieldUpdateOperationsInput | number | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25562,7 +23637,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lead?: UserUpdateOneRequiredWithoutTeamPlacementsNestedInput
   }
@@ -25598,7 +23672,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25633,7 +23706,6 @@ export namespace Prisma {
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
     totalIncentiveInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalIncentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -25682,10 +23754,6 @@ export namespace Prisma {
      * @deprecated Use MonthlyBillingDefaultArgs instead
      */
     export type MonthlyBillingArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = MonthlyBillingDefaultArgs<ExtArgs>
-    /**
-     * @deprecated Use IncentiveDefaultArgs instead
-     */
-    export type IncentiveArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = IncentiveDefaultArgs<ExtArgs>
     /**
      * @deprecated Use RefreshTokenDefaultArgs instead
      */

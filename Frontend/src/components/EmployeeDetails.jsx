@@ -14,18 +14,12 @@ const EmployeeDetails = () => {
   const { employeeId: stateEmployeeId } = location.state || {}
 
   const employeeIdToFetch = stateEmployeeId || params.id
-  // Year filter should only affect placements (tables), not the top summary/basic info.
-  // So we keep this state for the placements section only.
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [viewMode, setViewMode] = useState('personal') // 'personal' | 'team'
-  // IMPORTANT: Do NOT pass selectedYear into useEmployeeDetails – we always want full-year
-  // data for the header cards and basic information section. Year filtering is handled
-  // only for the placements tables and sheet-backed personal/team data.
+  
   const { data: rawData, isLoading, error, refetch } = useEmployeeDetails(
     employeeIdToFetch,
     user?.role,
-    user?.id,
-    selectedYear
+    user?.id
   )
   const updateVbidMutation = useUpdateVbid()
 
@@ -191,7 +185,6 @@ const EmployeeDetails = () => {
       incentiveUSD: CalculationService.formatCurrency(incentiveInr / 80),
       incentiveINR: CalculationService.formatCurrency(incentiveInr, 'INR'),
       placements,
-      availableYears: rawData.availableYears,
       // Summary data for dual-target detection
       teamSummary,
       personalSummary,
@@ -239,8 +232,8 @@ const EmployeeDetails = () => {
     const load = async () => {
       try {
         const [personalRes, teamRes] = await Promise.all([
-          apiRequest(`/dashboard/personal-placements?userId=${employeeIdToFetch}&year=${selectedYear}`),
-          apiRequest(`/dashboard/team-placements?leadId=${employeeIdToFetch}&year=${selectedYear}`),
+          apiRequest(`/dashboard/personal-placements?userId=${employeeIdToFetch}`),
+          apiRequest(`/dashboard/team-placements?leadId=${employeeIdToFetch}`),
         ]);
         if (!cancelled) {
           if (personalRes.ok) {
@@ -267,7 +260,7 @@ const EmployeeDetails = () => {
     return () => {
       cancelled = true;
     };
-  }, [employeeIdToFetch, selectedYear]);
+  }, [employeeIdToFetch]);
 
   const handleBack = () => {
     if (user?.role === 'SUPER_ADMIN') {
@@ -966,30 +959,6 @@ const EmployeeDetails = () => {
                 </svg>
                 Details of placements and billing status
               </h2>
-              
-              <div className="relative group">
-                <select
-                  value={selectedYear}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSelectedYear(val === 'All' ? 'All' : Number(val));
-                  }}
-                  className="appearance-none bg-white border border-slate-200 text-slate-700 pl-4 pr-10 py-2 rounded-xl shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all duration-200 cursor-pointer text-sm font-medium"
-                  disabled={isLoading}
-                >
-                  <option value="All">All Years</option>
-                  {(employeeData?.availableYears || [new Date().getFullYear()]).map(year => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
             </div>
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <table className="w-full">
@@ -1288,7 +1257,7 @@ const EmployeeDetails = () => {
                           <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                           </svg>
-                          <span className="font-medium">No placements found for {selectedYear === 'All' ? 'any year' : selectedYear}</span>
+                          <span className="font-medium">No placements found</span>
                         </div>
                       </td>
                     </tr>

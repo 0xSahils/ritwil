@@ -86,8 +86,7 @@ const TeamPage = () => {
   const [expandedTeams, setExpandedTeams] = useState({})
   const [expandedMembers, setExpandedMembers] = useState({})
   
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const { data: teamData, isLoading, error, refetch } = useSuperAdminDashboard(selectedYear)
+  const { data: teamData, isLoading, error, refetch } = useSuperAdminDashboard()
 
   const toggleTeam = useCallback((teamId) => {
     setExpandedTeams(prev => ({
@@ -231,21 +230,6 @@ const TeamPage = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="inline-flex bg-slate-100 rounded-full p-1 text-xs md:text-sm items-center gap-2">
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : Number(e.target.value))}
-                  className="bg-white border-none text-slate-700 text-sm rounded-full focus:ring-2 focus:ring-blue-500 py-1.5 px-3 shadow-sm cursor-pointer hover:bg-white/80 transition-colors"
-                  style={{ minWidth: '100px' }}
-                >
-                  <option value="All">All Years</option>
-                  {(teamData?.availableYears && teamData.availableYears.length > 0 
-                      ? teamData.availableYears 
-                      : [new Date().getFullYear()]
-                  ).map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-                <div className="h-6 w-px bg-slate-200 mx-1"></div>
                 <button
                   onClick={() => setActiveSection('hierarchy')}
                   className={`px-3 py-1.5 rounded-full font-medium transition-colors ${

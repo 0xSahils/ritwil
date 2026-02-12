@@ -70,34 +70,29 @@ const parseDateCell = (val) => {
   const strVal = String(val).trim().toLowerCase();
   if (strVal === 'na' || strVal === '-' || strVal === 'n/a' || strVal === '0') return null;
 
+  let d;
   if (typeof val === "number") {
     // Excel date check: numbers like 32874 (1/1/1990)
-    // 1/0/1990 is serial 32873, but let's be safe
     if (val < 32874) return null; // Before 1990
 
     const excelEpoch = Date.UTC(1899, 11, 30);
     const ms = excelEpoch + val * 24 * 60 * 60 * 1000;
-    const d = new Date(ms);
-    if (isNaN(d.getTime())) return null;
-    
-    // Handle "1/0/1990" and "0/1/1990" variations which often result in Jan 1 1990 or similar invalid epochs
-    if (d.getFullYear() <= 1990 && d.getMonth() === 0 && (d.getDate() === 0 || d.getDate() === 1)) {
-      return null;
-    }
-    return d;
+    d = new Date(ms);
+  } else {
+    // Handle common invalid string dates
+    if (strVal === '1/0/1990' || strVal === '0/1/1990' || strVal.includes('0/0/')) return null;
+    d = new Date(val);
   }
 
-  // Handle common invalid string dates
-  if (strVal === '1/0/1990' || strVal === '0/1/1990' || strVal.includes('0/0/')) return null;
-
-  const d = new Date(val);
   if (isNaN(d.getTime())) return null;
   
-  // Handle specific invalid date string formats requested by user like 1/0/1990
+  // Handle specific invalid date string formats
   if (d.getFullYear() <= 1990 && d.getMonth() === 0 && (d.getDate() === 0 || d.getDate() === 1)) {
     return null;
   }
-  return d;
+
+  // Normalize to start of day in UTC to ensure consistent comparison and prevent duplicacy
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 };
 
 // Required headers for personal and team imports
@@ -210,9 +205,26 @@ async function findLeadByVbOrName(vbCode, leadName) {
 }
 
 // Check if candidate matches an existing placement for the same employee
-async function isDuplicateCandidate(employeeId, candidateName, client, doj, level) {
-  if (!candidateName) return false;
-  const existing = await prisma.personalPlacement.findFirst({
+async function findExistingPersonalPlacement(employeeId, candidateName, client, doj, level, plcId) {
+  if (!candidateName && !plcId) return null;
+  
+  // Try to find by PLC ID first (most reliable)
+  // Skip "PLC-Passthrough", "0", and empty strings for unique matching
+  const normalizedPlcId = String(plcId || "").trim().toLowerCase();
+  const isGenericPlcId = normalizedPlcId === "plc-passthrough" || normalizedPlcId === "0" || normalizedPlcId === "";
+
+  if (plcId && !isGenericPlcId) {
+    const byPlcId = await prisma.personalPlacement.findFirst({
+      where: {
+        employeeId,
+        plcId: { equals: String(plcId).trim(), mode: 'insensitive' }
+      }
+    });
+    if (byPlcId) return byPlcId;
+  }
+
+  // Fallback to candidate details (for generic PLC IDs or if PLC ID match fails)
+  return await prisma.personalPlacement.findFirst({
     where: {
       employeeId,
       candidateName: { equals: String(candidateName).trim(), mode: 'insensitive' },
@@ -221,13 +233,27 @@ async function isDuplicateCandidate(employeeId, candidateName, client, doj, leve
       level: level || "L4"
     }
   });
-  return !!existing;
 }
 
-// Check if candidate matches an existing placement for the same lead
-async function isDuplicateTeamCandidate(leadId, candidateName, client, doj, level) {
-  if (!candidateName) return false;
-  const existing = await prisma.teamPlacement.findFirst({
+async function findExistingTeamPlacement(leadId, candidateName, client, doj, level, plcId) {
+  if (!candidateName && !plcId) return null;
+
+  // Try to find by PLC ID first (most reliable)
+  const normalizedPlcId = String(plcId || "").trim().toLowerCase();
+  const isGenericPlcId = normalizedPlcId === "plc-passthrough" || normalizedPlcId === "0" || normalizedPlcId === "";
+
+  if (plcId && !isGenericPlcId) {
+    const byPlcId = await prisma.teamPlacement.findFirst({
+      where: {
+        leadId,
+        plcId: { equals: String(plcId).trim(), mode: 'insensitive' }
+      }
+    });
+    if (byPlcId) return byPlcId;
+  }
+
+  // Fallback to candidate details
+  return await prisma.teamPlacement.findFirst({
     where: {
       leadId,
       candidateName: { equals: String(candidateName).trim(), mode: 'insensitive' },
@@ -236,7 +262,6 @@ async function isDuplicateTeamCandidate(leadId, candidateName, client, doj, leve
       level: level || "L2"
     }
   });
-  return !!existing;
 }
 
 export async function getPlacementsByUser(userId) {
@@ -1177,14 +1202,11 @@ const extractSummaryFromTeamNameRow = (row, isTeamImport = false) => {
     yearlyPlacementTarget: parseNum(row[4]),
     placementDone: parseNum(row[5]),
     targetAchievedPercent: sanitizePercent(row[6]),
-    yearlyRevenueTarget: null,
-    revenueAch: parseNum(row[7]),
-    revenueTargetAchievedPercent: sanitizePercent(row[8]),
     totalRevenueGenerated: parseNum(row[7]),
-    slabQualified: row[9] ? String(row[9]).trim() : null,
-    totalIncentiveInr: parseNum(row[10]),
-    totalIncentivePaidInr: parseNum(row[11]) || null,
-    individualSynopsis: row[12] ? String(row[12]).trim() : null,
+    slabQualified: row[8] ? String(row[8]).trim() : null,
+    totalIncentiveInr: parseNum(row[9]),
+    totalIncentivePaidInr: parseNum(row[10]) || null,
+    individualSynopsis: row[11] ? String(row[11]).trim() : null,
   };
 };
 
@@ -1526,12 +1548,13 @@ export async function importPersonalPlacements(payload, actorId) {
       continue;
     }
 
-    // Candidate Deduplication: Skip if this exact placement (Employee, Candidate, Client, DOJ) already exists in DB
+    // Candidate Deduplication: Find existing placement (Employee, Candidate, Client, DOJ, PLC ID)
     const client = String(getVal(row, "client") || "").trim();
     const candidateName = String(getVal(row, "candidate name") || "").trim();
-    if (await isDuplicateCandidate(employee.id, candidateName, client, doj, employee.level)) {
-      console.log(`Row ${rowIndex}: Skipping duplicate personal placement for candidate ${candidateName} (Employee: ${employee.user?.name || employee.id}, Client: ${client}, DOJ: ${doj.toISOString().split('T')[0]}, Level: ${employee.level || 'L4'})`);
-      continue;
+    const existingPlacement = await findExistingPersonalPlacement(employee.id, candidateName, client, doj, employee.level, plcId);
+    
+    if (existingPlacement) {
+      console.log(`Row ${rowIndex}: Found existing personal placement for candidate ${candidateName} (ID: ${existingPlacement.id}). Will update.`);
     }
 
     const doq = parseDateCell(getVal(row, "doq"));
@@ -1608,19 +1631,8 @@ export async function importPersonalPlacements(payload, actorId) {
           ? summaryData.totalIncentivePaidInr
           : null);
 
-    const finalYearlyRevenueTarget = (summaryData.yearlyRevenueTarget !== null && summaryData.yearlyRevenueTarget !== undefined)
-      ? summaryData.yearlyRevenueTarget
-      : null;
-
-    const finalRevenueAch = (summaryData.revenueAch !== null && summaryData.revenueAch !== undefined)
-      ? summaryData.revenueAch
-      : null;
-
-    const finalRevenueTargetAchievedPercent = (summaryData.revenueTargetAchievedPercent !== null && summaryData.revenueTargetAchievedPercent !== undefined)
-      ? summaryData.revenueTargetAchievedPercent
-      : null;
-
     preparedRows.push({
+      id: existingPlacement ? existingPlacement.id : undefined,
       employeeId: employee.id,
       level: employee.level || "L4", // Extract level from profile for data separation
       candidateName: String(candidateNameRaw || "").trim(),
@@ -1646,9 +1658,6 @@ export async function importPersonalPlacements(payload, actorId) {
       yearlyPlacementTarget: finalYearlyPlacementTarget,
       placementDone: finalPlacementDone,
       targetAchievedPercent: finalTargetAchievedPercent,
-      yearlyRevenueTarget: finalYearlyRevenueTarget,
-      revenueAch: finalRevenueAch,
-      revenueTargetAchievedPercent: finalRevenueTargetAchievedPercent,
       totalRevenueGenerated: finalTotalRevenueGenerated,
       slabQualified: finalSlabQualified,
       totalIncentiveInr: finalTotalIncentiveInr,
@@ -1675,15 +1684,12 @@ export async function importPersonalPlacements(payload, actorId) {
     employeeUpdates.set(employeeId, {
       employeeId,
       yearlyPlacementTarget: summaryData.yearlyPlacementTarget,
-      yearlyRevenueTarget: summaryData.yearlyRevenueTarget,
       placementDone: summaryData.placementDone,
-      revenueAch: summaryData.revenueAch,
-      revenueTargetAchievedPercent: summaryData.revenueTargetAchievedPercent,
+      targetAchievedPercent: summaryData.targetAchievedPercent,
       totalRevenue: summaryData.totalRevenueGenerated,
       slabQualified: summaryData.slabQualified,
       totalIncentiveAmount: summaryData.totalIncentiveInr,
       totalIncentivePaid: summaryData.totalIncentivePaidInr,
-      individualSynopsis: summaryData.individualSynopsis,
     });
   }
 
@@ -1729,43 +1735,20 @@ export async function importPersonalPlacements(payload, actorId) {
   // Increase transaction timeout to 60 seconds for large imports
   const result = await prisma.$transaction(async (tx) => {
     // Check duplicates in DB (skip "PLC-Passthrough" and "0")
-    // Use preparedRows instead of plcIds to get the deduplicated list
-    const plcIdsToCheck = preparedRows.map(r => r.plcId).filter(id => !shouldSkipDuplicateCheck(id));
-    const existingPlacements = plcIdsToCheck.length > 0
-      ? await tx.personalPlacement.findMany({
-          where: {
-            plcId: { in: plcIdsToCheck },
-          },
-        })
-      : [];
-
-    const existingPlcIds = new Set(existingPlacements.map((e) => e.plcId));
     const rowsToInsert = [];
     const rowsToUpdate = [];
 
-    // Separate rows into insert and update
+    // Separate rows into insert and update based on whether an ID was found
     for (const row of preparedRows) {
-      if (shouldSkipDuplicateCheck(row.plcId)) {
-        rowsToInsert.push(row);
+      if (row.id) {
+        // Remove the id from the row data before updating to avoid primary key conflicts
+        const { id, ...data } = row;
+        rowsToUpdate.push({ id, data });
       } else {
-        const isExisting = existingPlacements.some(p => 
-          p.plcId.toLowerCase() === row.plcId.toLowerCase()
-        );
-        
-        if (isExisting) {
-          // Check if placement fields are missing in the sheet row but targets exist
-          const hasPlacementData = row.candidateName && row.doj && row.client;
-          if (!hasPlacementData) {
-            // This row only contains target/summary updates, skip as placement update
-            // (Target updates are handled separately via employeeUpdates)
-            continue;
-          }
-          rowsToUpdate.push(row);
-        } else {
-          // Even for new placements, check if it's just a summary row (no candidate/doj/client)
-          if (row.candidateName && row.doj && row.client) {
-            rowsToInsert.push(row);
-          }
+        // New placement, check if it has required placement data
+        if (row.candidateName && row.doj && row.client) {
+          const { id, ...data } = row; // id is undefined anyway
+          rowsToInsert.push(data);
         }
       }
     }
@@ -1779,13 +1762,11 @@ export async function importPersonalPlacements(payload, actorId) {
 
     // Update existing records
     let updatedCount = 0;
-    for (const row of rowsToUpdate) {
-      await tx.personalPlacement.updateMany({
-        where: { 
-          plcId: row.plcId
-        },
+    for (const item of rowsToUpdate) {
+      await tx.personalPlacement.update({
+        where: { id: item.id },
         data: {
-          ...row,
+          ...item.data,
           batchId: batch.id,
         },
       });
@@ -1813,10 +1794,8 @@ export async function importPersonalPlacements(payload, actorId) {
         employeeUpdates.set(row.employeeId, {
           employeeId: row.employeeId,
           yearlyPlacementTarget: null,
-          yearlyRevenueTarget: null,
           placementDone: null,
-          revenueAch: null,
-          revenueTargetAchievedPercent: null,
+          targetAchievedPercent: null,
           totalRevenue: null,
           slabQualified: null,
           totalIncentiveAmount: null,
@@ -1828,17 +1807,11 @@ export async function importPersonalPlacements(payload, actorId) {
       if (update.yearlyPlacementTarget === null && row.yearlyPlacementTarget !== null && row.yearlyPlacementTarget !== undefined) {
         update.yearlyPlacementTarget = row.yearlyPlacementTarget;
       }
-      if (update.yearlyRevenueTarget === null && row.yearlyRevenueTarget !== null && row.yearlyRevenueTarget !== undefined) {
-        update.yearlyRevenueTarget = row.yearlyRevenueTarget;
-      }
       if (update.placementDone === null && row.placementDone !== null && row.placementDone !== undefined) {
         update.placementDone = row.placementDone;
       }
-      if (update.revenueAch === null && row.revenueAch !== null && row.revenueAch !== undefined) {
-        update.revenueAch = row.revenueAch;
-      }
-      if (update.revenueTargetAchievedPercent === null && row.revenueTargetAchievedPercent !== null && row.revenueTargetAchievedPercent !== undefined) {
-        update.revenueTargetAchievedPercent = row.revenueTargetAchievedPercent;
+      if (update.targetAchievedPercent === null && row.targetAchievedPercent !== null && row.targetAchievedPercent !== undefined) {
+        update.targetAchievedPercent = row.targetAchievedPercent;
       }
       if (update.totalRevenue === null && row.totalRevenueGenerated !== null && row.totalRevenueGenerated !== undefined) {
         update.totalRevenue = row.totalRevenueGenerated;
@@ -1851,9 +1824,6 @@ export async function importPersonalPlacements(payload, actorId) {
       }
       if (update.totalIncentivePaid === null && row.totalIncentivePaidInr !== null && row.totalIncentivePaidInr !== undefined) {
         update.totalIncentivePaid = row.totalIncentivePaidInr;
-      }
-      if (update.individualSynopsis === null && row.individualSynopsis !== null && row.individualSynopsis !== undefined) {
-        update.individualSynopsis = row.individualSynopsis;
       }
     }
 
@@ -1876,72 +1846,46 @@ export async function importPersonalPlacements(payload, actorId) {
 
         if (!profile) continue;
 
-        const isVantage = profile.teamId && vantageTeamIds.has(profile.teamId);
         const updateData = {};
 
-        // TARGET MERGING: Update targets even if placement data is missing
-        if (isVantage) {
-          // Vantage: REVENUE-based targets (but also have placement targets)
-          if (data.yearlyRevenueTarget !== null) {
-            updateData.yearlyTarget = data.yearlyRevenueTarget;
-            updateData.yearlyRevenueTarget = data.yearlyRevenueTarget;
-            updateData.targetType = 'REVENUE';
-          } else if (profile.yearlyRevenueTarget !== null) {
-            updateData.yearlyTarget = profile.yearlyRevenueTarget;
-            updateData.targetType = 'REVENUE';
-          }
+        // Yearly target handling
+        if (data.yearlyPlacementTarget !== null) {
+          updateData.yearlyTarget = data.yearlyPlacementTarget;
+          updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
           
-          // Store placement target if provided (for dual-target display)
-          if (data.yearlyPlacementTarget !== null) {
-            updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
-          }
-        } else {
-          // Non-Vantage: Usually PLACEMENTS-based, but could be REVENUE-based
-          if (data.yearlyPlacementTarget !== null) {
-            updateData.yearlyTarget = data.yearlyPlacementTarget;
-            updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
-            updateData.targetType = 'PLACEMENTS';
-          } else if (data.yearlyRevenueTarget !== null) {
-            // Fallback to revenue target if no placement target is provided
-            updateData.yearlyTarget = data.yearlyRevenueTarget;
-            updateData.yearlyRevenueTarget = data.yearlyRevenueTarget;
-            updateData.targetType = 'REVENUE';
-          }
+          // If the recruiter belongs to a Vantage team, their "Placement Target" header 
+          // actually represents a revenue value (as per user confirmation).
+          const isVantage = profile.team?.name?.toLowerCase().includes('vantage');
+          updateData.targetType = isVantage ? 'REVENUE' : 'PLACEMENTS';
         }
 
-      // Update all summary fields from summary data
-      if (data.placementDone !== null) {
-        updateData.placementsDone = data.placementDone;
-      }
-      if (data.revenueAch !== null) {
-        updateData.revenueAch = data.revenueAch;
-      }
-      if (data.revenueTargetAchievedPercent !== null) {
-        updateData.revenueTargetAchievedPercent = data.revenueTargetAchievedPercent;
-      }
-      if (data.totalRevenue !== null) {
-        updateData.totalRevenue = data.totalRevenue;
-      }
-      if (data.slabQualified !== null) {
-        updateData.slabQualified = data.slabQualified;
-      }
-      if (data.totalIncentiveAmount !== null) {
-        updateData.totalIncentiveAmount = data.totalIncentiveAmount;
-      }
-      if (data.totalIncentivePaid !== null) {
-        updateData.totalIncentivePaid = data.totalIncentivePaid;
-      }
-      if (data.individualSynopsis !== null) {
-        updateData.individualSynopsis = data.individualSynopsis;
-      }
+        // Update all summary fields from summary data
+        if (data.placementDone !== null) {
+          updateData.placementsDone = data.placementDone;
+        }
+        if (data.targetAchievedPercent !== null) {
+          updateData.revenueTargetAchievedPercent = data.targetAchievedPercent;
+        }
+        if (data.totalRevenue !== null) {
+          updateData.totalRevenue = data.totalRevenue;
+        }
+        if (data.slabQualified !== null) {
+          updateData.slabQualified = data.slabQualified;
+        }
+        if (data.totalIncentiveAmount !== null) {
+          updateData.totalIncentiveAmount = data.totalIncentiveAmount;
+        }
+        if (data.totalIncentivePaid !== null) {
+          updateData.totalIncentivePaid = data.totalIncentivePaid;
+        }
 
-      if (Object.keys(updateData).length > 0) {
-        await tx.employeeProfile.update({
-          where: { id: employeeId },
-          data: updateData,
-        });
+        if (Object.keys(updateData).length > 0) {
+          await tx.employeeProfile.update({
+            where: { id: employeeId },
+            data: updateData,
+          });
+        }
       }
-    }
 
     await tx.auditLog.create({
       data: {
@@ -2294,12 +2238,13 @@ export async function importTeamPlacements(payload, actorId) {
       throw new Error(`Row ${rowIndex}: invalid DOJ`);
     }
 
-    // Candidate Deduplication: Skip if this exact placement (Lead, Candidate, Client, DOJ, Level) already exists in DB
+    // Candidate Deduplication: Find existing placement (Lead, Candidate, Client, DOJ, Level, PLC ID)
     const client = String(getVal(row, "client") || "").trim();
     const candidateName = String(getVal(row, "candidate name") || "").trim();
-    if (await isDuplicateTeamCandidate(leadUser.id, candidateName, client, doj, leadUser.level || "L2")) {
-      console.log(`Row ${rowIndex}: Skipping duplicate team placement for candidate ${candidateName} (Lead: ${leadUser.user?.name || leadUser.id}, Client: ${client}, DOJ: ${doj.toISOString().split('T')[0]}, Level: ${leadUser.level || 'L2'})`);
-      continue;
+    const existingPlacement = await findExistingTeamPlacement(leadUser.id, candidateName, client, doj, leadUser.level || "L2", plcId);
+    
+    if (existingPlacement) {
+      console.log(`Row ${rowIndex}: Found existing team placement for candidate ${candidateName} (ID: ${existingPlacement.id}). Will update.`);
     }
 
     const doq = parseDateCell(getVal(row, "doq"));
@@ -2404,8 +2349,9 @@ export async function importTeamPlacements(payload, actorId) {
           : null);
 
     preparedRows.push({
+      id: existingPlacement ? existingPlacement.id : undefined,
       leadId: leadUser.id,
-      level: leadUser.level || "L4", // Extract level from profile for data separation
+      level: leadUser.level || "L2", // Use lead level (usually L2) for team placements
       candidateName: String(getVal(row, "candidate name") || "").trim(),
       recruiterName: getVal(row, "recruiter name")
         ? String(getVal(row, "recruiter name")).trim()
@@ -2496,45 +2442,20 @@ export async function importTeamPlacements(payload, actorId) {
   console.log(`Prepared ${preparedRows.length} rows for team placement. Starting transaction...`);
   // Increase transaction timeout to 60 seconds for large imports
   const result = await prisma.$transaction(async (tx) => {
-    // Check duplicates in DB (skip "PLC-Passthrough" and "0")
-    const plcIdsToCheck = preparedRows.map(r => r.plcId).filter(id => {
-      return !shouldSkipDuplicateCheck(id);
-    });
-    const existingPlacements = plcIdsToCheck.length > 0
-      ? await tx.teamPlacement.findMany({
-          where: {
-            plcId: { in: plcIdsToCheck },
-          },
-        })
-      : [];
-
-    const existingPlcIds = new Set(existingPlacements.map((e) => e.plcId));
     const rowsToInsert = [];
     const rowsToUpdate = [];
 
-    // Separate rows into insert and update
+    // Separate rows into insert and update based on whether an ID was found
     for (const row of preparedRows) {
-      if (shouldSkipDuplicateCheck(row.plcId)) {
-        rowsToInsert.push(row);
+      if (row.id) {
+        // Remove the id from the row data before updating to avoid primary key conflicts
+        const { id, ...data } = row;
+        rowsToUpdate.push({ id, data });
       } else {
-        const isExisting = existingPlacements.some(p => 
-          p.plcId.toLowerCase() === row.plcId.toLowerCase()
-        );
-        
-        if (isExisting) {
-          // Check if placement fields are missing in the sheet row but targets exist
-          const hasPlacementData = row.candidateName && row.doj && row.client;
-          if (!hasPlacementData) {
-            // This row only contains target/summary updates, skip as placement update
-            // (Target updates are handled separately via leadUpdates)
-            continue;
-          }
-          rowsToUpdate.push(row);
-        } else {
-          // Even for new placements, check if it's just a summary row (no candidate/doj/client)
-          if (row.candidateName && row.doj && row.client) {
-            rowsToInsert.push(row);
-          }
+        // New placement, check if it has required placement data
+        if (row.candidateName && row.doj && row.client) {
+          const { id, ...data } = row; // id is undefined anyway
+          rowsToInsert.push(data);
         }
       }
     }
@@ -2548,13 +2469,11 @@ export async function importTeamPlacements(payload, actorId) {
 
     // Update existing records
     let updatedCount = 0;
-    for (const row of rowsToUpdate) {
-      await tx.teamPlacement.updateMany({
-        where: { 
-          plcId: row.plcId
-        },
+    for (const item of rowsToUpdate) {
+      await tx.teamPlacement.update({
+        where: { id: item.id },
         data: {
-          ...row,
+          ...item.data,
           batchId: batch.id,
         },
       });
@@ -2582,15 +2501,15 @@ export async function importTeamPlacements(payload, actorId) {
         yearlyPlacementTarget: summaryData.yearlyPlacementTarget,
         yearlyRevenueTarget: summaryData.yearlyRevenueTarget,
         placementDone: summaryData.placementDone,
+        placementAchPercent: summaryData.placementAchPercent,
         revenueAch: summaryData.revenueAch,
         revenueTargetAchievedPercent: summaryData.revenueTargetAchievedPercent,
         totalRevenue: summaryData.totalRevenueGenerated,
         slabQualified: summaryData.slabQualified,
         totalIncentiveAmount: summaryData.totalIncentiveInr,
-      totalIncentivePaid: summaryData.totalIncentivePaidInr,
-      individualSynopsis: summaryData.individualSynopsis,
-    });
-  }
+        totalIncentivePaid: summaryData.totalIncentivePaidInr,
+      });
+    }
 
     // Now merge in data from placement rows if summary row data was missing
     for (const row of preparedRows) {
@@ -2600,6 +2519,7 @@ export async function importTeamPlacements(payload, actorId) {
           yearlyPlacementTarget: null,
           yearlyRevenueTarget: null,
           placementDone: null,
+          placementAchPercent: null,
           revenueAch: null,
           revenueTargetAchievedPercent: null,
           totalRevenue: null,
@@ -2618,6 +2538,9 @@ export async function importTeamPlacements(payload, actorId) {
       }
       if (update.placementDone === null && row.placementDone !== null && row.placementDone !== undefined) {
         update.placementDone = row.placementDone;
+      }
+      if (update.placementAchPercent === null && row.placementAchPercent !== null && row.placementAchPercent !== undefined) {
+        update.placementAchPercent = row.placementAchPercent;
       }
       if (update.revenueAch === null && row.revenueAch !== null && row.revenueAch !== undefined) {
         update.revenueAch = row.revenueAch;
@@ -2679,11 +2602,15 @@ export async function importTeamPlacements(payload, actorId) {
         }
       } else {
         // Non-Vantage: Usually PLACEMENTS-based, but could be REVENUE-based
-        if (data.yearlyPlacementTarget !== null) {
-          updateData.yearlyTarget = data.yearlyPlacementTarget;
-          updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
-          updateData.targetType = 'PLACEMENTS';
-        } else if (data.yearlyRevenueTarget !== null) {
+      if (data.yearlyPlacementTarget !== null) {
+        updateData.yearlyTarget = data.yearlyPlacementTarget;
+        updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
+        updateData.targetType = 'PLACEMENTS';
+        // Use placement-specific achievement percent if available
+        if (data.placementAchPercent !== null) {
+          updateData.revenueTargetAchievedPercent = data.placementAchPercent;
+        }
+      } else if (data.yearlyRevenueTarget !== null) {
           // Fallback to revenue target if no placement target is provided
           updateData.yearlyTarget = data.yearlyRevenueTarget;
           updateData.yearlyRevenueTarget = data.yearlyRevenueTarget;

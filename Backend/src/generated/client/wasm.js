@@ -224,18 +224,6 @@ exports.Prisma.MonthlyBillingScalarFieldEnum = {
   status: 'status'
 };
 
-exports.Prisma.IncentiveScalarFieldEnum = {
-  id: 'id',
-  employeeId: 'employeeId',
-  periodStart: 'periodStart',
-  periodEnd: 'periodEnd',
-  revenueTotal: 'revenueTotal',
-  slabName: 'slabName',
-  amountUsd: 'amountUsd',
-  amountInr: 'amountInr',
-  createdAt: 'createdAt'
-};
-
 exports.Prisma.RefreshTokenScalarFieldEnum = {
   id: 'id',
   token: 'token',
@@ -293,14 +281,10 @@ exports.Prisma.PersonalPlacementScalarFieldEnum = {
   yearlyPlacementTarget: 'yearlyPlacementTarget',
   placementDone: 'placementDone',
   targetAchievedPercent: 'targetAchievedPercent',
-  yearlyRevenueTarget: 'yearlyRevenueTarget',
-  revenueAch: 'revenueAch',
-  revenueTargetAchievedPercent: 'revenueTargetAchievedPercent',
   totalRevenueGenerated: 'totalRevenueGenerated',
   slabQualified: 'slabQualified',
   totalIncentiveInr: 'totalIncentiveInr',
   totalIncentivePaidInr: 'totalIncentivePaidInr',
-  individualSynopsis: 'individualSynopsis',
   createdAt: 'createdAt'
 };
 
@@ -336,7 +320,6 @@ exports.Prisma.TeamPlacementScalarFieldEnum = {
   slabQualified: 'slabQualified',
   totalIncentiveInr: 'totalIncentiveInr',
   totalIncentivePaidInr: 'totalIncentivePaidInr',
-  individualSynopsis: 'individualSynopsis',
   createdAt: 'createdAt'
 };
 
@@ -402,7 +385,6 @@ exports.Prisma.ModelName = {
   DailyEntry: 'DailyEntry',
   Placement: 'Placement',
   MonthlyBilling: 'MonthlyBilling',
-  Incentive: 'Incentive',
   RefreshToken: 'RefreshToken',
   AuditLog: 'AuditLog',
   PlacementImportBatch: 'PlacementImportBatch',

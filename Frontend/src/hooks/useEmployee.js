@@ -1,19 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '../api/client'
 
-export const useEmployeeDetails = (employeeId, userRole, currentUserId, year) => {
+export const useEmployeeDetails = (employeeId, userRole, currentUserId) => {
   return useQuery({
-    queryKey: ['employee', employeeId, year],
+    queryKey: ['employee', employeeId],
     queryFn: async () => {
       const isSelf = userRole === 'EMPLOYEE' && (!employeeId || employeeId === currentUserId)
       let endpoint = isSelf
         ? '/dashboard/employee'
         : `/dashboard/employee/${employeeId}`
       
-      if (year) {
-        endpoint += `?year=${year}`
-      }
-
       const response = await apiRequest(endpoint)
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))

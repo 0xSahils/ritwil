@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import CalculationService from "../utils/calculationService";
+import * as XLSX from "xlsx";
 
 const AdminEmployeePlacements = () => {
   const { id: userId } = useParams();
@@ -18,12 +19,17 @@ const AdminEmployeePlacements = () => {
   const [bulkText, setBulkText] = useState("");
   const [csvFile, setCsvFile] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState("All");
 
   // Derived state for filtering
   const availableYears = (() => {
     const years = new Set(placements
-      .map(p => p.doj ? new Date(p.doj).getFullYear() : null)
+      .map(p => {
+        // Prefer placementYear if available, otherwise use doj year
+        if (p.placementYear) return p.placementYear;
+        if (p.doj) return new Date(p.doj).getFullYear();
+        return null;
+      })
       .filter(y => y !== null && !isNaN(y))
     );
     // Always include current year
@@ -38,14 +44,23 @@ const AdminEmployeePlacements = () => {
 
   const filteredPlacements = placements.filter(p => {
     if (selectedYear === 'All') return true;
-    if (!p.doj) return false;
-    return new Date(p.doj).getFullYear() === Number(selectedYear);
+    // Prefer placementYear if available, otherwise use doj year
+    const year = p.placementYear || (p.doj ? new Date(p.doj).getFullYear() : null);
+    if (!year) return false;
+    return year === Number(selectedYear);
   });
 
 
   // Result Modal State
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultData, setResultData] = useState(null);
+
+  // New import modals for sheet-backed flows
+  const [showPersonalImportModal, setShowPersonalImportModal] = useState(false);
+  const [showTeamImportModal, setShowTeamImportModal] = useState(false);
+  const [personalFile, setPersonalFile] = useState(null);
+  const [teamFile, setTeamFile] = useState(null);
+  const [importError, setImportError] = useState("");
 
   const initialFormState = {
     candidateName: "",
@@ -282,7 +297,7 @@ const AdminEmployeePlacements = () => {
 
                         totalRevenue = row[colMap['total revenue']];
                         billingStatus = row[colMap['billing status']];
-                        placementType = String(row[colMap['placement type']] || "").toLowerCase().includes("contract") ? "CONTRACT" : "PERMANENT";
+                        placementType = String(row[colMap['placement type']] || "").trim(); // Keep exact value from sheet
                         incentiveAmountInr = row[colMap['incentive amount (inr)']] || row[colMap['incentive amount']] || row[colMap['incentive amount(inr)']];
                         const rawIncentivePaid = row[colMap['incentive paid (inr)']] || row[colMap['incentive paid']];
                         incentivePaidInr = (rawIncentivePaid !== undefined && rawIncentivePaid !== null) ? String(rawIncentivePaid).trim() : "";
@@ -315,7 +330,7 @@ const AdminEmployeePlacements = () => {
                         doq = null;
 
                         revenue = ctc || 0;
-                        placementType = String(role).toLowerCase().includes("contract") ? "CONTRACT" : "PERMANENT";
+                        placementType = String(role || "").trim(); // Keep exact value from sheet
                         billingStatus = "PENDING";
                         incentivePaidInr = "";
                      }
@@ -510,6 +525,24 @@ const AdminEmployeePlacements = () => {
               </button>
             )}
             <button
+              onClick={() => setShowPersonalImportModal(true)}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h4m0 0l-3-3m3 3l3-3m5-8V7a3 3 0 00-3-3H7a3 3 0 00-3 3v2" />
+              </svg>
+              Members Placement Import (Personal)
+            </button>
+            <button
+              onClick={() => setShowTeamImportModal(true)}
+              className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h4l2 10h8l2-6H9" />
+              </svg>
+              Team Lead Placement Import (Team)
+            </button>
+            <button
               onClick={() => setShowBulkModal(true)}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-2"
             >
@@ -602,9 +635,11 @@ const AdminEmployeePlacements = () => {
                       <td className="py-3 px-2 text-slate-600">{p.plcId || '-'}</td>
                       <td className="py-3 px-2">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          p.placementType === 'PERMANENT' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
+                          (p.placementType && (p.placementType.toUpperCase().includes('PERMANENT') || p.placementType.toUpperCase().includes('FTE')))
+                            ? 'bg-purple-100 text-purple-700' 
+                            : 'bg-orange-100 text-orange-700'
                         }`}>
-                          {p.placementType === 'PERMANENT' ? 'FTE' : 'Contract'}
+                          {p.placementType || '-'}
                         </span>
                       </td>
                       <td className="py-3 px-2">
@@ -772,6 +807,224 @@ const AdminEmployeePlacements = () => {
               <div className="flex justify-end gap-3 mt-6">
                 <button onClick={() => setShowBulkModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
                 <button onClick={handleBulkSubmit} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Upload Data</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Personal Import Modal */}
+      {showPersonalImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn">
+            <h2 className="text-xl font-bold text-slate-800 mb-3">Members Placement Import (Personal)</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Upload the Members Placement sheet. Data will be stored exactly as in the sheet and used for personal dashboards.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Excel File (.xlsx / .xls)</label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setPersonalFile(e.target.files[0] || null)}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+              </div>
+              {importError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                  {importError}
+                </div>
+              )}
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setShowPersonalImportModal(false);
+                    setPersonalFile(null);
+                    setImportError("");
+                  }}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!personalFile) {
+                      setImportError("Please choose an Excel file.");
+                      return;
+                    }
+                    try {
+                      setImportError("");
+                      const data = await personalFile.arrayBuffer();
+                      const workbook = XLSX.read(data);
+                      const sheetName = workbook.SheetNames[0];
+                      const sheet = workbook.Sheets[sheetName];
+                      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                      if (!jsonData.length) {
+                        throw new Error("Sheet is empty");
+                      }
+
+                      // Find header row dynamically (contains "candidate name" and "recruiter name")
+                      let headerIndex = -1;
+                      for (let i = 0; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || !row.length) continue;
+                        const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
+                        if (rowLower.includes("candidate name") && rowLower.includes("recruiter name")) {
+                          headerIndex = i;
+                          break;
+                        }
+                      }
+
+                      if (headerIndex === -1) {
+                        throw new Error("Could not find header row with 'Candidate Name' and 'Recruiter Name'");
+                      }
+
+                      const headers = jsonData[headerIndex];
+                      const allRows = [];
+
+                      // Extract data rows from the header block
+                      for (let i = headerIndex + 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || !row.length) continue;
+                        // Stop if we hit a summary header block starting with "Team"
+                        const firstCell = String(row[0] || "").trim().toLowerCase();
+                        if (firstCell === "team") break;
+                        allRows.push(row);
+                      }
+
+                      if (!allRows.length) {
+                        throw new Error("No valid placement rows found in sheet");
+                      }
+
+                      const response = await apiRequest("/placements/import/personal", {
+                        method: "POST",
+                        body: JSON.stringify({ headers, rows: allRows }),
+                      });
+                      const result = await response.json().catch(() => ({}));
+                      if (!response.ok) {
+                        throw new Error(result.error || "Import failed");
+                      }
+                      alert(`Personal placements imported (${result.insertedCount || 0} rows).`);
+                      setShowPersonalImportModal(false);
+                      setPersonalFile(null);
+                      await fetchPlacements();
+                    } catch (e) {
+                      setImportError(e.message || "Import failed");
+                    }
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                  Import Sheet
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Import Modal */}
+      {showTeamImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn">
+            <h2 className="text-xl font-bold text-slate-800 mb-3">Team Lead Placement Import (Team)</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Upload the Team Lead Placement sheet. Data will be stored exactly as in the sheet and used for team dashboards.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Excel File (.xlsx / .xls)</label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setTeamFile(e.target.files[0] || null)}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                />
+              </div>
+              {importError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                  {importError}
+                </div>
+              )}
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setShowTeamImportModal(false);
+                    setTeamFile(null);
+                    setImportError("");
+                  }}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!teamFile) {
+                      setImportError("Please choose an Excel file.");
+                      return;
+                    }
+                    try {
+                      setImportError("");
+                      const data = await teamFile.arrayBuffer();
+                      const workbook = XLSX.read(data);
+                      const sheetName = workbook.SheetNames[0];
+                      const sheet = workbook.Sheets[sheetName];
+                      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                      if (!jsonData.length) {
+                        throw new Error("Sheet is empty");
+                      }
+
+                      // Find header row dynamically (contains "candidate name" and "lead" or "lead name")
+                      let headerIndex = -1;
+                      for (let i = 0; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || !row.length) continue;
+                        const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
+                        if (rowLower.includes("candidate name") && (rowLower.includes("lead") || rowLower.includes("lead name"))) {
+                          headerIndex = i;
+                          break;
+                        }
+                      }
+
+                      if (headerIndex === -1) {
+                        throw new Error("Could not find header row with 'Candidate Name' and 'Lead'");
+                      }
+
+                      const headers = jsonData[headerIndex];
+                      const allRows = [];
+
+                      // Extract data rows from the header block
+                      for (let i = headerIndex + 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || !row.length) continue;
+                        // Stop if we hit a summary header block starting with "Team"
+                        const firstCell = String(row[0] || "").trim().toLowerCase();
+                        if (firstCell === "team") break;
+                        allRows.push(row);
+                      }
+
+                      if (!allRows.length) {
+                        throw new Error("No valid placement rows found in sheet");
+                      }
+
+                      const response = await apiRequest("/placements/import/team", {
+                        method: "POST",
+                        body: JSON.stringify({ headers, rows: allRows }),
+                      });
+                      const result = await response.json().catch(() => ({}));
+                      if (!response.ok) {
+                        throw new Error(result.error || "Import failed");
+                      }
+                      alert(`Team placements imported (${result.insertedCount || 0} rows).`);
+                      setShowTeamImportModal(false);
+                      setTeamFile(null);
+                    } catch (e) {
+                      setImportError(e.message || "Import failed");
+                    }
+                  }}
+                  className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                >
+                  Import Sheet
+                </button>
               </div>
             </div>
           </div>

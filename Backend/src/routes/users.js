@@ -1,5 +1,5 @@
 import express from "express";
-import pkg from "@prisma/client";
+import { Role } from "../generated/client/index.js";
 import prisma from "../prisma.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { cacheMiddleware } from "../middleware/cache.js";
@@ -11,7 +11,6 @@ import {
   getUserById,
 } from "../controllers/userController.js";
 
-const { Role } = pkg;
 const router = express.Router();
 // const prisma = new PrismaClient();
 

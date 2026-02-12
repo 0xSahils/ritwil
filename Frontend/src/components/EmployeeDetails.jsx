@@ -14,14 +14,40 @@ const EmployeeDetails = () => {
   const { employeeId: stateEmployeeId } = location.state || {}
 
   const employeeIdToFetch = stateEmployeeId || params.id
+  // Year filter should only affect placements (tables), not the top summary/basic info.
+  // So we keep this state for the placements section only.
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const { data: rawData, isLoading, error, refetch } = useEmployeeDetails(employeeIdToFetch, user?.role, user?.id, selectedYear)
+  const [viewMode, setViewMode] = useState('personal') // 'personal' | 'team'
+  // IMPORTANT: Do NOT pass selectedYear into useEmployeeDetails – we always want full-year
+  // data for the header cards and basic information section. Year filtering is handled
+  // only for the placements tables and sheet-backed personal/team data.
+  const { data: rawData, isLoading, error, refetch } = useEmployeeDetails(
+    employeeIdToFetch,
+    user?.role,
+    user?.id,
+    selectedYear
+  )
   const updateVbidMutation = useUpdateVbid()
 
   const [isEditingVbid, setIsEditingVbid] = useState(false)
   const [vbidValue, setVbidValue] = useState('')
   const [openTooltip, setOpenTooltip] = useState(null)
   const tooltipRef = useRef(null)
+ 
+  // Sheet-backed personal/team placements for this employee/lead
+  const [personalSheetData, setPersonalSheetData] = useState(null);
+  const [teamSheetData, setTeamSheetData] = useState(null);
+ 
+  const formatPlacementDate = (value) => {
+    if (!value) return '-';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '-';
+    // Treat sentinel 1990-01-01 as blank (from 1/0/1990 or similar)
+    if (d.getFullYear() === 1990 && d.getMonth() === 0 && d.getDate() === 1) {
+      return '-';
+    }
+    return d.toLocaleDateString();
+  };
 
   const employeeData = useMemo(() => {
     if (!rawData) return null
@@ -48,7 +74,7 @@ const EmployeeDetails = () => {
       totalRevenue: p.totalRevenue ? CalculationService.formatCurrency(p.totalRevenue) : '-',
       revenue: p.revenue ? CalculationService.formatCurrency(p.revenue) : '-',
       revenueAsLead: p.revenueAsLead ? CalculationService.formatCurrency(p.revenueAsLead) : '-',
-      placementType: p.placementType === 'PERMANENT' ? 'FTE' : 'Contract',
+      placementType: p.placementType || '-', // Keep exact value from sheet
       billedHours: p.billedHours ? String(p.billedHours) : '',
       billingStatus: p.billingStatus === 'BILLED' ? 'Done' : p.billingStatus === 'PENDING' ? 'Pending' : p.billingStatus,
       incentivePayoutETA: p.incentivePayoutEta ? p.incentivePayoutEta.slice(0, 10) : '',
@@ -61,17 +87,79 @@ const EmployeeDetails = () => {
       })),
     }))
 
-    // Calculate total Incentive INR from placements
+    // Sheet-backed summaries (if available). We do NOT recalculate totals here –
+    // we only reuse the snapshot values that were already computed in the sheet.
+    const personalSummary = personalSheetData?.summary;
+    const teamSummary = teamSheetData?.summary;
+
+    // Calculate fallback values only if no sheet summary available
     const totalPlacementIncentiveInr = placements.reduce((sum, p) => {
-       const valStr = p.incentiveAmountINR ? String(p.incentiveAmountINR).replace(/[^0-9.-]+/g,"") : "0";
-       return sum + (Number(valStr) || 0);
+      const valStr = p.incentiveAmountINR ? String(p.incentiveAmountINR).replace(/[^0-9.-]+/g, "") : "0";
+      return sum + (Number(valStr) || 0);
     }, 0);
 
     const calculatedIncentiveUsd = totalPlacementIncentiveInr / 80;
-
     const totalPlacementRevenue = (rawData.placements || []).reduce((sum, p) => {
        return sum + (Number(p.totalRevenue) || 0);
     }, 0);
+
+    // Use sheet summary values when available, otherwise fallback to calculated/rawData
+    const isTeamView = viewMode === 'team' && teamSheetData?.summary;
+    const isPersonalView = viewMode === 'personal' && personalSheetData?.summary;
+
+    const activeSummary = isTeamView ? teamSheetData.summary : (isPersonalView ? personalSheetData.summary : null);
+
+    // Revenue and placement targets from active summary
+    const revenueTarget = isTeamView 
+      ? (activeSummary.yearlyRevenueTarget || 0)
+      : (isPersonalView 
+          ? (activeSummary.yearlyRevenueTarget || rawData.yearlyRevenueTarget || 0)
+          : (rawData.targetType === 'REVENUE' ? yearlyTarget : 0));
+
+    const placementTarget = isTeamView
+      ? (activeSummary.yearlyPlacementTarget || 0)
+      : (isPersonalView
+          ? (activeSummary.yearlyPlacementTarget || (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0))
+          : (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0));
+
+    // Achieved values from active summary
+    const achievedRevenue = isTeamView
+      ? (activeSummary.revenueAch || activeSummary.totalRevenueGenerated || 0)
+      : (isPersonalView
+          ? (activeSummary.totalRevenueGenerated || revenueGenerated)
+          : revenueGenerated);
+
+    const achievedPlacements = isTeamView
+      ? (activeSummary.placementDone || 0)
+      : (isPersonalView
+          ? (activeSummary.placementDone || rawData.placementsCount || placements.length)
+          : (rawData.placementsCount || placements.length));
+
+    // Achievement percentages from active summary
+    const revenuePercent = isTeamView && activeSummary.revenueTargetAchievedPercent !== null
+      ? activeSummary.revenueTargetAchievedPercent
+      : (isPersonalView && activeSummary.revenueTargetAchievedPercent !== null
+          ? activeSummary.revenueTargetAchievedPercent
+          : (revenueTarget > 0 ? (achievedRevenue / revenueTarget) * 100 : 0));
+
+    const placementPercent = isTeamView && activeSummary.placementAchPercent !== null
+      ? activeSummary.placementAchPercent
+      : (isPersonalView && activeSummary.targetAchievedPercent !== null
+          ? activeSummary.targetAchievedPercent
+          : (placementTarget > 0 ? (achievedPlacements / placementTarget) * 100 : 0));
+
+    // Slab and incentives from active summary
+    const slab = isTeamView
+      ? (activeSummary.slabQualified || null)
+      : (isPersonalView
+          ? (activeSummary.slabQualified || rawData.slabQualified || null)
+          : (rawData.slabQualified || null));
+
+    const incentiveInr = isTeamView
+      ? (activeSummary.totalIncentiveInr || 0)
+      : (isPersonalView
+          ? (activeSummary.totalIncentiveInr || totalPlacementIncentiveInr)
+          : totalPlacementIncentiveInr);
 
     return {
       id: rawData.id,
@@ -82,26 +170,33 @@ const EmployeeDetails = () => {
       level: rawData.level,
       targetType: rawData.targetType || 'REVENUE',
       individualSynopsis: 'Active Recruiter',
-      yearlyTarget: rawData.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
-      yearlyRevenueTarget: rawData.yearlyRevenueTarget,
-      yearlyPlacementTarget: rawData.yearlyPlacementTarget,
-      rawRevenueGenerated: revenueGenerated,
-      rawPlacementsCount: rawData.placementsCount || placements.length,
-      targetAchieved: CalculationService.formatPercentage(percentage),
-      rawPercentage: percentage,
-      targetPlacements: String(yearlyTarget),
-      placementsAchieved: String(rawData.placementsCount || placements.length),
-      revenueGenerated: CalculationService.formatCurrency(revenueGenerated),
-      revenueGeneratedPercentage: CalculationService.formatPercentage(percentage),
+      // Targets
+      yearlyTarget: rawData.targetType === 'PLACEMENTS' ? String(placementTarget) : CalculationService.formatCurrency(revenueTarget),
+      yearlyRevenueTarget: revenueTarget,
+      yearlyPlacementTarget: placementTarget,
+      // Achieved values
+      rawRevenueGenerated: achievedRevenue,
+      rawPlacementsCount: achievedPlacements,
+      revenueGenerated: CalculationService.formatCurrency(achievedRevenue),
+      placementsAchieved: String(achievedPlacements),
+      // Percentages
+      targetAchieved: CalculationService.formatPercentage(placementPercent),
+      rawPercentage: placementPercent,
+      revenueGeneratedPercentage: CalculationService.formatPercentage(revenuePercent),
+      // Other
       calculatedRevenueGenerated: CalculationService.formatCurrency(totalPlacementRevenue),
-      totalRevenue: rawData.targetType === 'PLACEMENTS' ? String(yearlyTarget) : CalculationService.formatCurrency(yearlyTarget),
-      slabQualified: rawData.slabQualified || (rawData.incentive?.slabName || null),
-      incentiveUSD: CalculationService.formatCurrency(calculatedIncentiveUsd),
-      incentiveINR: CalculationService.formatCurrency(totalPlacementIncentiveInr, 'INR'),
+      totalRevenue: rawData.targetType === 'PLACEMENTS' ? String(placementTarget) : CalculationService.formatCurrency(revenueTarget),
+      targetPlacements: String(placementTarget),
+      slabQualified: slab,
+      incentiveUSD: CalculationService.formatCurrency(incentiveInr / 80),
+      incentiveINR: CalculationService.formatCurrency(incentiveInr, 'INR'),
       placements,
       availableYears: rawData.availableYears,
+      // Summary data for dual-target detection
+      teamSummary,
+      personalSummary,
     }
-  }, [rawData])
+  }, [rawData, viewMode, personalSheetData, teamSheetData])
 
   const handleLogout = () => {
     navigate('/')
@@ -112,20 +207,67 @@ const EmployeeDetails = () => {
   };
 
   const isRevenueTarget = employeeData?.targetType === 'REVENUE'
-  const isDualTarget = employeeData?.level === 'L2' && 
-                       employeeData?.yearlyRevenueTarget != null && 
-                       employeeData?.yearlyPlacementTarget != null;
+  
+  // Dual-target detection: Check if we have both revenue and placement targets in team summary
+  const isDualTarget = viewMode === 'team' && 
+                       employeeData?.teamSummary?.yearlyRevenueTarget != null && 
+                       employeeData?.teamSummary?.yearlyPlacementTarget != null;
 
   const dualRevenueTarget = employeeData?.yearlyRevenueTarget || 0;
   const dualPlacementTarget = employeeData?.yearlyPlacementTarget || 0;
   
-  const dualRevenuePercent = dualRevenueTarget > 0 ? (employeeData?.rawRevenueGenerated / dualRevenueTarget) * 100 : 0;
-  const dualPlacementPercent = dualPlacementTarget > 0 ? (employeeData?.rawPlacementsCount / dualPlacementTarget) * 100 : 0;
+  // Use percentages from sheet summary if available, otherwise calculate
+  const dualRevenuePercent = employeeData?.teamSummary?.revenueTargetAchievedPercent != null
+    ? employeeData.teamSummary.revenueTargetAchievedPercent
+    : (dualRevenueTarget > 0 ? (employeeData?.rawRevenueGenerated / dualRevenueTarget) * 100 : 0);
+  
+  const dualPlacementPercent = employeeData?.teamSummary?.placementAchPercent != null
+    ? employeeData.teamSummary.placementAchPercent
+    : (dualPlacementTarget > 0 ? (employeeData?.rawPlacementsCount / dualPlacementTarget) * 100 : 0);
 
   const showMargin = user?.role === 'S1_ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'TEAM_LEAD';
   const isVantageL4 = employeeData?.teamName && employeeData.teamName.toLowerCase().includes('vant') && 
-                      ['L3', 'L4'].includes(employeeData?.level?.toUpperCase());
-  const isL2 = ['L2', 'L3'].includes(employeeData?.level?.toUpperCase());
+                      ['L2', 'L3', 'L4'].includes(employeeData?.level?.toUpperCase());
+  
+  // Show toggle if user has both personal and team data
+  const canToggleView = !!((personalSheetData?.placements?.length || personalSheetData?.summary) && 
+                          (teamSheetData?.placements?.length || teamSheetData?.summary)) && 
+                          !['L2', 'L3'].includes(employeeData?.level?.toUpperCase());
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [personalRes, teamRes] = await Promise.all([
+          apiRequest(`/dashboard/personal-placements?userId=${employeeIdToFetch}&year=${selectedYear}`),
+          apiRequest(`/dashboard/team-placements?leadId=${employeeIdToFetch}&year=${selectedYear}`),
+        ]);
+        if (!cancelled) {
+          if (personalRes.ok) {
+            const p = await personalRes.json();
+            setPersonalSheetData(p);
+          } else {
+            setPersonalSheetData(null);
+          }
+          if (teamRes.ok) {
+            const t = await teamRes.json();
+            setTeamSheetData(t);
+          } else {
+            setTeamSheetData(null);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setPersonalSheetData(null);
+          setTeamSheetData(null);
+        }
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeIdToFetch, selectedYear]);
 
   const handleBack = () => {
     if (user?.role === 'SUPER_ADMIN') {
@@ -433,7 +575,31 @@ const EmployeeDetails = () => {
             
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-end gap-3">
-
+                {/* Personal/Team Toggle - Show for any user with team sheet data */}
+                {canToggleView && (
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-1 py-1 flex items-center gap-1 border border-white/30">
+                    <button
+                      onClick={() => setViewMode('personal')}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        viewMode === 'personal'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-white hover:text-white/80'
+                      }`}
+                    >
+                      Personal
+                    </button>
+                    <button
+                      onClick={() => setViewMode('team')}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        viewMode === 'team'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-white hover:text-white/80'
+                      }`}
+                    >
+                      Team
+                    </button>
+                  </div>
+                )}
 
                 {user?.id === employeeData?.id && user?.role !== 'EMPLOYEE' && (
                   <button
@@ -565,90 +731,226 @@ const EmployeeDetails = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">{employeeData.individualSynopsis}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      {isRevenueTarget ? 'Yearly Target' : 'Target no of placements'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {isRevenueTarget ? employeeData.yearlyTarget : employeeData.targetPlacements}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      Target Achieved %
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold text-green-600">{employeeData.targetAchieved}</span>
-                        <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-xs overflow-hidden">
-                          <div 
-                            className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500"
-                            style={{width: `${Math.min(employeeData.rawPercentage || 0, 100)}%`}}
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                  {isRevenueTarget ? (
-                    <tr className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                        Revenue Generated
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-blue-600">{employeeData.revenueGenerated}</td>
-                    </tr>
-                  ) : (
+                  {/* Show different fields based on viewMode */}
+                  {viewMode === 'team' && canToggleView && employeeData?.teamSummary ? (
                     <>
+                      {/* Team View Fields */}
                       <tr className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                          Placements Achieved
+                          Yearly Revenue Target
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-blue-600">{employeeData.placementsAchieved}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {employeeData.teamSummary.yearlyRevenueTarget 
+                            ? CalculationService.formatCurrency(employeeData.teamSummary.yearlyRevenueTarget)
+                            : '-'}
+                        </td>
                       </tr>
                       <tr className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                          Revenue Generated
+                          Yearly Placement Target
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-blue-600">{employeeData.calculatedRevenueGenerated}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {employeeData.teamSummary.yearlyPlacementTarget ?? '-'}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Revenue Ach
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-blue-600">
+                          {employeeData.teamSummary.revenueAch 
+                            ? CalculationService.formatCurrency(employeeData.teamSummary.revenueAch)
+                            : (employeeData.teamSummary.totalRevenueGenerated 
+                                ? CalculationService.formatCurrency(employeeData.teamSummary.totalRevenueGenerated)
+                                : '-')}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Revenue Target Achieved %
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-green-600">
+                              {employeeData.teamSummary.revenueTargetAchievedPercent != null
+                                ? CalculationService.formatPercentage(employeeData.teamSummary.revenueTargetAchievedPercent)
+                                : '-'}
+                            </span>
+                            {employeeData.teamSummary.revenueTargetAchievedPercent != null && (
+                              <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-xs overflow-hidden">
+                                <div 
+                                  className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500"
+                                  style={{width: `${Math.min(employeeData.teamSummary.revenueTargetAchievedPercent || 0, 100)}%`}}
+                                ></div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Placement Done
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-blue-600">
+                          {employeeData.teamSummary.placementDone ?? '-'}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Placement Ach %
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-green-600">
+                              {employeeData.teamSummary.placementAchPercent != null
+                                ? CalculationService.formatPercentage(employeeData.teamSummary.placementAchPercent)
+                                : '-'}
+                            </span>
+                            {employeeData.teamSummary.placementAchPercent != null && (
+                              <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-xs overflow-hidden">
+                                <div 
+                                  className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500"
+                                  style={{width: `${Math.min(employeeData.teamSummary.placementAchPercent || 0, 100)}%`}}
+                                ></div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Total Revenue Generated (USD)
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-blue-600">
+                          {employeeData.teamSummary.totalRevenueGenerated 
+                            ? CalculationService.formatCurrency(employeeData.teamSummary.totalRevenueGenerated)
+                            : '-'}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Slab qualified
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {employeeData.teamSummary.slabQualified ? (
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                              CalculationService.getSlabFromIncentivePercentage(employeeData.teamSummary.slabQualified, employeeData.teamName, employeeData.level).color
+                            }`}>
+                              {employeeData.teamSummary.slabQualified}
+                            </span>
+                          ) : '-'}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Total Incentive in INR
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                          {employeeData.teamSummary.totalIncentiveInr 
+                            ? CalculationService.formatCurrency(employeeData.teamSummary.totalIncentiveInr, 'INR')
+                            : '-'}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Total Incentive in INR (Paid)
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                          {employeeData.teamSummary.totalIncentivePaidInr 
+                            ? CalculationService.formatCurrency(employeeData.teamSummary.totalIncentivePaidInr, 'INR')
+                            : '-'}
+                        </td>
+                      </tr>
+                    </>
+                  ) : (
+                    <>
+                      {/* Personal View Fields */}
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          {isRevenueTarget ? 'Yearly Target' : 'Target no of placements'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {isRevenueTarget ? employeeData.yearlyTarget : employeeData.targetPlacements}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Target Achieved %
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-green-600">{employeeData.targetAchieved}</span>
+                            <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-xs overflow-hidden">
+                              <div 
+                                className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500"
+                                style={{width: `${Math.min(employeeData.rawPercentage || 0, 100)}%`}}
+                              ></div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      {isRevenueTarget ? (
+                        <tr className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                            Revenue Generated
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-blue-600">{employeeData.revenueGenerated}</td>
+                        </tr>
+                      ) : (
+                        <>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                              Placements Achieved
+                            </td>
+                            <td className="px-6 py-4 text-sm font-semibold text-blue-600">{employeeData.placementsAchieved}</td>
+                          </tr>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                              Revenue Generated
+                            </td>
+                            <td className="px-6 py-4 text-sm font-semibold text-blue-600">{employeeData.calculatedRevenueGenerated}</td>
+                          </tr>
+                        </>
+                      )}
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Slab qualified
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {(() => {
+                            const dbSlab = employeeData.slabQualified;
+                            let slabInfo;
+
+                            if (dbSlab) {
+                                 // Use the helper to determine slab from the stored percentage
+                                 slabInfo = CalculationService.getSlabFromIncentivePercentage(dbSlab, employeeData.teamName, employeeData.level);
+                            } else {
+                                 // Fallback to calculation based on Target Achieved %
+                                 slabInfo = CalculationService.calculateSlab(employeeData.targetAchieved, employeeData.teamName, employeeData.level);
+                            }
+
+                            return (
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${slabInfo.color}`}>
+                                {slabInfo.label}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Incentive in USD
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-600">{employeeData.incentiveUSD}</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
+                          Incentive in INR
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-600">{employeeData.incentiveINR}</td>
                       </tr>
                     </>
                   )}
-                  <tr className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      Slab qualified
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {(() => {
-                        const dbSlab = employeeData.slabQualified;
-                        let slabInfo;
-
-                        if (dbSlab) {
-                             // Use the helper to determine slab from the stored percentage
-                             slabInfo = CalculationService.getSlabFromIncentivePercentage(dbSlab, employeeData.teamName, employeeData.level);
-                        } else {
-                             // Fallback to calculation based on Target Achieved %
-                             slabInfo = CalculationService.calculateSlab(employeeData.targetAchieved, employeeData.teamName, employeeData.level);
-                        }
-
-                        return (
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${slabInfo.color}`}>
-                            {slabInfo.label}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      Incentive in USD
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-green-600">{employeeData.incentiveUSD}</td>
-                  </tr>
-                  <tr className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50">
-                      Incentive in INR
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 font-semibold text-green-600">{employeeData.incentiveINR}</td>
-                  </tr>
                 </tbody>
               </table>
             </div>
@@ -693,7 +995,7 @@ const EmployeeDetails = () => {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
                   <tr>
-                    {isL2 ? (
+                    {canToggleView && viewMode === 'team' ? (
                       <>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Recruiter Name</th>
@@ -709,6 +1011,30 @@ const EmployeeDetails = () => {
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Collection Status</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Billed Hours</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue -Lead (USD)</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive amount (INR)</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Paid (INR)</th>
+                      </>
+                    ) : canToggleView && viewMode === 'personal' ? (
+                      <>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Candidate Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Recruiter Name</th>
+                        {/* Hide Lead/Split for L2/L3 personal sheets as requested */}
+                        {!['L2', 'L3', 'L4'].includes(employeeData?.level?.toUpperCase()) && (
+                          <>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Lead</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Split With</th>
+                          </>
+                        )}
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Year</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOJ</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">DOQ</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Client</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">PLC ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Placement Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Billing Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Collection Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Total Billed Hours</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Revenue (USD)</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive amount (INR)</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Incentive Paid (INR)</th>
                       </>
@@ -732,22 +1058,73 @@ const EmployeeDetails = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
-                  {employeeData.placements.map((placement, idx) => (
+                  {(canToggleView && viewMode === 'team'
+                    ? (teamSheetData?.placements || [])
+                    : (canToggleView && viewMode === 'personal'
+                        ? (personalSheetData?.placements || [])
+                        : employeeData.placements)
+                  ).map((placement, idx) => (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      {isL2 ? (
+                      {canToggleView && viewMode === 'team' ? (
+                        <>
+                          <td className="px-4 py-4 text-sm text-slate-700 font-medium">{placement.candidateName}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.recruiterName ?? '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.leadName ?? '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.splitWith ?? '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.placementYear ?? '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            {formatPlacementDate(placement.doj)}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            {formatPlacementDate(placement.doq)}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.plcId}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.placementType}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.billingStatus}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.collectionStatus ?? '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{placement.totalBilledHours ?? '-'}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600 font-medium">
+                            {placement.revenueLeadUsd 
+                              ? (typeof placement.revenueLeadUsd === 'number' 
+                                  ? CalculationService.formatCurrency(placement.revenueLeadUsd)
+                                  : placement.revenueLeadUsd)
+                              : '-'}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600 font-semibold text-green-600">
+                            {placement.incentiveInr 
+                              ? (typeof placement.incentiveInr === 'number'
+                                  ? CalculationService.formatCurrency(placement.incentiveInr, 'INR')
+                                  : placement.incentiveInr)
+                              : '-'}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-slate-600">
+                            {placement.incentivePaidInr 
+                              ? (typeof placement.incentivePaidInr === 'number'
+                                  ? CalculationService.formatCurrency(placement.incentivePaidInr, 'INR')
+                                  : placement.incentivePaidInr)
+                              : '-'}
+                          </td>
+                        </>
+                      ) : canToggleView && viewMode === 'personal' ? (
                         <>
                           <td className="px-4 py-4 text-sm text-slate-700 font-medium">{placement.candidateName}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.recruiter}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.teamLead || '-'}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.placementSharing || '-'}</td>
+                          {!['L2', 'L3', 'L4'].includes(employeeData?.level?.toUpperCase()) && (
+                            <>
+                              <td className="px-4 py-4 text-sm text-slate-600">{placement.teamLead || '-'}</td>
+                              <td className="px-4 py-4 text-sm text-slate-600">{placement.placementSharing || '-'}</td>
+                            </>
+                          )}
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.placementYear}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doj}</td>
-                          <td className="px-4 py-4 text-sm text-slate-600">{placement.doq}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{formatPlacementDate(placement.doj)}</td>
+                          <td className="px-4 py-4 text-sm text-slate-600">{formatPlacementDate(placement.doq)}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.client}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">{placement.plcId}</td>
                           <td className="px-4 py-4 text-sm text-slate-600">
                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                               placement.placementType === 'FTE' 
+                               (placement.placementType && placement.placementType.toUpperCase().includes('PERMANENT')) || 
+                               (placement.placementType && placement.placementType.toUpperCase().includes('FTE'))
                                  ? 'bg-blue-100 text-blue-700' 
                                  : 'bg-purple-100 text-purple-700'
                              }`}>
@@ -756,7 +1133,7 @@ const EmployeeDetails = () => {
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600">
                              <div className="relative inline-block">
-                               {placement.placementType === 'FTE' ? (
+                               {(placement.placementType && (placement.placementType.toUpperCase().includes('PERMANENT') || placement.placementType.toUpperCase().includes('FTE'))) ? (
                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                                    placement.billingStatus === 'Done' ? 'bg-green-100 text-green-700' : 
                                    placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
@@ -899,7 +1276,12 @@ const EmployeeDetails = () => {
                       )}
                     </tr>
                   ))}
-                  {employeeData.placements.length === 0 && (
+                  {(canToggleView && viewMode === 'team'
+                    ? (teamSheetData?.placements || [])
+                    : (canToggleView && viewMode === 'personal'
+                        ? (personalSheetData?.placements || [])
+                        : employeeData.placements)
+                  ).length === 0 && (
                     <tr>
                       <td colSpan="100%" className="px-6 py-12 text-center text-slate-500 bg-slate-50/50">
                         <div className="flex flex-col items-center gap-3">

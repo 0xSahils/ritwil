@@ -15,6 +15,9 @@ const TeamLeadPage = () => {
   const [expandedMembers, setExpandedMembers] = useState({})
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [availableYears, setAvailableYears] = useState([])
+  const [viewMode, setViewMode] = useState('personal') // 'personal' | 'team'
+  const [personalSheetData, setPersonalSheetData] = useState(null)
+  const [teamSheetData, setTeamSheetData] = useState(null)
 
   useEffect(() => {
     let isMounted = true
@@ -82,6 +85,42 @@ const TeamLeadPage = () => {
 
     return () => {
       isMounted = false
+    }
+  }, [selectedYear])
+
+  // Load sheet-backed personal/team placements for this lead
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const [personalRes, teamRes] = await Promise.all([
+          apiRequest(`/dashboard/personal-placements?year=${selectedYear}`),
+          apiRequest(`/dashboard/team-placements?year=${selectedYear}`),
+        ])
+        if (!cancelled) {
+          if (personalRes.ok) {
+            const p = await personalRes.json()
+            setPersonalSheetData(p)
+          } else {
+            setPersonalSheetData(null)
+          }
+          if (teamRes.ok) {
+            const t = await teamRes.json()
+            setTeamSheetData(t)
+          } else {
+            setTeamSheetData(null)
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setPersonalSheetData(null)
+          setTeamSheetData(null)
+        }
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
     }
   }, [selectedYear])
 
@@ -287,6 +326,32 @@ const TeamLeadPage = () => {
                 <span className="text-sm font-medium text-slate-200">{members.filter(m => m.name !== 'pass through').length} Members</span>
              </div>
 
+             {/* View toggle for L2/L3 (TEAM_LEAD levels) */}
+             {(teamLeadData.level === 'L2' || teamLeadData.level === 'L3') && (
+               <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-1 py-1 flex items-center gap-1 backdrop-blur-md">
+                 <button
+                   onClick={() => setViewMode('personal')}
+                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                     viewMode === 'personal'
+                       ? 'bg-white text-slate-900'
+                       : 'text-slate-300 hover:text-white'
+                   }`}
+                 >
+                   Personal
+                 </button>
+                 <button
+                   onClick={() => setViewMode('team')}
+                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                     viewMode === 'team'
+                       ? 'bg-white text-slate-900'
+                       : 'text-slate-300 hover:text-white'
+                   }`}
+                 >
+                   Team
+                 </button>
+               </div>
+             )}
+
              <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
                 <span className="text-xs text-slate-400 mr-2">Total Target:</span>
                 <span className="text-sm font-bold text-white">{formattedTeamTarget}</span>
@@ -312,57 +377,110 @@ const TeamLeadPage = () => {
           </div>
         </div>
 
-        {/* My Personal Performance Section */}
+        {/* My Personal Performance Section (sheet-backed, no new calculations) */}
         <div className="bg-white rounded-[2rem] shadow-sm p-8 border border-slate-100">
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-3 mb-4">
             <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
-            <h2 className="text-xl font-bold text-slate-800">My Personal Performance</h2>
+            <h2 className="text-xl font-bold text-slate-800">
+              {viewMode === 'personal' ? 'My Personal Placements (Sheet)' : 'My Team Placements (Sheet)'}
+            </h2>
           </div>
-
-          <div 
-             onClick={() => handleMemberClick(currentLeadData, currentLeadData, teamData)}
-             className="bg-white border border-blue-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group max-w-sm border-l-4 border-l-blue-500"
-          >
-             <div className="flex items-start justify-between mb-6">
-               <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                   </svg>
-                 </div>
-                 <div>
-                   <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-600 transition-colors">My Stats</h3>
-                   <div className="text-slate-400 text-sm font-medium">{currentLeadData.level || 'L2'}</div>
-                 </div>
-               </div>
-               <CircularProgress 
-                  percentage={achievementPercentage} 
-                  color={
-                    achievementPercentage >= 75 ? "text-green-500" :
-                    achievementPercentage >= 50 ? "text-yellow-500" : "text-red-500"
-                  } 
-               />
-             </div>
-
-             <div className="space-y-3">
-               <div className="flex items-center justify-between text-sm">
-                 <span className="text-slate-500 font-medium">My Target:</span>
-                 <span className="text-slate-700 font-bold">
-                    {isPlacementTeam ? currentLeadData.target : CalculationService.formatCurrency(currentLeadData.target)}
-                 </span>
-               </div>
-               <div className="flex items-center justify-between text-sm">
-                 <span className="text-slate-500 font-medium">Achieved:</span>
-                 <span className={`font-bold ${
-                    achievementPercentage >= 75 ? "text-green-500" :
-                    achievementPercentage >= 50 ? "text-yellow-500" : "text-red-500"
-                 }`}>
-                   {isPlacementTeam ? achievedValue : CalculationService.formatCurrency(achievedValue)}
-                 </span>
-               </div>
-             </div>
+          <div className="text-sm text-slate-600 mb-2">
+            Data below is read directly from the uploaded Excel sheet. No additional calculations are done in the app.
+          </div>
+          <div className="mt-4">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
+                  {viewMode === 'personal' ? (
+                    <tr>
+                      <th className="px-4 py-2 text-left">Candidate Name</th>
+                      <th className="px-4 py-2 text-left">Placement Year</th>
+                      <th className="px-4 py-2 text-left">DOJ</th>
+                      <th className="px-4 py-2 text-left">DOQ</th>
+                      <th className="px-4 py-2 text-left">Client</th>
+                      <th className="px-4 py-2 text-left">PLC ID</th>
+                      <th className="px-4 py-2 text-left">Placement Type</th>
+                      <th className="px-4 py-2 text-left">Billing Status</th>
+                      <th className="px-4 py-2 text-left">Collection Status</th>
+                      <th className="px-4 py-2 text-left">Total Billed Hours</th>
+                      <th className="px-4 py-2 text-left">Revenue (USD)</th>
+                      <th className="px-4 py-2 text-left">Incentive amount (INR)</th>
+                      <th className="px-4 py-2 text-left">Incentive Paid (INR)</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th className="px-4 py-2 text-left">Candidate Name</th>
+                      <th className="px-4 py-2 text-left">Recruiter Name</th>
+                      <th className="px-4 py-2 text-left">Split With</th>
+                      <th className="px-4 py-2 text-left">Placement Year</th>
+                      <th className="px-4 py-2 text-left">DOJ</th>
+                      <th className="px-4 py-2 text-left">DOQ</th>
+                      <th className="px-4 py-2 text-left">Client</th>
+                      <th className="px-4 py-2 text-left">PLC ID</th>
+                      <th className="px-4 py-2 text-left">Placement Type</th>
+                      <th className="px-4 py-2 text-left">Billing Status</th>
+                      <th className="px-4 py-2 text-left">Collection Status</th>
+                      <th className="px-4 py-2 text-left">Total Billed Hours</th>
+                      <th className="px-4 py-2 text-left">Revenue -Lead (USD)</th>
+                      <th className="px-4 py-2 text-left">Incentive amount (INR)</th>
+                      <th className="px-4 py-2 text-left">Incentive Paid (INR)</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {viewMode === 'personal'
+                    ? (personalSheetData?.placements || []).map((p) => (
+                        <tr key={p.id}>
+                          <td className="px-4 py-2 text-slate-800">{p.candidateName}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.placementYear ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.doj ? new Date(p.doj).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.doq ? new Date(p.doq).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.client}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.plcId}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.placementType}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.billingStatus}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.collectionStatus ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.totalBilledHours ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.revenueUsd}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.incentiveInr}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.incentivePaidInr ?? '-'}</td>
+                        </tr>
+                      ))
+                    : (teamSheetData?.placements || []).map((p) => (
+                        <tr key={p.id}>
+                          <td className="px-4 py-2 text-slate-800">{p.candidateName}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.recruiterName ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.splitWith ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.placementYear ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.doj ? new Date(p.doj).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.doq ? new Date(p.doq).toLocaleDateString() : '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.client}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.plcId}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.placementType}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.billingStatus}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.collectionStatus ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.totalBilledHours ?? '-'}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.revenueLeadUsd}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.incentiveInr}</td>
+                          <td className="px-4 py-2 text-slate-600">{p.incentivePaidInr ?? '-'}</td>
+                        </tr>
+                      ))}
+                  {((viewMode === 'personal'
+                    ? personalSheetData?.placements
+                    : teamSheetData?.placements) || []
+                  ).length === 0 && (
+                    <tr>
+                      <td colSpan={viewMode === 'personal' ? 13 : 15} className="px-4 py-6 text-center text-slate-500">
+                        No {viewMode === 'personal' ? 'personal' : 'team'} placements found from sheet for this year.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

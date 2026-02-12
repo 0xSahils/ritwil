@@ -1,4 +1,4 @@
-import { PrismaClient, Role, PlacementType, BillingStatus } from "@prisma/client";
+import { PrismaClient, Role, PlacementType, BillingStatus } from "../src/generated/client/index.js";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";

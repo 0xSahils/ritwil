@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 datasource db {
@@ -74,6 +75,11 @@ model User {
 
   auditLogs AuditLog[]
 
+  // Placement import relations
+  placementImportBatches PlacementImportBatch[] @relation("UserPlacementImportBatches")
+  personalPlacements     PersonalPlacement[]
+  teamPlacements         TeamPlacement[]
+
   @@index([role])
   @@index([isActive])
 }
@@ -91,6 +97,14 @@ model EmployeeProfile {
   yearlyRevenueTarget   Decimal?   @db.Decimal(14, 2)
   yearlyPlacementTarget Decimal?   @db.Decimal(14, 2)
   slabQualified         String?
+  placementsDone          Int?
+  targetAchievementStatus String?
+  totalRevenue            Decimal? @db.Decimal(14, 2)
+  revenueAch              Decimal? @db.Decimal(14, 2)
+  revenueTargetAchievedPercent Decimal? @db.Decimal(5, 2)
+  totalIncentiveAmount    Decimal? @db.Decimal(14, 2)
+  totalIncentivePaid      Decimal? @db.Decimal(14, 2)
+  individualSynopsis    String?
   targetType            TargetType @default(REVENUE)
   isActive              Boolean    @default(true)
   deletedAt             DateTime?
@@ -224,3 +238,124 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+
+/// Import type for placement Excel uploads
+enum PlacementImportType {
+  PERSONAL
+  TEAM
+}
+
+/// Represents a single uploaded placement sheet (personal or team)
+model PlacementImportBatch {
+  id        String               @id @default(cuid())
+  type      PlacementImportType
+  uploaderId String
+  uploader  User                 @relation("UserPlacementImportBatches", fields: [uploaderId], references: [id])
+  createdAt DateTime             @default(now())
+
+  personalPlacements PersonalPlacement[]
+  teamPlacements     TeamPlacement[]
+
+  @@index([type])
+  @@index([uploaderId])
+}
+
+/// Row-level data for Members Placement Import (personal placements)
+model PersonalPlacement {
+  id        String   @id @default(cuid())
+
+  // Relations
+  employeeId String
+  employee   User     @relation(fields: [employeeId], references: [id])
+
+  batchId String?
+  batch   PlacementImportBatch? @relation(fields: [batchId], references: [id])
+
+  // Core placement fields (per row)
+  candidateName    String
+  placementYear    Int?
+  doj              DateTime
+  doq              DateTime?
+  client           String
+  plcId            String
+  placementType    String
+  billingStatus    String
+  collectionStatus String?
+  totalBilledHours Int?
+  revenueUsd       Decimal  @db.Decimal(14, 2)
+  incentiveInr     Decimal  @db.Decimal(14, 2)
+  incentivePaidInr Decimal? @db.Decimal(14, 2)
+
+  // Summary snapshot fields from sheet (copied as-is)
+  vbCode                 String?
+  recruiterName          String?
+  teamLeadName          String?
+  yearlyPlacementTarget  Decimal? @db.Decimal(14, 2)
+  placementDone          Int?
+  targetAchievedPercent  Decimal? @db.Decimal(5, 2)
+  yearlyRevenueTarget    Decimal? @db.Decimal(14, 2)
+  revenueAch             Decimal? @db.Decimal(14, 2)
+  revenueTargetAchievedPercent Decimal? @db.Decimal(5, 2)
+  totalRevenueGenerated  Decimal? @db.Decimal(14, 2)
+  slabQualified          String?
+  totalIncentiveInr      Decimal? @db.Decimal(14, 2)
+  totalIncentivePaidInr  Decimal? @db.Decimal(14, 2)
+  individualSynopsis     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([placementYear])
+  @@index([plcId])
+}
+
+/// Row-level data for Team Lead Placement Import (team placements)
+model TeamPlacement {
+  id        String   @id @default(cuid())
+
+  // Relations
+  leadId String
+  lead   User     @relation(fields: [leadId], references: [id])
+
+  batchId String?
+  batch   PlacementImportBatch? @relation(fields: [batchId], references: [id])
+
+  // Core placement fields (per row)
+  candidateName    String
+  recruiterName    String?
+  leadName         String?
+  splitWith        String?
+  placementYear    Int?
+  doj              DateTime
+  doq              DateTime?
+  client           String
+  plcId            String
+  placementType    String
+  billingStatus    String
+  collectionStatus String?
+  totalBilledHours Int?
+  revenueLeadUsd   Decimal  @db.Decimal(14, 2)
+  incentiveInr     Decimal  @db.Decimal(14, 2)
+  incentivePaidInr Decimal? @db.Decimal(14, 2)
+
+  // Summary snapshot fields from sheet (team-level)
+  vbCode                    String?
+  yearlyPlacementTarget     Decimal? @db.Decimal(14, 2)
+  placementDone             Int?
+  placementAchPercent       Decimal? @db.Decimal(5, 2)
+  yearlyRevenueTarget       Decimal? @db.Decimal(14, 2)
+  revenueAch                Decimal? @db.Decimal(14, 2)
+  revenueTargetAchievedPercent Decimal? @db.Decimal(5, 2)
+  totalRevenueGenerated     Decimal? @db.Decimal(14, 2)
+  slabQualified             String?
+  totalIncentiveInr         Decimal? @db.Decimal(14, 2)
+  totalIncentivePaidInr     Decimal? @db.Decimal(14, 2)
+  individualSynopsis        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([placementYear])
+  @@index([plcId])
+}
+

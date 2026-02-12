@@ -1,6 +1,5 @@
 import express from "express";
 import bcrypt from "bcryptjs";
-import pkg from "@prisma/client";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import prisma from "../prisma.js";
@@ -12,9 +11,7 @@ import {
 import { authenticate } from "../middleware/auth.js";
 import { createAuditLog } from "../controllers/auditLogController.js";
 
-const { PrismaClient } = pkg;
 const router = express.Router();
-// const prisma = new PrismaClient();
 
 async function createRefreshToken(userId) {
   const tokenRecord = await prisma.refreshToken.create({

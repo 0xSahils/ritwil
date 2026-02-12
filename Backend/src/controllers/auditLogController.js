@@ -1,9 +1,5 @@
-import pkg from "@prisma/client";
 import prisma from "../prisma.js";
 import crypto from 'crypto';
-
-// const { PrismaClient } = pkg;
-// const prisma = new PrismaClient();
 
 const generateHash = (previousHash, data) => {
   const content = `${previousHash || ''}${JSON.stringify(data)}`;

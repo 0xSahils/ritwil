@@ -13,7 +13,7 @@ const AdminTeamDetails = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const canEditTarget = currentUser?.role === "S1_ADMIN";
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState("All");
   
   const { 
     team, 
@@ -38,9 +38,12 @@ const AdminTeamDetails = () => {
   };
 
   // Import states
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile, setImportFile] = useState(null);
+  const [showPersonalImportModal, setShowPersonalImportModal] = useState(false);
+  const [showTeamImportModal, setShowTeamImportModal] = useState(false);
+  const [personalFile, setPersonalFile] = useState(null);
+  const [teamFile, setTeamFile] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const handleUpdateTeam = (data) => {
@@ -114,313 +117,139 @@ const AdminTeamDetails = () => {
   }
 
 
-  const handleTeamImport = async () => {
-    if (!importFile) {
-      showNotification("error", "Please select a file first.");
+  const handlePersonalImport = async () => {
+    if (!personalFile) {
+      setImportError("Please choose an Excel file.");
       return;
     }
-
-    if (!team) return;
-
     try {
       setImporting(true);
-      console.log("Starting import process...");
-      console.log("File:", importFile.name, "Size:", importFile.size);
-
-      const data = await importFile.arrayBuffer();
+      setImportError("");
+      const data = await personalFile.arrayBuffer();
       const workbook = XLSX.read(data);
-      const firstSheetName = workbook.SheetNames[0];
-      console.log("Sheet Name:", firstSheetName);
-      const worksheet = workbook.Sheets[firstSheetName];
-      
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      console.log("Total Rows:", rows.length);
-      
-      let currentRecruiterName = null;
-      const placementsToUpload = [];
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      if (!jsonData.length) {
+        throw new Error("Sheet is empty");
+      }
 
-      // Parsing State
-      let mode = 'SCANNING'; 
-      let cols = {};
-      let recruiterNameIndex = 1;
-      let l2Targets = null;
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length === 0) continue;
-
-        const firstCell = String(row[0] || "").trim();
-        const secondCell = String(row[1] || "").trim();
-
-        // Debug log for header detection
-        if (firstCell === "Team" || secondCell === "Recruiter Name") {
-             console.log(`Row ${i} [Header Candidate]: "${firstCell}", "${secondCell}"`);
-        }
-
-        if (firstCell === "Team") {
-           let foundRecruiterIndex = -1;
-           let foundL2Index = -1;
-           
-           row.forEach((cell, idx) => {
-               const cellStr = String(cell).trim();
-               if (cellStr === "Recruiter Name") foundRecruiterIndex = idx;
-               if (cellStr === "L2 Name") foundL2Index = idx;
-           });
-           
-           if (foundL2Index !== -1) {
-              console.log(`Row ${i}: Found L2 Team Block.`);
-              recruiterNameIndex = foundL2Index;
-              mode = 'EXPECT_L2_INFO';
-              
-              // Map L2 Target Columns from THIS header row
-              cols.l2RevenueTarget = -1;
-              cols.l2PlacementTarget = -1;
-              
-              row.forEach((cell, idx) => {
-                 const val = String(cell).trim().toLowerCase();
-                 if (val.includes("yearly revenue target")) cols.l2RevenueTarget = idx;
-                 else if (val.includes("yearly placement target")) cols.l2PlacementTarget = idx;
-                 else if (val.includes("yearly target")) cols.l2RevenueTarget = idx; // Fallback for Vantage/General
-              });
-              continue;
-           }
-           
-           if (foundRecruiterIndex !== -1) {
-              console.log(`Row ${i}: Found Team Block. Recruiter Name at index ${foundRecruiterIndex}`);
-              recruiterNameIndex = foundRecruiterIndex;
-              mode = 'EXPECT_RECRUITER_INFO';
-              l2Targets = null; // Reset L2 targets for standard sheets
-              continue;
-           }
-        }
-
-        if (mode === 'EXPECT_L2_INFO') {
-           const rName = row[recruiterNameIndex];
-           if (rName) {
-             currentRecruiterName = rName;
-             console.log(`Row ${i}: Found L2 Info: "${currentRecruiterName}"`);
-             
-             // Capture Targets
-             l2Targets = {};
-             if (cols.l2RevenueTarget !== -1) l2Targets.yearlyRevenueTarget = row[cols.l2RevenueTarget];
-             if (cols.l2PlacementTarget !== -1) l2Targets.yearlyPlacementTarget = row[cols.l2PlacementTarget];
-             
-             console.log("Captured L2 Targets:", l2Targets);
-             mode = 'EXPECT_PLACEMENT_HEADER'; 
-           }
-           continue;
-        }
-
-        if (mode === 'EXPECT_RECRUITER_INFO') {
-          const rName = row[recruiterNameIndex];
-          if (rName) {
-            currentRecruiterName = rName;
-            console.log(`Row ${i}: Found Recruiter Info: "${currentRecruiterName}"`);
-            mode = 'EXPECT_PLACEMENT_HEADER';
-          }
-          continue;
-        }
-
-        if (mode === 'EXPECT_PLACEMENT_HEADER' || (firstCell === "Recruiter Name" && secondCell === "Candidate Name")) {
-           if (firstCell === "Recruiter Name" && secondCell === "Candidate Name") {
-             console.log(`Row ${i}: Found Placement Header -> Switching to READING_PLACEMENTS`);
-             mode = 'READING_PLACEMENTS';
-             cols = {
-               recruiterName: 0,
-               candidateName: 1,
-               doj: 2,
-               client: 3,
-               revenue: 4,
-               billingStatus: 5,
-             };
-             
-             row.forEach((cell, idx) => {
-               const val = String(cell).trim().toLowerCase();
-               if (val.includes("recruiter name")) cols.recruiterName = idx;
-               else if (val.includes("candidate name")) cols.candidateName = idx;
-               else if (val.includes("candidate id")) cols.candidateId = idx;
-               else if (val.includes("candidate")) cols.candidateName = cols.candidateName ?? idx; // Fallback
-               
-               else if (val.includes("client") && (val.includes("name") || val === "client")) cols.clientName = idx;
-              else if (val.includes("client")) cols.clientName = cols.clientName ?? idx; // Fallback for just "Client"
-              
-              else if (val.includes("doj")) cols.doj = idx;
-              else if (val.includes("doi")) cols.doi = idx;
-               
-               // Check Total Revenue FIRST to avoid it being caught by generic "revenue"
-              else if (val.includes("total revenue")) cols.totalRevenue = idx;
-              
-              else if (val.includes("revenue") && !val.includes("target") && !val.includes("qualifier")) {
-                  if (val.includes("lead")) {
-                      cols.revenueAsLead = idx;
-                      // Also map standard revenue to revenueAsLead for calculations
-                      cols.revenue = idx;
-                  }
-                  else cols.revenue = idx;
-              }
-              else if (val.includes("target")) cols.yearlyTarget = idx;
-              else if (val.includes("slab") || val.includes("qualifier")) cols.slabQualified = idx;
-              else if (val.includes("billed hours") || val.includes("hours")) cols.billedHours = idx;
-              else if (val.includes("billing")) cols.billingStatus = idx;
-              else if (val.includes("incentive") && (val.includes("amount") || val.includes("inr"))) cols.incentiveAmountInr = idx; 
-              else if (val.includes("paid") || (val.includes("incentive") && val.includes("paid"))) cols.incentivePaidInr = idx;
-              else if (val.includes("target") && val.includes("type")) cols.targetType = idx;
-              else if (val.includes("type")) cols.placementType = idx;
-              
-              else if (val.includes("sourcer")) cols.sourcer = idx;
-              else if (val.includes("account") || val.includes("manager")) cols.accountManager = idx;
-              else if (val.includes("tl") || val.includes("team lead")) cols.teamLead = idx;
-              else if (val.includes("sharing") || val.includes("split")) cols.placementSharing = idx;
-              else if (val.includes("credit")) cols.placementCredit = idx;
-            });
-            console.log("Columns Mapped:", cols);
-            continue;
-          }
-       }
-
-        if (mode === 'READING_PLACEMENTS') {
-          if (firstCell === "Team") {
-             // Find Recruiter Name column
-             let foundIndex = -1;
-             row.forEach((cell, idx) => {
-                 if (String(cell).trim() === "Recruiter Name") {
-                     foundIndex = idx;
-                 }
-             });
- 
-             if (foundIndex !== -1) {
-                 console.log(`Row ${i}: Found New Team Block. Recruiter Name at index ${foundIndex} -> Switching to EXPECT_RECRUITER_INFO`);
-                 recruiterNameIndex = foundIndex;
-                 mode = 'EXPECT_RECRUITER_INFO';
-                 // i--; // Re-process this row? No, we found the header, next row has data? 
-                 // Actually if this row is "Team | Recruiter Name", the NEXT row has the team name? No wait.
-                 // "Team" is usually a header row. 
-                 // If structure is:
-                 // Row X: Team | Recruiter Name
-                 // Row X+1: NULL | Some Recruiter
-                 // Then we switch to EXPECT_RECRUITER_INFO and continue loop so next iteration picks up Row X+1?
-                 // But wait, "Team" is firstCell. 
-                 continue;
-             }
-          }
-
-          const candidateName = row[cols.candidateName];
-          if (!candidateName) continue;
-
-          let rawRecruiterVal = row[cols.recruiterName !== undefined ? cols.recruiterName : recruiterNameIndex];
-          let recruiterName = currentRecruiterName;
-          let vbid = null;
-
-          if (rawRecruiterVal) {
-              const valStr = String(rawRecruiterVal).trim();
-              // Check if it's a number (VBID)
-              if (/^\d+$/.test(valStr)) {
-                  vbid = valStr;
-              } else {
-                  // It's a name? Or maybe "Recruiter Name" header repeated?
-                  const upper = valStr.toUpperCase();
-                  if (upper !== "VB CODE" && upper !== "RECRUITER NAME" && upper !== "TEAM") {
-                      recruiterName = valStr;
-                  }
-              }
-          }
-
-          if (!recruiterName) {
-            // console.warn(`Row ${i}: No recruiter name found (Candidate: ${candidateName})`);
-            continue;
-          }
-
-          // SKIP HEADER ROWS disguised as data
-          const rNameUpper = String(recruiterName).trim().toUpperCase();
-          if (rNameUpper === "VB CODE" || rNameUpper === "RECRUITER NAME" || rNameUpper === "TEAM") {
-             console.log(`Row ${i}: Skipping repeated header row.`);
-             continue;
-          }
-
-          // Handle Date of Quit
-          let doq = cols.doq !== undefined ? row[cols.doq] : "NA";
-          if (String(doq).trim().toUpperCase() === "NA" || !doq) {
-             doq = null;
-          } else {
-             doq = CalculationService.parseExcelDate(doq);
-          }
-
-          let doj = CalculationService.parseExcelDate(row[cols.doj]);
-          
-          placementsToUpload.push({
-            employeeId: null, 
-            recruiterName: String(recruiterName).trim(),
-            vbid: vbid,
-            candidateName: candidateName,
-            candidateId: cols.candidateId !== undefined ? String(row[cols.candidateId] || "") : null,
-            clientName: String(row[cols.clientName] || row[cols.client] || ""), // Use clientName col, fallback to generic client
-            doj: doj,
-            doq: doq,
-            doi: cols.doi !== undefined ? CalculationService.parseExcelDate(row[cols.doi]) : CalculationService.parseExcelDate(row[cols.doj]), 
-            revenue: row[cols.revenue],
-            revenueAsLead: cols.revenueAsLead !== undefined ? row[cols.revenueAsLead] : null,
-            billedHours: cols.billedHours !== undefined ? row[cols.billedHours] : null,
-            billingStatus: row[cols.billingStatus],
-            incentiveAmountInr: row[cols.incentiveAmountInr],
-            incentivePaidInr: row[cols.incentivePaidInr],
-            placementType: cols.placementType !== undefined ? String(row[cols.placementType] || "PERMANENT").toUpperCase() : "PERMANENT",
-            yearlyTarget: cols.yearlyTarget !== undefined ? row[cols.yearlyTarget] : null,
-            targetType: cols.targetType !== undefined ? String(row[cols.targetType]).toUpperCase() : null,
-            slabQualified: cols.slabQualified !== undefined ? row[cols.slabQualified] : null,
-            // Attach L2 targets if present and name matches (or just attach to all if we assume this block belongs to this L2)
-            // Since we are inside the block for this recruiter, we can attach them.
-            yearlyRevenueTarget: l2Targets ? l2Targets.yearlyRevenueTarget : null,
-            yearlyPlacementTarget: l2Targets ? l2Targets.yearlyPlacementTarget : null,
-
-            sourcer: cols.sourcer !== undefined ? row[cols.sourcer] : null,
-            accountManager: cols.accountManager !== undefined ? row[cols.accountManager] : null,
-            teamLead: cols.teamLead !== undefined ? row[cols.teamLead] : null,
-            placementSharing: cols.placementSharing !== undefined ? row[cols.placementSharing] : null,
-            placementCredit: cols.placementCredit !== undefined ? row[cols.placementCredit] : null,
-            totalRevenue: cols.totalRevenue !== undefined ? row[cols.totalRevenue] : null,
-          });
+      // Find header row dynamically (contains "candidate name" and "recruiter name")
+      let headerIndex = -1;
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || !row.length) continue;
+        const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
+        if (rowLower.includes("candidate name") && rowLower.includes("recruiter name")) {
+          headerIndex = i;
+          break;
         }
       }
 
-      console.log(`Extraction Complete. Found ${placementsToUpload.length} placements.`);
-
-      if (placementsToUpload.length === 0) {
-        alert("No valid placements found.");
-        setImporting(false);
-        return;
+      if (headerIndex === -1) {
+        throw new Error("Could not find header row with 'Candidate Name' and 'Recruiter Name'");
       }
 
-      console.log("Sending to backend:", placementsToUpload.length, "placements");
+      const headers = jsonData[headerIndex];
+      const allRows = [];
 
-      // Reuse the global bulk endpoint as it accepts { placements: [] } with employeeIds
-      const response = await apiRequest("/placements/bulk-global", {
+      // Extract data rows from the header block
+      for (let i = headerIndex + 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || !row.length) continue;
+        // Stop if we hit a summary header block starting with "Team"
+        const firstCell = String(row[0] || "").trim().toLowerCase();
+        if (firstCell === "team") break;
+        allRows.push(row);
+      }
+
+      if (!allRows.length) {
+        throw new Error("No valid placement rows found in sheet");
+      }
+
+      const response = await apiRequest("/placements/import/personal", {
         method: "POST",
-        body: JSON.stringify({ placements: placementsToUpload }),
+        body: JSON.stringify({ headers, rows: allRows }),
       });
-
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const resData = await response.json();
-        throw new Error(resData.error || "Failed to upload placements");
+        throw new Error(result.error || "Import failed");
       }
-      
-      const result = await response.json();
-      console.log("Backend Result:", result);
-      
-      if (result.errors && result.errors.length > 0) {
-        console.error("Backend Errors:", result.errors);
-        const errorMsg = `Uploaded ${result.created.length} placements.\nFailed to upload ${result.errors.length} placements.\n\nCheck console for details.`;
-        alert(errorMsg);
-      } else {
-        alert(`Successfully uploaded ${result.created.length} placements!`);
+      alert(`Personal placements imported (${result.insertedCount || 0} rows).`);
+      setShowPersonalImportModal(false);
+      setPersonalFile(null);
+      refetch();
+    } catch (e) {
+      setImportError(e.message || "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleTeamImport = async () => {
+    if (!teamFile) {
+      setImportError("Please choose an Excel file.");
+      return;
+    }
+    try {
+      setImporting(true);
+      setImportError("");
+      const data = await teamFile.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      if (!jsonData.length) {
+        throw new Error("Sheet is empty");
       }
-      
-      setShowImportModal(false);
-      setImportFile(null);
-      refetch(); // Refresh to show updated revenue
-      
-    } catch (err) {
-      console.error(err);
-      alert("Error importing file: " + err.message);
+
+      // Find header row dynamically (contains "candidate name" and "lead" or "lead name")
+      let headerIndex = -1;
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || !row.length) continue;
+        const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
+        if (rowLower.includes("candidate name") && (rowLower.includes("lead") || rowLower.includes("lead name"))) {
+          headerIndex = i;
+          break;
+        }
+      }
+
+      if (headerIndex === -1) {
+        throw new Error("Could not find header row with 'Candidate Name' and 'Lead'");
+      }
+
+      const headers = jsonData[headerIndex];
+      const allRows = [];
+
+      // Extract data rows from the header block
+      for (let i = headerIndex + 1; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || !row.length) continue;
+        // Stop if we hit a summary header block starting with "Team"
+        const firstCell = String(row[0] || "").trim().toLowerCase();
+        if (firstCell === "team") break;
+        allRows.push(row);
+      }
+
+      if (!allRows.length) {
+        throw new Error("No valid placement rows found in sheet");
+      }
+
+      const response = await apiRequest("/placements/import/team", {
+        method: "POST",
+        body: JSON.stringify({ headers, rows: allRows }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || "Import failed");
+      }
+      alert(`Team placements imported (${result.insertedCount || 0} rows).`);
+      setShowTeamImportModal(false);
+      setTeamFile(null);
+      refetch();
+    } catch (e) {
+      setImportError(e.message || "Import failed");
     } finally {
       setImporting(false);
     }
@@ -455,20 +284,6 @@ const AdminTeamDetails = () => {
               <span className={`px-3 py-1 rounded-full text-sm font-medium bg-${team.color}-100 text-${team.color}-700 capitalize`}>
                 {team.color}
               </span>
-              
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : Number(e.target.value))}
-                className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto py-1.5 px-3 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors ml-4"
-              >
-                <option value="All">All Years</option>
-                {(team.availableYears && team.availableYears.length > 0 
-                    ? team.availableYears 
-                    : [new Date().getFullYear()]
-                ).map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
 
               <button 
                 onClick={() => setShowSettingsModal(true)}
@@ -524,19 +339,46 @@ const AdminTeamDetails = () => {
 
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-slate-800">
-                {activeTab === "leads" ? "Team Leads" : "Team Members"}
-              </h3>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowImportModal(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-bold text-slate-800">
+                  {activeTab === "leads" ? "Team Leads" : "Team Members"}
+                </h3>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                  className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto py-1.5 px-3 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  Import Placements
-                </button>
+                  <option value="All">All Years</option>
+                  {(team.availableYears && team.availableYears.length > 0 
+                      ? team.availableYears 
+                      : [new Date().getFullYear()]
+                  ).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3">
+                {activeTab === "leads" ? (
+                  <button
+                    onClick={() => setShowTeamImportModal(true)}
+                    className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Team Lead Placement Import
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowPersonalImportModal(true)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Members Placement Import
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     const type = activeTab === "leads" ? "lead" : "member";
@@ -753,34 +595,84 @@ const AdminTeamDetails = () => {
         </div>
       )}
 
-      {showImportModal && (
+      {showPersonalImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-fadeIn">
-            <h2 className="text-xl font-bold text-slate-800 mb-4">Import Placements for {team.name}</h2>
+            <h2 className="text-xl font-bold text-slate-800 mb-4">Members Placement Import (Personal)</h2>
             <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-700">
-                <p className="font-medium mb-2">Instructions:</p>
+              <div className="bg-indigo-50 p-4 rounded-lg text-sm text-indigo-700">
+                <p className="font-medium mb-2">Instructions for Personal Sheet:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Upload an Excel file (.xlsx, .xls) containing placement data.</li>
-                  <li>Recruiters in the file must be members of <strong>{team.name}</strong>.</li>
-                  <li>Data for recruiters not in this team will be skipped.</li>
+                  <li>Upload an Excel file containing individual recruiter placements.</li>
+                  <li>The sheet must have headers like "Candidate Name" and "Recruiter Name".</li>
+                  <li>Data will be saved as personal placements (PersonalPlacement).</li>
                 </ul>
-                <p className="text-xs text-slate-500 mt-1">Headers: candidateName, clientName, doi, doj, revenue, revenueAsLead, placementType, billedHours, billingStatus, incentivePayoutEta, incentiveAmountInr, incentivePaid, plcId, placementYear, collectionStatus</p>
               </div>
-              
+              {importError && (
+                <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100">
+                  {importError}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Select Excel File</label>
                 <input 
                   type="file" 
                   accept=".xlsx, .xls" 
-                  onChange={e => setImportFile(e.target.files[0])}
-                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  onChange={e => setPersonalFile(e.target.files[0])}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
               </div>
-
               <div className="flex justify-end gap-3 mt-6">
                 <button 
-                  onClick={() => setShowImportModal(false)} 
+                  onClick={() => { setShowPersonalImportModal(false); setImportError(""); }} 
+                  disabled={importing}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handlePersonalImport} 
+                  disabled={!personalFile || importing}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-sm flex items-center gap-2"
+                >
+                  {importing ? "Importing..." : "Upload & Process"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTeamImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-fadeIn">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">Team Lead Placement Import (Team)</h2>
+            <div className="space-y-4">
+              <div className="bg-violet-50 p-4 rounded-lg text-sm text-violet-700">
+                <p className="font-medium mb-2">Instructions for Team Sheet:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Upload an Excel file containing team lead / snapshot data.</li>
+                  <li>The sheet must have headers like "Candidate Name" and "Lead".</li>
+                  <li>Data will be saved as team placements (TeamPlacement) and update lead snapshots.</li>
+                </ul>
+              </div>
+              {importError && (
+                <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100">
+                  {importError}
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Select Excel File</label>
+                <input 
+                  type="file" 
+                  accept=".xlsx, .xls" 
+                  onChange={e => setTeamFile(e.target.files[0])}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button 
+                  onClick={() => { setShowTeamImportModal(false); setImportError(""); }} 
                   disabled={importing}
                   className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
                 >
@@ -788,20 +680,10 @@ const AdminTeamDetails = () => {
                 </button>
                 <button 
                   onClick={handleTeamImport} 
-                  disabled={!importFile || importing}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-sm flex items-center gap-2"
+                  disabled={!teamFile || importing}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium shadow-sm flex items-center gap-2"
                 >
-                  {importing ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Importing...
-                    </>
-                  ) : (
-                    'Upload & Process'
-                  )}
+                  {importing ? "Importing..." : "Upload & Process"}
                 </button>
               </div>
             </div>

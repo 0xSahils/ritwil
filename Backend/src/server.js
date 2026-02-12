@@ -7,7 +7,6 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
-import pkg from "@prisma/client";
 import prisma from "./prisma.js";
 import authRouter from "./routes/auth.js";
 import userRouter from "./routes/users.js";
@@ -23,7 +22,6 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const { PrismaClient } = pkg;
 const app = express();
 // const prisma = new PrismaClient();
 

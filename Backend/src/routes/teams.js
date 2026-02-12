@@ -1,5 +1,5 @@
 import express from "express";
-import pkg from "@prisma/client";
+import { Role } from "../generated/client/index.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { cacheMiddleware } from "../middleware/cache.js";
 import {
@@ -15,7 +15,6 @@ import {
   importTeamTargets,
 } from "../controllers/teamController.js";
 
-const { Role } = pkg;
 const router = express.Router();
 
 router.use(authenticate);

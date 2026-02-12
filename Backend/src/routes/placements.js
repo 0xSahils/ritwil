@@ -1,5 +1,5 @@
 import express from "express";
-import pkg from "@prisma/client";
+import { Role } from "../generated/client/index.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { clearCacheMiddleware } from "../middleware/cache.js";
 import {
@@ -11,13 +11,64 @@ import {
   bulkCreateGlobalPlacements,
   deletePlacement,
   bulkDeletePlacements,
+  bulkUpdateMetrics,
+} from "../controllers/placementController.js";
+import {
+  importPersonalPlacements,
+  importTeamPlacements,
+  deleteAllPlacements,
 } from "../controllers/placementController.js";
 
-const { Role } = pkg;
 const router = express.Router();
 
 router.use(authenticate);
 router.use(clearCacheMiddleware);
+
+// Bulk update metrics
+router.post("/bulk-metrics", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
+  try {
+    const { metrics } = req.body;
+    if (!Array.isArray(metrics)) {
+      return res.status(400).json({ error: "metrics must be an array" });
+    }
+    const result = await bulkUpdateMetrics(metrics, req.user.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Import Members Placement (Personal data)
+router.post(
+  "/import/personal",
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
+  async (req, res, next) => {
+    try {
+      const { headers, rows } = req.body;
+      const result = await importPersonalPlacements({ headers, rows }, req.user.id);
+      res.status(201).json(result);
+    } catch (err) {
+      const message = err.message || "Failed to import personal placements";
+      res.status(400).json({ error: message });
+    }
+  }
+);
+
+// Import Team Lead Placement (Team data)
+router.post(
+  "/import/team",
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
+  async (req, res, next) => {
+    try {
+      const { headers, rows } = req.body;
+      const result = await importTeamPlacements({ headers, rows }, req.user.id);
+      res.status(201).json(result);
+    } catch (err) {
+      const message = err.message || "Failed to import team placements";
+      res.status(400).json({ error: message });
+    }
+  }
+);
 
 // Bulk delete placements
 router.delete("/bulk", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
@@ -27,6 +78,16 @@ router.delete("/bulk", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req,
       return res.status(400).json({ error: "placementIds must be an array" });
     }
     const result = await bulkDeletePlacements(placementIds, req.user.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Delete ALL placement data (Personal, Team, and old model)
+router.delete("/all", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
+  try {
+    const result = await deleteAllPlacements(req.user.id);
     res.json(result);
   } catch (err) {
     next(err);
@@ -99,20 +160,9 @@ router.put("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res
 router.put("/:id/billing", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { billing } = req.body; // Expecting { billing: [{ month, hours, status }] }
-    const result = await updatePlacementBilling(id, billing, req.user.id);
+    const { month, billingData } = req.body;
+    const result = await updatePlacementBilling(id, month, billingData, req.user.id);
     res.json(result);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Delete a placement
-router.delete("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    await deletePlacement(id, req.user.id);
-    res.status(204).send();
   } catch (err) {
     next(err);
   }

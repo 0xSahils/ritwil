@@ -1,7 +1,5 @@
-import pkg from "@prisma/client";
+import { Role } from "../generated/client/index.js";
 import prisma from "../prisma.js";
-
-const { Role } = pkg;
 
 // const prisma = new PrismaClient();
 
@@ -49,6 +47,7 @@ export async function listTeamsWithMembers(currentUser) {
           user: {
             include: {
               placements: true,
+              personalPlacements: true,
             },
           },
           manager: true,
@@ -59,12 +58,19 @@ export async function listTeamsWithMembers(currentUser) {
   });
 
   const data = teams.map((team) => {
-    const leads = team.employees.filter(
-      (p) => p.user.role === Role.TEAM_LEAD
-    );
-    const members = team.employees.filter(
-      (p) => p.user.role === Role.EMPLOYEE
-    );
+  const leads = team.employees.filter(
+    (p) => p.user.role === Role.TEAM_LEAD
+  );
+  // Treat L2/L3 leads as "members" as well so they show up
+  // in the Team Members section for management and personal uploads.
+  const members = team.employees.filter((p) => {
+    if (p.user.role === Role.EMPLOYEE) return true;
+    if (p.user.role === Role.TEAM_LEAD) {
+      const lvl = (p.level || "").toUpperCase();
+      return lvl === "L2" || lvl === "L3";
+    }
+    return false;
+  });
 
     // Calculate aggregated stats
     // Update: Aggregated Target should be sum of ALL team members (L4 + L3 + L2) targets
@@ -74,15 +80,20 @@ export async function listTeamsWithMembers(currentUser) {
     );
 
     const aggregatedRevenue = team.employees.reduce((total, member) => {
-      const memberRevenue = member.user.placements.reduce(
-        (sum, entry) => sum + Number(entry.revenue || 0),
+      const combinedPlacements = [
+        ...(member.user.placements || []),
+        ...(member.user.personalPlacements || [])
+      ];
+      const memberRevenue = combinedPlacements.reduce(
+        (sum, entry) => sum + Number(entry.revenue || entry.revenueUsd || 0),
         0
       );
       return total + memberRevenue;
     }, 0);
 
     const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
-      return total + (member.user.placements?.length || 0);
+      const combinedCount = (member.user.placements?.length || 0) + (member.user.personalPlacements?.length || 0);
+      return total + combinedCount;
     }, 0);
 
     // Determine team target type from members (default to REVENUE)
@@ -96,9 +107,9 @@ export async function listTeamsWithMembers(currentUser) {
       yearlyTarget: aggregatedTarget, // Use aggregated target from leads
       targetType,
       totalRevenue: aggregatedRevenue, // Add calculated revenue
-    totalPlacements: aggregatedPlacementsCount,
-    leads: leads.map((p) => ({
-      id: p.id,
+      totalPlacements: aggregatedPlacementsCount,
+      leads: leads.map((p) => ({
+        id: p.id,
         userId: p.user.id,
         name: p.user.name,
         level: p.level,
@@ -112,8 +123,11 @@ export async function listTeamsWithMembers(currentUser) {
         level: p.level,
         target: Number(p.yearlyTarget || 0),
         targetType: p.targetType,
-        revenue: p.user.placements.reduce(
+        revenue: (p.user.placements || []).reduce(
           (sum, e) => sum + Number(e.revenue || 0),
+          0
+        ) + (p.user.personalPlacements || []).reduce(
+          (sum, e) => sum + Number(e.revenueUsd || 0),
           0
         ),
       })),
@@ -303,6 +317,7 @@ export async function getTeamDetails(id, year) {
           user: {
             include: {
               placements: true,
+              personalPlacements: true,
             },
           },
           manager: true, // Manager is a User model, no need to include user again
@@ -317,6 +332,28 @@ export async function getTeamDetails(id, year) {
     throw error;
   }
 
+  const leads = team.employees.filter(
+    (p) => p.user.role === Role.TEAM_LEAD
+  );
+  // Treat L2/L3 leads as "members" as well so they show up
+  // in the Team Members section for management and personal uploads.
+  const members = team.employees.filter((p) => {
+    if (p.user.role === Role.EMPLOYEE) return true;
+    if (p.user.role === Role.TEAM_LEAD) {
+      const lvl = (p.level || "").toUpperCase();
+      return lvl === "L2" || lvl === "L3";
+    }
+    return false;
+  });
+
+  // Fetch team placements for all leads (before filtering so we can collect years)
+  const leadIds = leads.map(l => l.user.id);
+  const allTeamPlacements = leadIds.length > 0 ? await prisma.teamPlacement.findMany({
+    where: {
+      leadId: { in: leadIds },
+    },
+  }) : [];
+
   // Collect available years from all placements in the team
   const availableYears = new Set();
   availableYears.add(new Date().getFullYear()); // Always include current year
@@ -330,23 +367,55 @@ export async function getTeamDetails(id, year) {
         }
       });
     }
+    if (emp.user.personalPlacements) {
+      emp.user.personalPlacements.forEach(p => {
+        if (p.doj) {
+          const y = new Date(p.doj).getFullYear();
+          if (!isNaN(y)) availableYears.add(y);
+        } else if (p.placementYear) {
+          availableYears.add(p.placementYear);
+        }
+      });
+    }
   });
+
+  // Also add years from team placements
+  allTeamPlacements.forEach(tp => {
+    if (tp.placementYear) {
+      availableYears.add(tp.placementYear);
+    } else if (tp.doj) {
+      const y = new Date(tp.doj).getFullYear();
+      if (!isNaN(y)) availableYears.add(y);
+    }
+  });
+
+  // Filter team placements by year
+  const teamPlacements = year && year !== 'All' 
+    ? allTeamPlacements.filter(tp => {
+        if (tp.placementYear) return tp.placementYear === Number(year);
+        if (tp.doj) return new Date(tp.doj).getFullYear() === Number(year);
+        return false;
+      })
+    : allTeamPlacements;
 
   const filterPlacements = (placements) => {
     if (!year || year === 'All') return placements;
     const targetYear = Number(year);
     return placements.filter(p => {
+      if (p.placementYear) return p.placementYear === targetYear;
       if (!p.doj) return false;
       return new Date(p.doj).getFullYear() === targetYear;
     });
   };
 
-  const leads = team.employees.filter(
-    (p) => p.user.role === Role.TEAM_LEAD
-  );
-  const members = team.employees.filter(
-    (p) => p.user.role === Role.EMPLOYEE
-  );
+  // Group team placements by leadId
+  const teamPlacementsByLead = new Map();
+  teamPlacements.forEach(tp => {
+    if (!teamPlacementsByLead.has(tp.leadId)) {
+      teamPlacementsByLead.set(tp.leadId, []);
+    }
+    teamPlacementsByLead.get(tp.leadId).push(tp);
+  });
 
   const aggregatedTarget = team.employees.reduce(
     (sum, member) => sum + Number(member.yearlyTarget || 0),
@@ -354,17 +423,44 @@ export async function getTeamDetails(id, year) {
   );
 
   const aggregatedRevenue = team.employees.reduce((total, member) => {
-    const filteredPlacements = filterPlacements(member.user.placements || []);
+    const combinedPlacements = [
+      ...(member.user.placements || []),
+      ...(member.user.personalPlacements || [])
+    ];
+    const filteredPlacements = filterPlacements(combinedPlacements);
     const memberRevenue = filteredPlacements.reduce(
-      (sum, entry) => sum + Number(entry.revenue || 0),
+      (sum, entry) => sum + Number(entry.revenue || entry.revenueUsd || 0),
       0
     );
+    
+    // For leads, also add team placement revenue
+    if (member.user.role === Role.TEAM_LEAD) {
+      const leadTeamPlacements = teamPlacementsByLead.get(member.user.id) || [];
+      const teamRevenue = leadTeamPlacements.reduce(
+        (sum, tp) => sum + Number(tp.revenueLeadUsd || 0),
+        0
+      );
+      return total + memberRevenue + teamRevenue;
+    }
+    
     return total + memberRevenue;
   }, 0);
 
   const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
-    const filteredPlacements = filterPlacements(member.user.placements || []);
-    return total + filteredPlacements.length;
+    const combinedPlacements = [
+      ...(member.user.placements || []),
+      ...(member.user.personalPlacements || [])
+    ];
+    const filteredPlacements = filterPlacements(combinedPlacements);
+    let count = filteredPlacements.length;
+    
+    // For leads, also add team placement count
+    if (member.user.role === Role.TEAM_LEAD) {
+      const leadTeamPlacements = teamPlacementsByLead.get(member.user.id) || [];
+      count += leadTeamPlacements.length;
+    }
+    
+    return total + count;
   }, 0);
 
   // Determine team target type from members (default to REVENUE)
@@ -380,7 +476,25 @@ export async function getTeamDetails(id, year) {
     totalPlacements: aggregatedPlacementsCount,
     availableYears: Array.from(availableYears).sort((a, b) => b - a),
     leads: leads.map((p) => {
-      const filteredPlacements = filterPlacements(p.user.placements || []);
+      const combinedPlacements = [
+        ...(p.user.placements || []),
+        ...(p.user.personalPlacements || [])
+      ];
+      const filteredPlacements = filterPlacements(combinedPlacements);
+      const personalRevenue = filteredPlacements.reduce(
+        (sum, e) => sum + Number(e.revenue || e.revenueUsd || 0),
+        0
+      );
+      const personalPlacementsCount = filteredPlacements.length;
+      
+      // Add team placements for this lead
+      const leadTeamPlacements = teamPlacementsByLead.get(p.user.id) || [];
+      const teamRevenue = leadTeamPlacements.reduce(
+        (sum, tp) => sum + Number(tp.revenueLeadUsd || 0),
+        0
+      );
+      const teamPlacementsCount = leadTeamPlacements.length;
+      
       return {
         id: p.id,
         userId: p.user.id,
@@ -391,16 +505,17 @@ export async function getTeamDetails(id, year) {
         target: Number(p.yearlyTarget || 0),
         targetType: p.targetType,
         slabQualified: p.slabQualified,
-        revenue: filteredPlacements.reduce(
-          (sum, e) => sum + Number(e.revenue || 0),
-          0
-        ),
-        placementsCount: filteredPlacements.length,
+        revenue: personalRevenue + teamRevenue,
+        placementsCount: personalPlacementsCount + teamPlacementsCount,
         joinedAt: p.createdAt,
       };
     }),
     members: members.map((p) => {
-      const filteredPlacements = filterPlacements(p.user.placements || []);
+      const combinedPlacements = [
+        ...(p.user.placements || []),
+        ...(p.user.personalPlacements || [])
+      ];
+      const filteredPlacements = filterPlacements(combinedPlacements);
       return {
         id: p.id,
         userId: p.user.id,
@@ -414,7 +529,7 @@ export async function getTeamDetails(id, year) {
         managerName: p.manager?.name || null,
         managerId: p.managerId,
         revenue: filteredPlacements.reduce(
-          (sum, e) => sum + Number(e.revenue || 0),
+          (sum, e) => sum + Number(e.revenue || e.revenueUsd || 0),
           0
         ),
         placementsCount: filteredPlacements.length,

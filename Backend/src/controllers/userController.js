@@ -1,8 +1,7 @@
-import pkg from "@prisma/client";
+import { Role } from "../generated/client/index.js";
 import bcrypt from "bcryptjs";
 import prisma from "../prisma.js";
 
-const { Role } = pkg;
 // const prisma = new PrismaClient();
 
 export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, role }) {

@@ -1,17 +1,40 @@
 import express from "express";
-import pkg from "@prisma/client";
+import { Role } from "../generated/client/index.js";
 import prisma from "../prisma.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { cacheMiddleware } from "../middleware/cache.js";
-import { getSuperAdminOverview, getTeamLeadOverview } from "../controllers/dashboardController.js";
+import {
+  getSuperAdminOverview,
+  getTeamLeadOverview,
+  getPersonalPlacementOverview,
+  getTeamPlacementOverview,
+} from "../controllers/dashboardController.js";
 
-const { Role } = pkg;
 const router = express.Router();
 // const prisma = new PrismaClient();
 
-// Helper to process employee data with year filtering
-const processEmployeeData = (employee, year) => {
+// Helper to process employee data with year filtering (now includes PersonalPlacement and TeamPlacement)
+const processEmployeeData = async (employee, year) => {
   if (!employee || !employee.employeeProfile) return null;
+
+  // Fetch personal and team placements
+  // Check for team placements if user is a TEAM_LEAD (any level, not just L2/L3)
+  const [personalPlacements, teamPlacements] = await Promise.all([
+    prisma.personalPlacement.findMany({
+      where: {
+        employeeId: employee.id,
+        ...(year && year !== 'All' ? { placementYear: Number(year) } : {}),
+      },
+    }),
+    employee.role === Role.TEAM_LEAD
+      ? prisma.teamPlacement.findMany({
+          where: {
+            leadId: employee.id,
+            ...(year && year !== 'All' ? { placementYear: Number(year) } : {}),
+          },
+        })
+      : Promise.resolve([]),
+  ]);
 
   // Calculate available years from all data before filtering
   const availableYears = new Set();
@@ -22,8 +45,29 @@ const processEmployeeData = (employee, year) => {
         const y = new Date(p.doj).getFullYear();
         if (!isNaN(y)) availableYears.add(y);
       }
+      if (p.placementYear) {
+        availableYears.add(p.placementYear);
+      }
     });
   }
+
+  // Add years from personal placements
+  personalPlacements.forEach(p => {
+    if (p.placementYear) availableYears.add(p.placementYear);
+    if (p.doj) {
+      const y = new Date(p.doj).getFullYear();
+      if (!isNaN(y)) availableYears.add(y);
+    }
+  });
+
+  // Add years from team placements
+  teamPlacements.forEach(p => {
+    if (p.placementYear) availableYears.add(p.placementYear);
+    if (p.doj) {
+      const y = new Date(p.doj).getFullYear();
+      if (!isNaN(y)) availableYears.add(y);
+    }
+  });
   
   if (employee.incentives) {
     employee.incentives.forEach(i => {
@@ -44,16 +88,41 @@ const processEmployeeData = (employee, year) => {
     targetYear = parseInt(year);
   }
 
-  // Filter placements by DOJ year
-  const filteredPlacements = employee.placements.filter(p => {
+  // Filter old placements by DOJ year or placementYear
+  const filteredPlacements = (employee.placements || []).filter(p => {
     if (!targetYear) return true;
-    if (!p.doj) return false;
-    const pDate = new Date(p.doj);
-    return pDate.getFullYear() === targetYear;
+    if (p.placementYear) return p.placementYear === targetYear;
+    if (p.doj) {
+      const pDate = new Date(p.doj);
+      return pDate.getFullYear() === targetYear;
+    }
+    return false;
+  });
+
+  // Filter personal placements by year
+  const filteredPersonalPlacements = personalPlacements.filter(p => {
+    if (!targetYear) return true;
+    if (p.placementYear) return p.placementYear === targetYear;
+    if (p.doj) {
+      const pDate = new Date(p.doj);
+      return pDate.getFullYear() === targetYear;
+    }
+    return false;
+  });
+
+  // Filter team placements by year
+  const filteredTeamPlacements = teamPlacements.filter(p => {
+    if (!targetYear) return true;
+    if (p.placementYear) return p.placementYear === targetYear;
+    if (p.doj) {
+      const pDate = new Date(p.doj);
+      return pDate.getFullYear() === targetYear;
+    }
+    return false;
   });
 
   // Filter incentives by periodEnd year
-  const filteredIncentives = employee.incentives.filter(i => {
+  const filteredIncentives = (employee.incentives || []).filter(i => {
     if (!targetYear) return true;
     if (!i.periodEnd) return false;
     const iDate = new Date(i.periodEnd);
@@ -63,14 +132,25 @@ const processEmployeeData = (employee, year) => {
   const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
   const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
   const yearlyPlacementTarget = employee.employeeProfile.yearlyPlacementTarget ? Number(employee.employeeProfile.yearlyPlacementTarget) : null;
-  const targetType = employee.employeeProfile.targetType || "REVENUE";
+  const targetType = employee.employeeProfile.targetType || (employee.employeeProfile.level === "L4" ? "PLACEMENTS" : "REVENUE");
   const slabQualified = employee.employeeProfile.slabQualified || false;
   
-  const revenueGenerated = filteredPlacements.reduce(
+  // Calculate revenue from all sources
+  const oldPlacementRevenue = filteredPlacements.reduce(
     (sum, p) => sum + Number(p.revenue || 0),
     0
   );
-  const placementsCount = filteredPlacements.length;
+  const personalPlacementRevenue = filteredPersonalPlacements.reduce(
+    (sum, p) => sum + Number(p.revenueUsd || 0),
+    0
+  );
+  const teamPlacementRevenue = filteredTeamPlacements.reduce(
+    (sum, p) => sum + Number(p.revenueLeadUsd || 0),
+    0
+  );
+  const revenueGenerated = oldPlacementRevenue + personalPlacementRevenue + teamPlacementRevenue;
+  
+  const placementsCount = filteredPlacements.length + filteredPersonalPlacements.length + filteredTeamPlacements.length;
 
   let percentage = 0;
   if (targetType === "PLACEMENTS") {
@@ -86,34 +166,81 @@ const processEmployeeData = (employee, year) => {
         )
       : null;
 
-  const totalIncentiveInr = filteredPlacements.reduce(
+  const oldPlacementIncentive = filteredPlacements.reduce(
     (sum, p) => sum + Number(p.incentiveAmountInr || 0),
     0
   );
+  const personalPlacementIncentive = filteredPersonalPlacements.reduce(
+    (sum, p) => sum + Number(p.incentiveInr || 0),
+    0
+  );
+  const teamPlacementIncentive = filteredTeamPlacements.reduce(
+    (sum, p) => sum + Number(p.incentiveInr || 0),
+    0
+  );
+  const totalIncentiveInr = oldPlacementIncentive + personalPlacementIncentive + teamPlacementIncentive;
 
-  return {
-    id: employee.id,
-    name: employee.name,
-    team: employee.employeeProfile.team?.name || null,
-    teamLead: employee.employeeProfile.manager?.name || null,
-    level: employee.employeeProfile.level || "L4",
-    vbid: employee.employeeProfile.vbid || null,
-    yearlyTarget,
-    yearlyRevenueTarget,
-    yearlyPlacementTarget,
-    targetType,
-    slabQualified,
-    revenueGenerated,
-    placementsCount,
-    percentage,
-    selectedYear: targetYear,
-    availableYears: sortedAvailableYears,
-    incentive: {
-      slabName: latestIncentive?.slabName || null,
-      amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
-      amountInr: totalIncentiveInr,
-    },
-    placements: filteredPlacements.map((p) => ({
+  // Convert personal placements to same format
+  const convertedPersonalPlacements = filteredPersonalPlacements.map(p => ({
+    id: p.id,
+    candidateName: p.candidateName,
+    candidateId: null,
+    placementYear: p.placementYear,
+    plcId: p.plcId,
+    sourcer: null,
+    accountManager: null,
+    teamLead: p.teamLeadName,
+    placementSharing: null,
+    placementCredit: null,
+    totalRevenue: p.totalRevenueGenerated,
+    revenueAsLead: null,
+    doi: null,
+    doj: p.doj,
+    doq: p.doq,
+    client: p.client,
+    placementType: p.placementType, // Keep exact value from sheet
+    billedHours: p.totalBilledHours,
+    revenue: Number(p.revenueUsd),
+    billingStatus: p.billingStatus,
+    collectionStatus: p.collectionStatus,
+    incentivePayoutEta: null,
+    incentiveAmountInr: Number(p.incentiveInr),
+    incentivePaidInr: Number(p.incentivePaidInr || 0),
+    monthlyBilling: [],
+  }));
+
+  // Convert team placements to same format
+  const convertedTeamPlacements = filteredTeamPlacements.map(p => ({
+    id: p.id,
+    candidateName: p.candidateName,
+    candidateId: null,
+    placementYear: p.placementYear,
+    plcId: p.plcId,
+    sourcer: null,
+    accountManager: null,
+    teamLead: p.leadName,
+    placementSharing: p.splitWith,
+    placementCredit: null,
+    totalRevenue: p.totalRevenueGenerated,
+    revenueAsLead: Number(p.revenueLeadUsd),
+    doi: null,
+    doj: p.doj,
+    doq: p.doq,
+    client: p.client,
+    placementType: p.placementType, // Keep exact value from sheet
+    billedHours: p.totalBilledHours,
+    revenue: Number(p.revenueLeadUsd),
+    billingStatus: p.billingStatus,
+    collectionStatus: p.collectionStatus,
+    incentivePayoutEta: null,
+    incentiveAmountInr: Number(p.incentiveInr),
+    incentivePaidInr: Number(p.incentivePaidInr || 0),
+    monthlyBilling: [],
+  }));
+
+  // Combine all placements
+  const allPlacements = [
+    ...filteredPlacements.map((p) => ({
       id: p.id,
       candidateName: p.candidateName,
       candidateId: p.candidateId,
@@ -138,13 +265,46 @@ const processEmployeeData = (employee, year) => {
       incentivePayoutEta: p.incentivePayoutEta,
       incentiveAmountInr: Number(p.incentiveAmountInr),
       incentivePaidInr: Number(p.incentivePaidInr || 0),
-      monthlyBilling: p.monthlyBillings.map((mb) => ({
+      monthlyBilling: (p.monthlyBillings || []).map((mb) => ({
         id: mb.id,
         month: mb.month,
         hours: mb.hours,
         status: mb.status,
       })),
     })),
+    ...convertedPersonalPlacements,
+    ...convertedTeamPlacements,
+  ].sort((a, b) => {
+    // Sort by doj descending, or createdAt if doj not available
+    const dateA = a.doj ? new Date(a.doj) : new Date(0);
+    const dateB = b.doj ? new Date(b.doj) : new Date(0);
+    return dateB - dateA;
+  });
+
+  return {
+    id: employee.id,
+    name: employee.name,
+    role: employee.role, // Include role so frontend can check if user is TEAM_LEAD
+    team: employee.employeeProfile.team?.name || null,
+    teamLead: employee.employeeProfile.manager?.name || null,
+    level: employee.employeeProfile.level || "L4",
+    vbid: employee.employeeProfile.vbid || null,
+    yearlyTarget,
+    yearlyRevenueTarget,
+    yearlyPlacementTarget,
+    targetType,
+    slabQualified,
+    revenueGenerated,
+    placementsCount,
+    percentage,
+    selectedYear: targetYear,
+    availableYears: sortedAvailableYears,
+    incentive: {
+      slabName: latestIncentive?.slabName || null,
+      amountUsd: latestIncentive?.amountUsd ? Number(latestIncentive.amountUsd) : 0,
+      amountInr: totalIncentiveInr,
+    },
+    placements: allPlacements,
   };
 };
 
@@ -207,7 +367,7 @@ router.get(
         },
       });
 
-      const processedData = processEmployeeData(employee, year);
+      const processedData = await processEmployeeData(employee, year);
       
       if (!processedData) {
         return res.status(404).json({ error: "Employee not configured" });
@@ -269,8 +429,40 @@ router.get(
         }
       }
 
-      const processedData = processEmployeeData(employee, year);
+      const processedData = await processEmployeeData(employee, year);
       res.json(processedData);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Sheet-backed personal placements overview (for dashboards)
+router.get(
+  "/personal-placements",
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN, Role.TEAM_LEAD, Role.EMPLOYEE),
+  async (req, res, next) => {
+    try {
+      const { userId, year } = req.query;
+      const targetUserId = userId || req.user.id;
+      const data = await getPersonalPlacementOverview(targetUserId, year || "All");
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Sheet-backed team placements overview (for dashboards)
+router.get(
+  "/team-placements",
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN, Role.TEAM_LEAD),
+  async (req, res, next) => {
+    try {
+      const { leadId, year } = req.query;
+      const targetLeadId = leadId || req.user.id;
+      const data = await getTeamPlacementOverview(targetLeadId, year || "All");
+      res.json(data);
     } catch (err) {
       next(err);
     }

@@ -32,14 +32,25 @@ export const formatCurrency = (amount, currencyCode = CURRENCY_CODE) => {
 };
 
 /**
+ * Returns numeric percentage for display (handles backend decimal form e.g. 1.01 = 101%, 2.5 = 250%)
+ * @param {number|string} value
+ * @returns {number}
+ */
+export const getDisplayPercentage = (value) => {
+  if (value === undefined || value === null || value === '') return 0;
+  const num = Number(value);
+  if (isNaN(num)) return 0;
+  if (num > 1 && num <= 10) return num * 100;
+  return num;
+};
+
+/**
  * Formats a percentage
  * @param {number|string} value 
  * @returns {string}
  */
 export const formatPercentage = (value) => {
-  if (value === undefined || value === null || value === '') return '0%';
-  const num = Number(value);
-  if (isNaN(num)) return '0%';
+  const num = getDisplayPercentage(value);
   return `${Math.round(num)}%`;
 };
 
@@ -324,9 +335,19 @@ export const getSlabFromIncentivePercentage = (incentivePercentageStr, teamName,
   return { label, color };
 };
 
+/** Format placement count: 10 → "10", 10.5 → "10.5" (no trailing .00) */
+export const formatPlacementCount = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const num = Number(value);
+  if (isNaN(num)) return null;
+  return num % 1 === 0 ? String(num) : String(Number(num.toFixed(2)));
+};
+
 export const CalculationService = {
   formatCurrency,
   formatPercentage,
+  getDisplayPercentage,
+  formatPlacementCount,
   calculateDaysDifference,
   checkQualifierStatus, // Checks if qualifier period (90 days) is completed
   calculateTargetAchievement,

@@ -320,8 +320,10 @@ const HierarchyTab = ({ user }) => {
         setExpandedLeads(prev => ({ ...prev, [leadId]: !prev[leadId] }));
     };
 
-    const handleMemberClick = (member) => {
-        navigate(`/employee/${member.id}`);
+    const handleMemberClick = (member, lead, team, forceViewParam) => {
+        const isLead = member.role === 'TEAM_LEAD' || (member.level && ['L2', 'L3'].includes(member.level.toUpperCase()));
+        const viewParam = forceViewParam || (isLead ? '?view=team' : '?view=personal');
+        navigate(`/employee/${member.id}${viewParam}`);
     };
 
     const getTeamColorClasses = (color) => {
@@ -1118,7 +1120,7 @@ const MembersTab = () => {
                         )}
                       </td>
                       <td className="py-4 text-right pr-6">
-                         <button onClick={() => navigate(`/employee/${member.id}`)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">View</button>
+                         <button onClick={() => handleMemberClick(member)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">View</button>
                          <button onClick={() => openEditModal(member)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">Edit</button>
                          <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
                       </td>

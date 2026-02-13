@@ -96,9 +96,8 @@ export async function listTeamsWithMembers(currentUser) {
       return total + combinedCount;
     }, 0);
 
-    // Determine team target type from members (default to REVENUE)
-    // If any member has PLACEMENTS, the team is likely PLACEMENTS
-    const targetType = team.employees.some(m => m.targetType === 'PLACEMENTS') ? 'PLACEMENTS' : 'REVENUE';
+    // Vantage team (name contains "vant") = REVENUE; all other teams = PLACEMENTS
+    const targetType = team.name.toLowerCase().includes('vant') ? 'REVENUE' : 'PLACEMENTS';
 
     return {
       id: team.id,
@@ -407,8 +406,8 @@ export async function getTeamDetails(id) {
     return total + count;
   }, 0);
 
-  // Determine team target type from members (default to REVENUE)
-  const targetType = team.employees.some(m => m.targetType === 'PLACEMENTS') ? 'PLACEMENTS' : 'REVENUE';
+  // Vantage team (name contains "vant") = REVENUE; all other teams = PLACEMENTS
+  const targetType = team.name.toLowerCase().includes('vant') ? 'REVENUE' : 'PLACEMENTS';
 
   return {
     id: team.id,

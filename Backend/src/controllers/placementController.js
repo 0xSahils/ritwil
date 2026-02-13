@@ -1,35 +1,55 @@
 import prisma from "../prisma.js";
 import { Role } from "../generated/client/index.js";
 
-// Helper to parse numbers, handling "NA", currency symbols, and empty strings
+// Helper to parse numbers: handles NA, Excel errors, commas, and empty strings
 const parseNum = (val, defaultVal = null) => {
-  if (val === undefined || val === null || val === '') return defaultVal;
+  if (val === undefined || val === null) return defaultVal;
   const strVal = String(val).trim().toLowerCase();
-  if (strVal === 'na' || strVal === '-' || strVal === 'n/a') return defaultVal;
-  
-  if (typeof val === 'number') return val;
-  const clean = String(val).replace(/[^0-9.-]/g, '');
+  if (strVal === "") return defaultVal;
+  // Excel/CSV placeholders and errors
+  if (/^(na|n\/a|-|–|—|#n\/a|#ref!|#value!|#div\/0!|#name\?|\s*-\s*)$/.test(strVal)) return defaultVal;
+
+  if (typeof val === "number" && !isNaN(val)) return val;
+  // Remove commas (thousands), currency symbols; keep digits, one minus, one decimal point
+  const clean = String(val).replace(/,/g, "").replace(/[^0-9.-]/g, "");
   const num = Number(clean);
-  // Only return defaultVal if the cleaned string is empty or if it's truly NaN
-  // We want to allow actual 0 as a valid number
-  return (isNaN(num) || (clean === '' && val !== 0)) ? defaultVal : num;
+  return (isNaN(num) || clean === "") ? defaultVal : num;
 };
 
 // Alias for parseNum to maintain compatibility with existing code
 const parseCurrency = (val) => parseNum(val);
 
+// Cap value to Decimal(5,2) range to avoid DB overflow (max 999.99, min -999.99)
+const capDecimal5_2 = (val) => {
+  if (val === null || val === undefined) return null;
+  const num = parseNum(val);
+  if (num === null) return null;
+  return Math.min(999.99, Math.max(-999.99, num));
+};
+
+// Placement done: store as-is up to Decimal(14,2) max. Reject only negatives.
+const PLACEMENT_DONE_MAX = 999999999999.99;
+const capPlacementDone = (val) => {
+  if (val === null || val === undefined) return null;
+  const num = parseNum(val);
+  if (num === null || num < 0) return null;
+  return Math.min(PLACEMENT_DONE_MAX, Math.max(0, num));
+};
+
 // Helper to sanitize numeric values for precision 5, scale 2 (max 999.99)
-// Also handles Excel decimal heuristic (e.g. 0.85 for 85%)
+// Also handles Excel decimal heuristic (e.g. 0.85 for 85%, 1.01 for 101%)
 const sanitizePercent = (val) => {
   const num = parseNum(val);
   if (num === null) return null;
-  
+
   let result = num;
-  // Heuristic: If value is <= 1.0 and > 0, it's likely a decimal from Excel (e.g. 0.85 for 85%)
+  // Heuristic: 0 < value <= 1 → decimal (0.85 = 85%); 1 < value <= 10 → over-100% decimal (1.01 = 101%, 2.5 = 250%)
   if (result > 0 && result <= 1.0) {
     result = result * 100;
+  } else if (result > 1 && result <= 10) {
+    result = result * 100;
   }
-  
+
   // Precision 5, scale 2 means max 999.99. We'll cap at 999.99 and floor at -999.99
   return Math.min(999.99, Math.max(-999.99, result));
 };
@@ -56,19 +76,25 @@ const mapPlacementType = (type) => {
   return "PERMANENT";
 };
 
-// Shared helper to normalize string headers
+// Shared helper to normalize string headers (collapses spaces around parentheses for consistency)
 const normalizeHeader = (h) => {
-  const normalized = String(h || "").trim().toLowerCase();
-  // Handle common typo "pls id" -> "plc id"
+  let normalized = String(h || "").trim().toLowerCase();
   if (normalized === "pls id") return "plc id";
+  normalized = normalized.replace(/\s*\(\s*/g, "(").replace(/\s*\)\s*/g, ")");
   return normalized;
 };
 
-// Helper to parse dates, handling Excel serials and specific invalid formats (1/0/1990)
+const shouldSkipDuplicateCheck = (plcId) => {
+  const normalized = String(plcId || "").trim().toLowerCase();
+  return normalized === "plc-passthrough" || normalized === "0" || normalized === "";
+};
+
+// Helper to parse dates, handling Excel serials, errors (#N/A), and invalid formats
 const parseDateCell = (val) => {
-  if (val === undefined || val === null || val === '') return null;
+  if (val === undefined || val === null || val === "") return null;
   const strVal = String(val).trim().toLowerCase();
-  if (strVal === 'na' || strVal === '-' || strVal === 'n/a' || strVal === '0') return null;
+  if (strVal === "" || strVal === "na" || strVal === "-" || strVal === "n/a" || strVal === "0") return null;
+  if (/^#(n\/a|ref!|value!|div\/0!|name\?)$/.test(strVal)) return null;
 
   let d;
   if (typeof val === "number") {
@@ -105,6 +131,71 @@ const PERSONAL_REQUIRED_HEADERS = [
 const TEAM_REQUIRED_HEADERS = [
   "lead name",
 ];
+
+// Strict L2/L3 team sheet: required summary headers (first block)
+const REQUIRED_TEAM_SUMMARY_HEADERS = [
+  "team", "vb code", "lead name", "yearly placement target", "placement done", "placement ach %",
+  "yearly revenue target", "revenue ach", "revenue target achieved %", "total revenue generated (usd)",
+  "slab qualified", "total incentive in inr", "total incentive in inr (paid)"
+];
+
+// Strict L2/L3 team sheet: required placement headers (placement block)
+const REQUIRED_TEAM_PLACEMENT_HEADERS = [
+  "lead name", "candidate name", "recruiter name", "lead", "split with", "placement year", "doj", "doq",
+  "client", "plc id", "placement type", "billing status", "collection status", "total billed hours",
+  "revenue -lead (usd)", "incentive amount (inr)", "incentive paid (inr)"
+];
+
+// Recruiter/personal sheet: summary block (fewer columns than team sheet)
+// Team, VB Code, Recruiter Name, Team Lead, Yearly Placement Target, Placement Done, Target Achieved %, Total Revenue Generated (USD), Slab qualified, Total Incentive in INR, Total Incentive in INR (Paid)
+const REQUIRED_PERSONAL_SUMMARY_HEADERS = [
+  "team", "vb code", "recruiter name", "team lead", "yearly placement target", "placement done",
+  "target achieved %", "total revenue generated (usd)", "slab qualified", "total incentive in inr", "total incentive in inr (paid)"
+];
+// Aliases: person column (at least one); ach column can be "target achieved %" or "placement ach %"
+const PERSONAL_SUMMARY_PERSON_ALIASES = ["recruiter name", "lead name", "lead", "recruiter"];
+const PERSONAL_SUMMARY_ACH_ALIASES = ["target achieved %", "placement ach %"];
+
+// Recruiter/personal sheet: placement block
+// Recruiter Name, Candidate Name, Placement Year, DOJ, DOQ, Client, PLC ID, Placement Type, Billing Status, Collection Status, Total Billed Hours, Revenue (USD), Incentive amount (INR), Incentive Paid (INR)
+const REQUIRED_PERSONAL_PLACEMENT_HEADERS = [
+  "recruiter name", "candidate name", "placement year", "doj", "doq", "client", "plc id",
+  "placement type", "billing status", "collection status", "total billed hours",
+  "revenue (usd)", "incentive amount (inr)", "incentive paid (inr)"
+];
+const PERSONAL_PLACEMENT_PERSON_ALIASES = ["recruiter name", "lead name", "lead", "vb code"];
+
+function validateRequiredHeaders(normalizedHeaderList, required) {
+  const set = new Set(normalizedHeaderList);
+  // Required names may have spaces around parentheses; set has normalizeHeader() form (e.g. "total revenue generated(usd)")
+  const missing = required.filter((h) => !set.has(normalizeHeader(h)));
+  return { valid: missing.length === 0, missing };
+}
+
+// Personal sheet: summary block must have required summary columns + at least one person column
+function validatePersonalSummaryHeaders(normalizedHeaderList) {
+  const set = new Set(normalizedHeaderList);
+  const hasPerson = PERSONAL_SUMMARY_PERSON_ALIASES.some((h) => set.has(h));
+  const requiredCore = REQUIRED_PERSONAL_SUMMARY_HEADERS.filter((h) => !PERSONAL_SUMMARY_PERSON_ALIASES.includes(h));
+  const has = (key) => set.has(normalizeHeader(key));
+  const missing = requiredCore.filter((h) => {
+    if (PERSONAL_SUMMARY_ACH_ALIASES.includes(h)) return !PERSONAL_SUMMARY_ACH_ALIASES.some((alias) => has(alias));
+    return !has(h);
+  });
+  if (!hasPerson) missing.push("recruiter name or lead name");
+  return { valid: missing.length === 0, missing };
+}
+
+// Personal sheet: placement block must have required placement columns
+function validatePersonalPlacementHeaders(normalizedHeaderList) {
+  const set = new Set(normalizedHeaderList);
+  const requiredCore = REQUIRED_PERSONAL_PLACEMENT_HEADERS.filter((h) => !PERSONAL_PLACEMENT_PERSON_ALIASES.includes(h));
+  const has = (key) => set.has(normalizeHeader(key));
+  const missing = requiredCore.filter((h) => !has(h));
+  const hasPerson = PERSONAL_PLACEMENT_PERSON_ALIASES.some((h) => set.has(h));
+  if (!hasPerson) missing.push("recruiter name or vb code");
+  return { valid: missing.length === 0, missing };
+}
 
 export function validatePersonalHeaders(headers) {
   if (!Array.isArray(headers) || headers.length === 0) {
@@ -182,10 +273,13 @@ async function findEmployeeByVbOrName(vbCode, recruiterName) {
   return null;
 }
 
-async function findLeadByVbOrName(vbCode, leadName) {
+async function findLeadByVbOrName(vbCode, leadName, teamName) {
+  const teamFilter = teamName && String(teamName).trim()
+    ? { team: { name: { equals: String(teamName).trim(), mode: "insensitive" } } }
+    : {};
   if (vbCode) {
     const profile = await prisma.employeeProfile.findFirst({
-      where: { vbid: String(vbCode).trim() },
+      where: { vbid: String(vbCode).trim(), ...teamFilter },
       include: { user: true },
     });
     if (profile) return profile;
@@ -195,7 +289,8 @@ async function findLeadByVbOrName(vbCode, leadName) {
       where: {
         user: {
           name: { equals: leadName.trim(), mode: "insensitive" },
-        }
+        },
+        ...teamFilter
       },
       include: { user: true },
     });
@@ -1155,8 +1250,19 @@ export async function bulkUpdateMetrics(metricsData, actorId) {
 
 // --- SHARED SUMMARY EXTRACTION HELPERS ---
 
+// Slab qualified must not be a placement type value (FTE, CONTRACT, PERMANENT) - often wrong column is mapped
+const PLACEMENT_TYPE_SLAB_BLACKLIST = new Set(["fte", "contract", "permanent", "permanent full time", "pft"]);
+const sanitizeSlabQualified = (val) => {
+  if (val == null || val === "") return null;
+  const s = String(val).trim().toLowerCase();
+  if (!s) return null;
+  if (PLACEMENT_TYPE_SLAB_BLACKLIST.has(s)) return null;
+  return String(val).trim();
+};
+
 // Helper to extract ALL summary fields from a row (using header mapping)
 const extractSummaryFields = (row, getVal) => {
+  const slabRaw = getVal(row, "slab qualified") || getVal(row, "slab") ? String(getVal(row, "slab qualified") || getVal(row, "slab")).trim() : null;
   return {
     vbCode: getVal(row, "vb code") ? String(getVal(row, "vb code")).trim() : null,
     recruiterName: getVal(row, "recruiter name") || getVal(row, "lead name") || getVal(row, "lead") || getVal(row, "recruiter") ? String(getVal(row, "recruiter name") || getVal(row, "lead name") || getVal(row, "lead") || getVal(row, "recruiter")).trim() : null,
@@ -1167,18 +1273,18 @@ const extractSummaryFields = (row, getVal) => {
     yearlyRevenueTarget: parseNum(getVal(row, "yearly revenue target") || getVal(row, "revenue target") || getVal(row, "rev target")),
     revenueAch: parseNum(getVal(row, "revenue ach") || getVal(row, "total revenue") || getVal(row, "rev ach")),
     revenueTargetAchievedPercent: sanitizePercent(getVal(row, "revenue target achieved %") || getVal(row, "rev ach %") || getVal(row, "revenue ach %")),
-    totalRevenueGenerated: parseNum(getVal(row, "total revenue generated (usd)") || getVal(row, "total revenue") || getVal(row, "total revenue generated")),
-    slabQualified: getVal(row, "slab qualified") || getVal(row, "slab") ? String(getVal(row, "slab qualified") || getVal(row, "slab")).trim() : null,
-    totalIncentiveInr: parseNum(getVal(row, "total incentive in inr") || getVal(row, "total incentive") || getVal(row, "incentive") || getVal(row, "incentive amount")),
+    totalRevenueGenerated: parseNum(getVal(row, "total revenue generated (usd)") || getVal(row, "revenue generated") || getVal(row, "total revenue") || getVal(row, "total revenue generated")),
+    slabQualified: sanitizeSlabQualified(slabRaw),
+    totalIncentiveInr: parseNum(getVal(row, "total incentive in inr") || getVal(row, "incentive earned") || getVal(row, "total incentive") || getVal(row, "incentive") || getVal(row, "incentive amount")),
     totalIncentivePaidInr: parseNum(getVal(row, "total incentive in inr (paid)") || getVal(row, "incentive paid") || getVal(row, "total incentive paid")),
     individualSynopsis: getVal(row, "individual synopsis") || getVal(row, "synopsis") ? String(getVal(row, "individual synopsis") || getVal(row, "synopsis")).trim() : null,
   };
 };
 
-// Helper to extract summary fields from team name row format
-// Format: [Team, VB Code, Recruiter/Lead Name, Team Lead, Yearly Placement Target, Placement Done, Target Achieved %, Total Revenue Generated, Slab qualified, Total Incentive in INR, Total Incentive in INR (Paid)]
+// Helper to extract summary fields from team name row format (fixed indices for sheet: Team, VB Code, Lead Name, Yearly Placement Target, Placement Done, Placement Ach %, Yearly Revenue Target, Revenue Ach, Revenue Target Achieved %, Total Revenue Generated (USD), Slab qualified, ...)
 const extractSummaryFromTeamNameRow = (row, isTeamImport = false) => {
   if (isTeamImport) {
+    const slabRaw = row[10] != null && row[10] !== "" ? String(row[10]).trim() : null;
     return {
       vbCode: row[1] ? String(row[1]).trim() : null,
       leadName: row[2] ? String(row[2]).trim() : null,
@@ -1189,12 +1295,13 @@ const extractSummaryFromTeamNameRow = (row, isTeamImport = false) => {
       revenueAch: parseNum(row[7]),
       revenueTargetAchievedPercent: sanitizePercent(row[8]),
       totalRevenueGenerated: parseNum(row[9]),
-      slabQualified: row[10] ? String(row[10]).trim() : null,
+      slabQualified: sanitizeSlabQualified(slabRaw),
       totalIncentiveInr: parseNum(row[11]),
       totalIncentivePaidInr: parseNum(row[12]) || null,
       individualSynopsis: row[13] ? String(row[13]).trim() : null,
     };
   }
+  const slabRaw = row[8] != null && row[8] !== "" ? String(row[8]).trim() : null;
   return {
     vbCode: row[1] ? String(row[1]).trim() : null,
     recruiterName: row[2] ? String(row[2]).trim() : null,
@@ -1203,7 +1310,7 @@ const extractSummaryFromTeamNameRow = (row, isTeamImport = false) => {
     placementDone: parseNum(row[5]),
     targetAchievedPercent: sanitizePercent(row[6]),
     totalRevenueGenerated: parseNum(row[7]),
-    slabQualified: row[8] ? String(row[8]).trim() : null,
+    slabQualified: sanitizeSlabQualified(slabRaw),
     totalIncentiveInr: parseNum(row[9]),
     totalIncentivePaidInr: parseNum(row[10]) || null,
     individualSynopsis: row[11] ? String(row[11]).trim() : null,
@@ -1250,7 +1357,8 @@ export async function importPersonalPlacements(payload, actorId) {
   };
 
   const getVal = (row, key) => {
-    const idx = headerMap[key];
+    const k = normalizeHeader(key);
+    const idx = headerMap[k];
     if (idx === undefined) return null;
     return row[idx];
   };
@@ -1276,29 +1384,66 @@ export async function importPersonalPlacements(payload, actorId) {
   // Find the "Team" column index (usually first column)
   const teamColIdx = headerMap["team"] !== undefined ? headerMap["team"] : 0;
 
+  // Validate first header row (from payload headers) – must be either summary or placement style
+  const normalizedFirstHeaders = headers.map(normalizeHeader);
+  const firstHasSummary = normalizedFirstHeaders.includes("team") && normalizedFirstHeaders.includes("vb code");
+  const firstHasPlacement = normalizedFirstHeaders.includes("candidate name") && normalizedFirstHeaders.includes("plc id");
+  if (firstHasSummary) {
+    const summaryCheck = validatePersonalSummaryHeaders(normalizedFirstHeaders);
+    if (!summaryCheck.valid) {
+      throw new Error(
+        `Invalid recruiter sheet: missing summary headers: ${summaryCheck.missing.join(", ")}. ` +
+        `Required (summary block): ${REQUIRED_PERSONAL_SUMMARY_HEADERS.join(", ")} and recruiter name or lead name.`
+      );
+    }
+  } else if (firstHasPlacement) {
+    const placementCheck = validatePersonalPlacementHeaders(normalizedFirstHeaders);
+    if (!placementCheck.valid) {
+      throw new Error(
+        `Invalid recruiter sheet: missing placement headers: ${placementCheck.missing.join(", ")}. ` +
+        `Required (placement block): ${REQUIRED_PERSONAL_PLACEMENT_HEADERS.join(", ")} and recruiter name or vb code.`
+      );
+    }
+  }
+  // If neither, validatePersonalHeaders already required at least one person column; allow import to proceed
+
   console.log(`Processing rows into preparedRows...`);
   for (const row of rows) {
     rowIndex += 1;
     if (rowIndex % 100 === 0) console.log(`Processing row ${rowIndex}...`);
 
     // Dynamic Header Detection: Detect if this is a header row (Summary or Placement)
-     const rowStrings = row.map(c => String(c || "").trim().toLowerCase());
-     const hasCandidateHeader = rowStrings.includes("candidate name");
-     const hasPlcIdHeader = rowStrings.includes("plc id");
-     const hasTeamHeaderRow = rowStrings.includes("team") && rowStrings.includes("vb code");
-     
-     if ((hasCandidateHeader && hasPlcIdHeader) || hasTeamHeaderRow) {
-       console.log(`Row ${rowIndex}: Detected new header row (${hasCandidateHeader ? 'Placement' : 'Summary'}). Updating header mapping.`);
-       const newMap = {};
-       rowStrings.forEach((h, idx) => {
-         if (h) newMap[h] = idx;
-       });
-       // REPLACE the map to avoid index mismatch between summary and placement columns
-       // We keep the object reference so getVal still works
-       for (const key in headerMap) delete headerMap[key];
-       Object.assign(headerMap, newMap);
-       continue; // Skip the header row itself
-     }
+    const rowStrings = row.map((c) => String(c || "").trim().toLowerCase()).map(normalizeHeader);
+    const hasCandidateHeader = rowStrings.includes("candidate name");
+    const hasPlcIdHeader = rowStrings.includes("plc id");
+    const hasTeamHeaderRow = rowStrings.includes("team") && rowStrings.includes("vb code");
+
+    if ((hasCandidateHeader && hasPlcIdHeader) || hasTeamHeaderRow) {
+      const isPlacementBlock = hasCandidateHeader && hasPlcIdHeader;
+      if (isPlacementBlock) {
+        const placementCheck = validatePersonalPlacementHeaders(rowStrings);
+        if (!placementCheck.valid) {
+          throw new Error(
+            `Invalid recruiter sheet: placement block missing headers: ${placementCheck.missing.join(", ")}.`
+          );
+        }
+      } else {
+        const summaryCheck = validatePersonalSummaryHeaders(rowStrings);
+        if (!summaryCheck.valid) {
+          throw new Error(
+            `Invalid recruiter sheet: summary block missing headers: ${summaryCheck.missing.join(", ")}.`
+          );
+        }
+      }
+      console.log(`Row ${rowIndex}: Detected new header row (${isPlacementBlock ? "Placement" : "Summary"}). Updating header mapping.`);
+      const newMap = {};
+      rowStrings.forEach((h, idx) => {
+        if (h) newMap[h] = idx;
+      });
+      for (const key in headerMap) delete headerMap[key];
+      Object.assign(headerMap, newMap);
+      continue; // Skip the header row itself
+    }
 
     // Check if this row starts a new person block (first column contains "Team" or is a team name)
   const firstCell = row[teamColIdx];
@@ -1529,7 +1674,14 @@ export async function importPersonalPlacements(payload, actorId) {
     // Check for duplicates within the current person's block to prevent local duplicates
     if (inPersonBlock && currentEmployee) {
       const normalizedPlcId = plcId.toLowerCase();
-      if (!shouldSkipDuplicateCheck(plcId)) {
+      
+      // Helper to check if PLC ID should skip duplicate validation
+      const shouldSkipDuplicateCheckLocal = (pId) => {
+        const normalized = String(pId || "").trim().toLowerCase();
+        return normalized === "plc-passthrough" || normalized === "0" || normalized === "";
+      };
+
+      if (!shouldSkipDuplicateCheckLocal(plcId)) {
         if (localPlcIds.has(normalizedPlcId)) {
           console.log(`Skipping duplicate PLC ID ${plcId} for ${currentEmployee.user.firstName} in same sheet block`);
           continue; // Skip this row as it's a duplicate in the same sheet for the same person
@@ -1583,10 +1735,11 @@ export async function importPersonalPlacements(payload, actorId) {
       getVal(row, "total incentive in inr (paid)")
     );
 
-    // Get summary data for this employee (from summary row or current block)
-    const summaryData = employeeSummaryData.get(employee.id) || currentSummaryRow || {};
+    // Use only this employee's summary row — never currentSummaryRow (which may be another person's or team-level).
+    // Otherwise L2/L3 in an L4 sheet get the wrong yearly target from L4's or team summary.
+    const summaryData = employeeSummaryData.get(employee.id) || {};
 
-    // Merge fields: BOTH are equally important - prefer placement row values if they exist, use summary as fallback
+    // Merge fields: prefer placement row values if they exist, then this employee's summary only
     // This ensures we preserve data from both sources without overwriting placement-specific data
     const finalYearlyPlacementTarget = (yearlyPlacementTarget !== null && yearlyPlacementTarget !== undefined)
       ? yearlyPlacementTarget
@@ -1652,17 +1805,67 @@ export async function importPersonalPlacements(payload, actorId) {
       incentivePaidInr,
       vbCode: summaryData.vbCode || (currentVbCode ? String(currentVbCode).trim() : null),
       recruiterName: summaryData.recruiterName || (currentRecruiterName ? String(currentRecruiterName).trim() : null),
-      teamLeadName: (hasLeadHeader && (summaryData.teamLeadName || getVal(row, "team lead")))
-        ? String(summaryData.teamLeadName || getVal(row, "team lead")).trim()
-        : null,
       yearlyPlacementTarget: finalYearlyPlacementTarget,
-      placementDone: finalPlacementDone,
+      placementDone: capPlacementDone(finalPlacementDone),
       targetAchievedPercent: finalTargetAchievedPercent,
       totalRevenueGenerated: finalTotalRevenueGenerated,
       slabQualified: finalSlabQualified,
       totalIncentiveInr: finalTotalIncentiveInr,
       totalIncentivePaidInr: finalTotalIncentivePaidInr,
     });
+  }
+
+  // Persist summary-only recruiters: if an employee has summary data but no placement rows, create one row with summary (same as team import)
+  const employeeIdsWithPlacements = new Set(preparedRows.map((r) => r.employeeId));
+  const SUMMARY_PLC_PREFIX = "SUMMARY-";
+  for (const [employeeId, summaryData] of employeeSummaryData) {
+    if (employeeIdsWithPlacements.has(employeeId)) continue;
+    const profile = allProfiles.find((p) => p.id === employeeId);
+    if (!profile) continue;
+    const dojPlaceholder = new Date(Date.UTC(2000, 0, 1));
+    preparedRows.push({
+      id: undefined,
+      employeeId,
+      level: profile.level || "L4",
+      candidateName: "(Summary only)",
+      placementYear: null,
+      doj: dojPlaceholder,
+      doq: null,
+      client: "-",
+      plcId: SUMMARY_PLC_PREFIX + employeeId,
+      placementType: "-",
+      billingStatus: "PENDING",
+      collectionStatus: null,
+      totalBilledHours: null,
+      revenueUsd: 0,
+      incentiveInr: 0,
+      incentivePaidInr: 0,
+      vbCode: summaryData.vbCode ?? null,
+      recruiterName: summaryData.recruiterName ?? profile.user?.name ?? null,
+      teamLeadName: summaryData.teamLeadName ?? null,
+      yearlyPlacementTarget: summaryData.yearlyPlacementTarget ?? null,
+      placementDone: capPlacementDone(summaryData.placementDone ?? null),
+      targetAchievedPercent: summaryData.targetAchievedPercent ?? null,
+      totalRevenueGenerated: summaryData.totalRevenueGenerated ?? null,
+      slabQualified: summaryData.slabQualified != null && String(summaryData.slabQualified).trim() ? String(summaryData.slabQualified).trim() : null,
+      totalIncentiveInr: summaryData.totalIncentiveInr ?? null,
+      totalIncentivePaidInr: summaryData.totalIncentivePaidInr ?? null,
+    });
+  }
+
+  // Resolve existing summary-only rows so we update instead of duplicate
+  const summaryOnlyEmployeeIds = [...employeeSummaryData.keys()].filter((id) => !employeeIdsWithPlacements.has(id));
+  if (summaryOnlyEmployeeIds.length > 0) {
+    const existingSummaryRows = await prisma.personalPlacement.findMany({
+      where: { employeeId: { in: summaryOnlyEmployeeIds }, plcId: { startsWith: SUMMARY_PLC_PREFIX } },
+      select: { id: true, employeeId: true },
+    });
+    const existingByEmployeeId = new Map(existingSummaryRows.map((p) => [p.employeeId, p.id]));
+    for (const row of preparedRows) {
+      if (row.plcId && String(row.plcId).startsWith(SUMMARY_PLC_PREFIX) && existingByEmployeeId.has(row.employeeId)) {
+        row.id = existingByEmployeeId.get(row.employeeId);
+      }
+    }
   }
 
   if (preparedRows.length === 0 && employeeSummaryData.size === 0) {
@@ -1674,6 +1877,7 @@ export async function importPersonalPlacements(payload, actorId) {
         employeesUpdated: 0,
       },
       batchId: null,
+      insertedCount: 0,
       errors: [],
     };
   }
@@ -1692,12 +1896,6 @@ export async function importPersonalPlacements(payload, actorId) {
       totalIncentivePaid: summaryData.totalIncentivePaidInr,
     });
   }
-
-  // Helper to check if PLC ID should skip duplicate validation
-  const shouldSkipDuplicateCheck = (plcId) => {
-    const normalized = String(plcId || "").trim().toLowerCase();
-    return normalized === "plc-passthrough" || normalized === "0" || normalized === "";
-  };
 
   // Duplicate PLC IDs within payload - allow them but use the last occurrence (skip "PLC-Passthrough" and "0")
   // PLC ID is ALWAYS unique globally - so we deduplicate by plcId only
@@ -1785,6 +1983,19 @@ export async function importPersonalPlacements(payload, actorId) {
       insertedCount = rowsToInsert.length;
     }
 
+    // When this import added real placement rows for an employee, remove their old summary-only placeholder row
+    const employeeIdsWithRealPlacementsInThisImport = new Set(
+      preparedRows.filter((r) => !(r.plcId && String(r.plcId).startsWith(SUMMARY_PLC_PREFIX))).map((r) => r.employeeId)
+    );
+    if (employeeIdsWithRealPlacementsInThisImport.size > 0) {
+      await tx.personalPlacement.deleteMany({
+        where: {
+          employeeId: { in: [...employeeIdsWithRealPlacementsInThisImport] },
+          plcId: { startsWith: SUMMARY_PLC_PREFIX },
+        },
+      });
+    }
+
     // Update EmployeeProfile targetType and yearlyTarget based on team
     // Group by employeeId and collect ALL summary data (from summary rows and placement rows)
     // Summary rows already processed into employeeUpdates above.
@@ -1848,15 +2059,14 @@ export async function importPersonalPlacements(payload, actorId) {
 
         const updateData = {};
 
+        // Vantage team (name contains "vant") = REVENUE; all other teams = PLACEMENTS
+        const isVantage = profile.team?.name?.toLowerCase().includes('vant');
+        updateData.targetType = isVantage ? 'REVENUE' : 'PLACEMENTS';
+
         // Yearly target handling
         if (data.yearlyPlacementTarget !== null) {
           updateData.yearlyTarget = data.yearlyPlacementTarget;
           updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
-          
-          // If the recruiter belongs to a Vantage team, their "Placement Target" header 
-          // actually represents a revenue value (as per user confirmation).
-          const isVantage = profile.team?.name?.toLowerCase().includes('vantage');
-          updateData.targetType = isVantage ? 'REVENUE' : 'PLACEMENTS';
         }
 
         // Update all summary fields from summary data
@@ -1914,30 +2124,87 @@ export async function importPersonalPlacements(payload, actorId) {
   });
 
   console.log(`Transaction finished for importPersonalPlacements. Result: ${JSON.stringify(result)}`);
-  return { ...result, errors: [] };
+  return {
+    ...result,
+    insertedCount: result.summary?.placementsCreated ?? 0,
+    errors: [],
+  };
 }
 
 export async function importTeamPlacements(payload, actorId) {
-  const { headers, rows } = payload || {};
+  const { headers, rows, teamId } = payload || {};
 
-  console.log(`Starting importTeamPlacements with ${rows?.length} rows`);
+  console.log(`Starting importTeamPlacements with ${rows?.length} rows, teamId=${teamId || "none"}`);
 
   if (!Array.isArray(headers) || !Array.isArray(rows)) {
     throw new Error("headers and rows must be arrays");
   }
 
-  const { headerMap, hasLeadHeader, hasSplitHeader } = validateTeamHeaders(headers);
+  // Resolve panel team name when uploading from a team management panel (only accept data for this team)
+  let expectedTeamName = null;
+  if (teamId) {
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { name: true },
+    });
+    if (!team) throw new Error("Invalid team ID");
+    expectedTeamName = team.name.trim();
+  }
+
+  const normalizedHeaders = headers.map(normalizeHeader);
+  const hasSummaryHeaderRow = normalizedHeaders.includes("team") && normalizedHeaders.includes("vb code");
+  const hasPlacementHeaderRow = normalizedHeaders.includes("candidate name") && normalizedHeaders.includes("plc id");
+  if (teamId) {
+    if (hasSummaryHeaderRow) {
+      const summaryCheck = validateRequiredHeaders(normalizedHeaders, REQUIRED_TEAM_SUMMARY_HEADERS);
+      if (!summaryCheck.valid) {
+        throw new Error(
+          `Invalid team sheet: missing summary headers: ${summaryCheck.missing.join(", ")}. ` +
+          `Required: ${REQUIRED_TEAM_SUMMARY_HEADERS.join(", ")}`
+        );
+      }
+    } else if (hasPlacementHeaderRow) {
+      const placementCheck = validateRequiredHeaders(normalizedHeaders, REQUIRED_TEAM_PLACEMENT_HEADERS);
+      if (!placementCheck.valid) {
+        throw new Error(
+          `Invalid team sheet: missing placement headers: ${placementCheck.missing.join(", ")}. ` +
+          `Required: ${REQUIRED_TEAM_PLACEMENT_HEADERS.join(", ")}`
+        );
+      }
+      report.placementHeaderValid = true;
+    } else {
+      throw new Error(
+        "Invalid team sheet: first header row must be summary (Team, VB Code, Lead Name, ...) or placement (Lead Name, Candidate Name, PLC ID, ...)."
+      );
+    }
+  }
+
+  const { headerMap, hasLeadHeader: initialHasLeadHeader, hasSplitHeader: initialHasSplitHeader } = validateTeamHeaders(headers);
+  let hasLeadHeader = initialHasLeadHeader;
+  let hasSplitHeader = initialHasSplitHeader;
   console.log(`Headers validated. hasLeadHeader: ${hasLeadHeader}`);
 
-  // Pre-fetching users and profiles for caching
+  // Report for import result dialog
+  const report = {
+    summaryRowsChecked: 0,
+    summaryRowsAccepted: 0,
+    summaryRowsRejectedWrongTeam: 0,
+    placementRowsChecked: 0,
+    placementsCreated: 0,
+    placementsUpdated: 0,
+    placementsRejectedWrongTeam: 0,
+    placementsRejectedLeadNotFound: 0,
+    placementHeaderValid: false,
+  };
+
+  // Pre-fetching users and profiles for caching (include team so we can filter by sheet team name)
   console.log("Pre-fetching users and profiles for team import...");
   const allProfiles = await prisma.employeeProfile.findMany({
-    include: { user: true }
+    include: { user: true, team: { select: { name: true } } }
   });
-  
+
   const profileByVb = new Map();
   const profileByName = new Map();
-  
   for (const p of allProfiles) {
     if (p.vbid) {
       profileByVb.set(String(p.vbid).trim().toLowerCase(), p);
@@ -1947,20 +2214,27 @@ export async function importTeamPlacements(payload, actorId) {
     }
   }
 
-  const findLeadCached = (vbCode, leadName) => {
-    if (vbCode) {
-      const profile = profileByVb.get(String(vbCode).trim().toLowerCase());
-      if (profile) return profile;
-    }
+  const teamNameMatches = (profile, sheetTeamName) => {
+    if (!sheetTeamName || !profile.team?.name) return true;
+    return String(profile.team.name).trim().toLowerCase() === String(sheetTeamName).trim().toLowerCase();
+  };
+
+  // Resolve lead by VB Code or Lead Name; when sheetTeamName is provided, only return if profile's team matches
+  const findLeadCached = (vbCode, leadName, sheetTeamName) => {
     if (leadName) {
-      const profile = profileByName.get(String(leadName).trim().toLowerCase());
-      if (profile) return profile;
+      const byName = profileByName.get(String(leadName).trim().toLowerCase());
+      if (byName && teamNameMatches(byName, sheetTeamName)) return byName;
+    }
+    if (vbCode) {
+      const byVb = profileByVb.get(String(vbCode).trim().toLowerCase());
+      if (byVb && teamNameMatches(byVb, sheetTeamName)) return byVb;
     }
     return null;
   };
 
   const getVal = (row, key) => {
-    const idx = headerMap[key];
+    const k = normalizeHeader(key);
+    const idx = headerMap[k];
     if (idx === undefined) return null;
     return row[idx];
   };
@@ -1979,12 +2253,33 @@ export async function importTeamPlacements(payload, actorId) {
   let currentVbCode = null;
   let currentLeadName = null;
   let currentLeadUser = null;
+  let currentTeamName = null;
   let inPersonBlock = false;
   let currentSummaryRow = null; // Store the summary row data
+  let currentSummaryHeaderRow = null; // Team sheet: summary block header (Team, VB Code, Yearly Revenue Target, Slab qualified, ...)
   const localPlcIds = new Set(); // Track PLC IDs within the current lead block
 
   // Find the "Team" column index (usually first column)
   const teamColIdx = headerMap["team"] !== undefined ? headerMap["team"] : 0;
+
+  const isSheetTeamMatchingPanel = (sheetTeamName) => {
+    if (!expectedTeamName) return true;
+    if (!sheetTeamName || !String(sheetTeamName).trim()) return false;
+    return String(sheetTeamName).trim().toLowerCase() === expectedTeamName.toLowerCase();
+  };
+
+  const buildGetValFromHeaderRow = (headerRow) => {
+    const map = {};
+    (headerRow || []).forEach((h, idx) => {
+      const k = String(h || "").trim().toLowerCase();
+      if (k) map[k] = idx;
+    });
+    return (row, key) => {
+      const idx = map[key] ?? map[key.replace(/\s*\([^)]*\)/g, "").trim()];
+      if (idx === undefined) return null;
+      return row[idx];
+    };
+  };
 
   console.log("Processing rows into preparedRows for team import...");
 
@@ -1992,49 +2287,112 @@ export async function importTeamPlacements(payload, actorId) {
     rowIndex += 1;
     if (rowIndex % 50 === 0) console.log(`Processing row ${rowIndex}/${rows.length}...`);
 
-    // Dynamic Header Detection: If row contains "Candidate Name" and "PLC ID", it's a new header row
-    const rowStrings = row.map(c => String(c || "").trim().toLowerCase());
+    // Dynamic Header Detection: If row contains "Candidate Name" and "PLC ID", it's the placement header
+    const rowStrings = row.map(c => String(c || "").trim().toLowerCase()).map(normalizeHeader);
     const hasCandidateHeader = rowStrings.includes("candidate name");
     const hasPlcIdHeader = rowStrings.includes("plc id");
-    
+
     if (hasCandidateHeader && hasPlcIdHeader) {
-      console.log(`Row ${rowIndex}: Detected new header row in team import. Updating header mapping.`);
+      console.log(`Row ${rowIndex}: Detected placement header row. Updating header mapping.`);
+      if (teamId) {
+        const placementCheck = validateRequiredHeaders(rowStrings, REQUIRED_TEAM_PLACEMENT_HEADERS);
+        if (!placementCheck.valid) {
+          throw new Error(
+            `Invalid team sheet: placement block missing headers: ${placementCheck.missing.join(", ")}.`
+          );
+        }
+      }
+      report.placementHeaderValid = true;
+      currentSummaryHeaderRow = null;
       const newMap = {};
       rowStrings.forEach((h, idx) => {
         if (h) newMap[h] = idx;
       });
-      // Merge with existing map
       Object.assign(headerMap, newMap);
-      continue; // Skip the header row itself
+      hasLeadHeader = newMap["lead name"] !== undefined || newMap["lead"] !== undefined;
+      hasSplitHeader = newMap["split with"] !== undefined;
+      continue;
     }
 
-    // Check if this row starts a new person block (first column contains "Team" or is a team name)
+    // Team sheet: first data row (rowIndex === 1) with summary header = summary row (don't rely on team name in DB)
+    const hasSummaryHeaderMap = headerMap["yearly revenue target"] !== undefined || headerMap["vb code"] !== undefined;
+    const vbCodeVal = getVal(row, "vb code");
+    const leadNameVal = getVal(row, "lead name") || getVal(row, "lead");
+    const candidateVal = getVal(row, "candidate name");
+    if (rowIndex === 1 && hasSummaryHeaderMap && (vbCodeVal || leadNameVal) && !candidateVal) {
+      report.summaryRowsChecked += 1;
+      const teamNameFromRow = getVal(row, "team") ?? (row[teamColIdx] != null ? String(row[teamColIdx]).trim() : null);
+      if (expectedTeamName && !isSheetTeamMatchingPanel(teamNameFromRow)) {
+        report.summaryRowsRejectedWrongTeam += 1;
+        continue;
+      }
+      const summaryData = extractSummaryFields(row, getVal);
+      summaryData.leadName = summaryData.recruiterName || summaryData.teamLeadName || (row[2] != null ? String(row[2]).trim() : null) || leadNameVal;
+      summaryData.placementAchPercent = summaryData.targetAchievedPercent ?? null; // team expects placementAchPercent
+      let leadUser = findLeadCached(summaryData.vbCode || vbCodeVal, summaryData.leadName || leadNameVal, teamNameFromRow);
+      if (!leadUser && (vbCodeVal || leadNameVal)) {
+        leadUser = await findLeadByVbOrName(vbCodeVal || summaryData.vbCode, leadNameVal || summaryData.leadName, teamNameFromRow);
+      }
+      if (leadUser) {
+        report.summaryRowsAccepted += 1;
+        currentLeadUser = leadUser;
+        currentVbCode = summaryData.vbCode || vbCodeVal;
+        currentLeadName = summaryData.leadName || leadNameVal;
+        currentTeamName = teamNameFromRow || null;
+        currentSummaryRow = summaryData;
+        leadSummaryData.set(leadUser.id, summaryData);
+        inPersonBlock = true;
+        localPlcIds.clear();
+        console.log(`Row ${rowIndex}: Parsed team summary row (first row) for lead ${leadUser.user?.name || leadUser.id}. yearlyRevenueTarget=${summaryData.yearlyRevenueTarget}, slabQualified=${summaryData.slabQualified}`);
+      }
+      continue;
+    }
+
+    // Team sheet: row with first cell "Team" and "VB Code" / "Yearly Revenue Target" is the summary block header
     const firstCell = row[teamColIdx];
     const firstCellLower = firstCell ? String(firstCell).trim().toLowerCase() : "";
     const isTeamHeader = firstCellLower === "team";
+    const hasSummaryHeaders = rowStrings.includes("vb code") && (rowStrings.includes("yearly revenue target") || rowStrings.includes("yearly placement target"));
+    if (isTeamHeader && hasSummaryHeaders) {
+      currentSummaryHeaderRow = row;
+      continue;
+    }
+
     const isTeamNameRow = firstCellLower && teamNames.has(firstCellLower) && row.length > 2;
 
     // Handle summary row that starts directly with team name (no "Team" header before it)
     if (isTeamNameRow && !isTeamHeader) {
-      // This is a summary row starting with team name
-      const summaryData = extractSummaryFromTeamNameRow(row, true);
+      report.summaryRowsChecked += 1;
+      const sheetTeamName = firstCellLower || (row[teamColIdx] != null ? String(row[teamColIdx]).trim() : null);
+      if (expectedTeamName && !isSheetTeamMatchingPanel(sheetTeamName)) {
+        report.summaryRowsRejectedWrongTeam += 1;
+        continue;
+      }
+      let summaryData;
+      if (currentSummaryHeaderRow && currentSummaryHeaderRow.length) {
+        const getValSummary = buildGetValFromHeaderRow(currentSummaryHeaderRow);
+        summaryData = extractSummaryFields(row, getValSummary);
+        summaryData.leadName = summaryData.leadName || (row[2] != null ? String(row[2]).trim() : null) || summaryData.recruiterName;
+      } else {
+        summaryData = extractSummaryFromTeamNameRow(row, true);
+      }
       const vbCode = summaryData.vbCode;
-      const leadName = row[2] ? String(row[2]).trim() : null;
-      
+      const leadName = summaryData.leadName || (row[2] ? String(row[2]).trim() : null);
       if (vbCode || leadName) {
-        // Try to find lead
-        const leadUser = findLeadCached(vbCode, leadName);
+        const leadUser = findLeadCached(vbCode, leadName, sheetTeamName);
         if (leadUser) {
+          report.summaryRowsAccepted += 1;
           currentVbCode = vbCode;
           currentLeadName = leadName;
           currentLeadUser = leadUser;
+          currentTeamName = sheetTeamName || null;
           currentSummaryRow = summaryData;
           leadSummaryData.set(leadUser.id, summaryData);
           inPersonBlock = true;
-          localPlcIds.clear(); // Clear local PLC tracking for new lead
+          localPlcIds.clear();
         }
       }
-      continue; // Skip the team name row itself
+      continue;
     }
 
     if (isTeamHeader) {
@@ -2043,6 +2401,7 @@ export async function importTeamPlacements(payload, actorId) {
       currentVbCode = null;
       currentLeadName = null;
       currentLeadUser = null;
+      currentTeamName = null;
       currentSummaryRow = null;
       localPlcIds.clear(); // Clear local PLC tracking for new block
       
@@ -2055,44 +2414,42 @@ export async function importTeamPlacements(payload, actorId) {
         // Check if first column is a team name (this is the summary row format)
         const nextFirstCell = String(nextRow[0] || "").trim();
         const isNextTeamNameRow = nextFirstCell && teamNames.has(nextFirstCell.toLowerCase());
-        
+        const metricsTeamName = isNextTeamNameRow ? nextFirstCell : (getVal(nextRow, "team") ?? null);
+        if (expectedTeamName && !isSheetTeamMatchingPanel(metricsTeamName)) {
+          continue; // Skip block for different team
+        }
         // Get values - summary row might have team name in first column, then VB Code, then Lead Name
         let metricsVbCode = getVal(nextRow, "vb code");
         let metricsLeadName = getVal(nextRow, "lead name") || getVal(nextRow, "lead");
         
         // If first column is team name, VB Code and Lead Name might be in columns 1 and 2
         if (isNextTeamNameRow && nextRow.length > 2) {
-          // Extract from team name row format
           const summaryData = extractSummaryFromTeamNameRow(nextRow, true);
           metricsVbCode = summaryData.vbCode;
           metricsLeadName = nextRow[2] ? String(nextRow[2]).trim() : null;
           currentSummaryRow = summaryData;
         } else {
-          // Try normal extraction
           currentSummaryRow = extractSummaryFields(nextRow, getVal);
         }
         
-        // Skip if lead name is actually a team name (but allow if it's in the team name row format)
         if (metricsLeadName && !isNextTeamNameRow && teamNames.has(String(metricsLeadName).trim().toLowerCase())) {
-          continue; // Skip this row - it's a team name, not a lead name
+          continue;
         }
         
-        // Check if this looks like a metrics row (has VB Code or Lead Name but might not have candidate yet)
         const hasCandidate = getVal(nextRow, "candidate name");
         if ((metricsVbCode || metricsLeadName) && !hasCandidate) {
           currentVbCode = metricsVbCode;
           currentLeadName = metricsLeadName;
           
-          // Try to find lead immediately
-          currentLeadUser = findLeadCached(metricsVbCode, metricsLeadName);
+          currentLeadUser = findLeadCached(metricsVbCode, metricsLeadName, metricsTeamName);
           if (!currentLeadUser && (metricsVbCode || metricsLeadName)) {
             // Skip if we can't find the lead - don't fail entire import
             continue;
           }
           
-          // Store summary data for this lead
-          if (currentLeadUser && currentSummaryRow) {
-            leadSummaryData.set(currentLeadUser.id, currentSummaryRow);
+          if (currentLeadUser) {
+            currentTeamName = metricsTeamName || null;
+            if (currentSummaryRow) leadSummaryData.set(currentLeadUser.id, currentSummaryRow);
           }
           
           break; // Found metrics row, stop looking
@@ -2116,15 +2473,16 @@ export async function importTeamPlacements(payload, actorId) {
     // If this is a summary row, extract ALL summary fields
     if (isSummaryRow) {
       const summaryData = extractSummaryFields(row, getVal);
-      
-      // Try to identify lead from this summary row
+      const teamNameFromRow = getVal(row, "team") ?? (row[teamColIdx] != null ? String(row[teamColIdx]).trim() : null);
+      // Try to identify lead from this summary row (must belong to team when team name is present)
       let lead = currentLeadUser;
       if (!lead && (summaryData.vbCode || leadNameInRow)) {
-        lead = findLeadCached(summaryData.vbCode, leadNameInRow);
+        lead = findLeadCached(summaryData.vbCode, leadNameInRow, teamNameFromRow);
         if (lead) {
           currentLeadUser = lead;
           currentVbCode = summaryData.vbCode;
           currentLeadName = leadNameInRow;
+          currentTeamName = teamNameFromRow || currentTeamName;
           currentSummaryRow = summaryData;
           leadSummaryData.set(lead.id, summaryData);
           inPersonBlock = true;
@@ -2163,7 +2521,7 @@ export async function importTeamPlacements(payload, actorId) {
         if (leadName) currentLeadName = leadName;
         
         if (currentVbCode || currentLeadName) {
-          currentLeadUser = findLeadCached(currentVbCode, currentLeadName);
+          currentLeadUser = findLeadCached(currentVbCode, currentLeadName, currentTeamName);
           if (!currentLeadUser) {
             throw new Error(
               `Row ${rowIndex}: could not resolve lead for VB Code "${currentVbCode}" / Lead Name "${currentLeadName}"`
@@ -2188,19 +2546,33 @@ export async function importTeamPlacements(payload, actorId) {
     }
 
     // Use current lead from block, or try to find from row
+    report.placementRowsChecked += 1;
+    if (expectedTeamName && currentTeamName && !isSheetTeamMatchingPanel(currentTeamName)) {
+      report.placementsRejectedWrongTeam += 1;
+      continue;
+    }
     let leadUser = currentLeadUser;
     if (!leadUser) {
       const vbCode = getVal(row, "vb code");
       const leadName = getVal(row, "lead name") || getVal(row, "lead");
+      const rowTeamName = getVal(row, "team") ?? (row[teamColIdx] != null ? String(row[teamColIdx]).trim() : null);
+      const teamNameForLookup = currentTeamName || rowTeamName;
       
       // Skip if lead name is actually a team name (like "Vantedge")
       if (leadName && teamNames.has(String(leadName).trim().toLowerCase())) {
         continue; // Skip this row - it's a team name, not a lead name
       }
       
-      leadUser = await findLeadByVbOrName(vbCode, leadName);
+      leadUser = findLeadCached(vbCode, leadName, teamNameForLookup);
+      if (!leadUser && (vbCode || leadName)) {
+        leadUser = await findLeadByVbOrName(vbCode, leadName, teamNameForLookup);
+      }
       if (!leadUser) {
-        // Skip rows where we can't find the lead instead of failing entire import
+        if (expectedTeamName && teamNameForLookup && !isSheetTeamMatchingPanel(teamNameForLookup)) {
+          report.placementsRejectedWrongTeam += 1;
+        } else {
+          report.placementsRejectedLeadNotFound += 1;
+        }
         continue;
       }
       // Update current tracking and mark as in person block
@@ -2208,9 +2580,10 @@ export async function importTeamPlacements(payload, actorId) {
       currentVbCode = vbCode;
       currentLeadName = leadName;
       currentLeadUser = leadUser;
+      if (teamNameForLookup) currentTeamName = teamNameForLookup;
     }
 
-    // PLC ID
+  // PLC ID
     const plcIdRaw = getVal(row, "plc id") || getVal(row, "pls id");
     const plcId = String(plcIdRaw || "").trim();
     if (!plcId) {
@@ -2257,96 +2630,24 @@ export async function importTeamPlacements(payload, actorId) {
     const incentiveInr = parseCurrency(getVal(row, "incentive amount (inr)"));
     const incentivePaidInr = parseCurrency(getVal(row, "incentive paid (inr)"));
 
-    const yearlyPlacementTarget = parseCurrency(
-      getVal(row, "yearly placement target")
-    );
-    const placementDone = parseNum(getVal(row, "placement done"));
-
-    const placementAchPercent = sanitizePercent(getVal(row, "placement ach %"));
-
-    const yearlyRevenueTarget = parseCurrency(
-      getVal(row, "yearly revenue target")
-    );
-    const revenueAch = parseCurrency(getVal(row, "revenue ach"));
-
-    const revenueTargetAchievedPercent = sanitizePercent(getVal(row, "revenue target achieved %"));
-
-    const totalRevenueGenerated = parseCurrency(
-      getVal(row, "total revenue generated (usd)")
-    );
-
-    const totalIncentiveInr = parseCurrency(
-      getVal(row, "total incentive in inr")
-    );
-    const totalIncentivePaidInr = parseCurrency(
-      getVal(row, "total incentive in inr (paid)")
-    );
-
-    // Get summary data for this lead (from summary row or current block)
+    // Get summary data for this lead (from summary row or current block). Summary-only fields must
+    // be taken ONLY from summaryData: after the placement header row, headerMap is the placement
+    // header, so getVal(row, "yearly revenue target") would read placementRow[6] = DOJ (Excel date),
+    // getVal(row, "slab qualified") would read placementRow[10] = Placement Type (FTE), etc.
     const summaryData = leadSummaryData.get(leadUser.id) || currentSummaryRow || {};
 
-    // Merge fields: BOTH are equally important - prefer placement row values if they exist, use summary as fallback
-    // This ensures we preserve data from both sources without overwriting placement-specific data
-    const finalYearlyPlacementTarget = (yearlyPlacementTarget !== null && yearlyPlacementTarget !== undefined)
-      ? yearlyPlacementTarget
-      : (summaryData.yearlyPlacementTarget !== null && summaryData.yearlyPlacementTarget !== undefined
-          ? summaryData.yearlyPlacementTarget
-          : null);
-    
-    const finalPlacementDone = (placementDone !== null && placementDone !== undefined)
-      ? placementDone
-      : (summaryData.placementDone !== null && summaryData.placementDone !== undefined
-          ? summaryData.placementDone
-          : null);
-    
-    const finalPlacementAchPercent = (placementAchPercent !== null && placementAchPercent !== undefined)
-      ? placementAchPercent
-      : (summaryData.placementAchPercent !== null && summaryData.placementAchPercent !== undefined
-          ? summaryData.placementAchPercent
-          : null);
-    
-    const finalYearlyRevenueTarget = (yearlyRevenueTarget !== null && yearlyRevenueTarget !== undefined)
-      ? yearlyRevenueTarget
-      : (summaryData.yearlyRevenueTarget !== null && summaryData.yearlyRevenueTarget !== undefined
-          ? summaryData.yearlyRevenueTarget
-          : null);
-    
-    const finalRevenueAch = (revenueAch !== null && revenueAch !== undefined)
-      ? revenueAch
-      : (summaryData.revenueAch !== null && summaryData.revenueAch !== undefined
-          ? summaryData.revenueAch
-          : null);
-    
-    const finalRevenueTargetAchievedPercent = (revenueTargetAchievedPercent !== null && revenueTargetAchievedPercent !== undefined)
-      ? revenueTargetAchievedPercent
-      : (summaryData.revenueTargetAchievedPercent !== null && summaryData.revenueTargetAchievedPercent !== undefined
-          ? summaryData.revenueTargetAchievedPercent
-          : null);
-    
-    const finalTotalRevenueGenerated = (totalRevenueGenerated !== null && totalRevenueGenerated !== undefined)
-      ? totalRevenueGenerated
-      : (summaryData.totalRevenueGenerated !== null && summaryData.totalRevenueGenerated !== undefined
-          ? summaryData.totalRevenueGenerated
-          : null);
-    
-    const slabFromRow = getVal(row, "slab qualified");
-    const finalSlabQualified = (slabFromRow && String(slabFromRow).trim())
-      ? String(slabFromRow).trim()
-      : (summaryData.slabQualified
-          ? String(summaryData.slabQualified).trim()
-          : null);
-    
-    const finalTotalIncentiveInr = (totalIncentiveInr !== null && totalIncentiveInr !== undefined)
-      ? totalIncentiveInr
-      : (summaryData.totalIncentiveInr !== null && summaryData.totalIncentiveInr !== undefined
-          ? summaryData.totalIncentiveInr
-          : null);
-    
-    const finalTotalIncentivePaidInr = (totalIncentivePaidInr !== null && totalIncentivePaidInr !== undefined)
-      ? totalIncentivePaidInr
-      : (summaryData.totalIncentivePaidInr !== null && summaryData.totalIncentivePaidInr !== undefined
-          ? summaryData.totalIncentivePaidInr
-          : null);
+    const finalYearlyPlacementTarget = summaryData.yearlyPlacementTarget ?? null;
+    const finalPlacementDone = summaryData.placementDone ?? null;
+    const finalPlacementAchPercent = summaryData.placementAchPercent ?? summaryData.targetAchievedPercent ?? null;
+    const finalYearlyRevenueTarget = summaryData.yearlyRevenueTarget ?? null;
+    const finalRevenueAch = summaryData.revenueAch ?? null;
+    const finalRevenueTargetAchievedPercent = summaryData.revenueTargetAchievedPercent ?? null;
+    const finalTotalRevenueGenerated = summaryData.totalRevenueGenerated ?? null;
+    const finalSlabQualified = summaryData.slabQualified != null && String(summaryData.slabQualified).trim()
+      ? String(summaryData.slabQualified).trim()
+      : null;
+    const finalTotalIncentiveInr = summaryData.totalIncentiveInr ?? null;
+    const finalTotalIncentivePaidInr = summaryData.totalIncentivePaidInr ?? null;
 
     preparedRows.push({
       id: existingPlacement ? existingPlacement.id : undefined,
@@ -2376,7 +2677,7 @@ export async function importTeamPlacements(payload, actorId) {
       incentivePaidInr,
       vbCode: summaryData.vbCode || (currentVbCode ? String(currentVbCode).trim() : null),
       yearlyPlacementTarget: finalYearlyPlacementTarget,
-      placementDone: finalPlacementDone,
+      placementDone: capPlacementDone(finalPlacementDone),
       placementAchPercent: finalPlacementAchPercent,
       yearlyRevenueTarget: finalYearlyRevenueTarget,
       revenueAch: finalRevenueAch,
@@ -2388,8 +2689,67 @@ export async function importTeamPlacements(payload, actorId) {
     });
   }
 
+  // Persist summary-only leads: if a lead has summary data but no placement rows, create one row with summary so it's stored
+  const leadIdsWithPlacements = new Set(preparedRows.map((r) => r.leadId));
+  const SUMMARY_PLC_PREFIX = "SUMMARY-";
+  for (const [leadId, summaryData] of leadSummaryData) {
+    if (leadIdsWithPlacements.has(leadId)) continue;
+    const profile = allProfiles.find((p) => p.id === leadId);
+    if (!profile) continue;
+    const dojPlaceholder = new Date(Date.UTC(2000, 0, 1));
+    preparedRows.push({
+      id: undefined,
+      leadId,
+      level: profile.level || "L2",
+      candidateName: "(Summary only)",
+      recruiterName: null,
+      leadName: summaryData.leadName || summaryData.recruiterName || profile.user?.name || null,
+      splitWith: null,
+      placementYear: null,
+      doj: dojPlaceholder,
+      doq: null,
+      client: "-",
+      plcId: SUMMARY_PLC_PREFIX + leadId,
+      placementType: "-",
+      billingStatus: "PENDING",
+      collectionStatus: null,
+      totalBilledHours: null,
+      revenueLeadUsd: 0,
+      incentiveInr: 0,
+      incentivePaidInr: 0,
+      vbCode: summaryData.vbCode ?? null,
+      yearlyPlacementTarget: summaryData.yearlyPlacementTarget ?? null,
+      placementDone: capPlacementDone(summaryData.placementDone ?? null),
+      placementAchPercent: summaryData.placementAchPercent ?? summaryData.targetAchievedPercent ?? null,
+      yearlyRevenueTarget: summaryData.yearlyRevenueTarget ?? null,
+      revenueAch: summaryData.revenueAch ?? null,
+      revenueTargetAchievedPercent: summaryData.revenueTargetAchievedPercent ?? null,
+      totalRevenueGenerated: summaryData.totalRevenueGenerated ?? null,
+      slabQualified: summaryData.slabQualified != null && String(summaryData.slabQualified).trim() ? String(summaryData.slabQualified).trim() : null,
+      totalIncentiveInr: summaryData.totalIncentiveInr ?? null,
+      totalIncentivePaidInr: summaryData.totalIncentivePaidInr ?? null,
+    });
+  }
+
+  // Resolve existing summary-only rows so we update instead of duplicate
+  const summaryOnlyLeadIds = [...leadSummaryData.keys()].filter((id) => !leadIdsWithPlacements.has(id));
+  if (summaryOnlyLeadIds.length > 0) {
+    const existingSummaryRows = await prisma.teamPlacement.findMany({
+      where: { leadId: { in: summaryOnlyLeadIds }, plcId: { startsWith: SUMMARY_PLC_PREFIX } },
+      select: { id: true, leadId: true },
+    });
+    const existingByLeadId = new Map(existingSummaryRows.map((p) => [p.leadId, p.id]));
+    for (const row of preparedRows) {
+      if (row.plcId && String(row.plcId).startsWith(SUMMARY_PLC_PREFIX) && existingByLeadId.has(row.leadId)) {
+        row.id = existingByLeadId.get(row.leadId);
+      }
+    }
+  }
+
   if (preparedRows.length === 0 && leadSummaryData.size === 0) {
     console.log("No valid placements or summary data found in sheet.");
+    report.placementsCreated = 0;
+    report.placementsUpdated = 0;
     return {
       summary: {
         placementsCreated: 0,
@@ -2397,15 +2757,11 @@ export async function importTeamPlacements(payload, actorId) {
         employeesUpdated: 0,
       },
       batchId: null,
+      insertedCount: 0,
       errors: [],
+      report,
     };
   }
-
-  // Helper to check if PLC ID should skip duplicate validation
-  const shouldSkipDuplicateCheck = (plcId) => {
-    const normalized = String(plcId || "").trim().toLowerCase();
-    return normalized === "plc-passthrough" || normalized === "0" || normalized === "";
-  };
 
   // Duplicate PLC IDs within payload - allow them but use the last occurrence (skip "PLC-Passthrough" and "0")
   // PLC ID is ALWAYS unique globally - so we deduplicate by plcId only
@@ -2492,168 +2848,22 @@ export async function importTeamPlacements(payload, actorId) {
       insertedCount = rowsToInsert.length;
     }
 
-    // Update EmployeeProfile targets for leads based on summary data
-    // Ensure every lead found in summary rows but without placements is added to leadUpdates
-    const leadUpdates = new Map();
-    for (const [leadId, summaryData] of leadSummaryData) {
-      leadUpdates.set(leadId, {
-        leadId,
-        yearlyPlacementTarget: summaryData.yearlyPlacementTarget,
-        yearlyRevenueTarget: summaryData.yearlyRevenueTarget,
-        placementDone: summaryData.placementDone,
-        placementAchPercent: summaryData.placementAchPercent,
-        revenueAch: summaryData.revenueAch,
-        revenueTargetAchievedPercent: summaryData.revenueTargetAchievedPercent,
-        totalRevenue: summaryData.totalRevenueGenerated,
-        slabQualified: summaryData.slabQualified,
-        totalIncentiveAmount: summaryData.totalIncentiveInr,
-        totalIncentivePaid: summaryData.totalIncentivePaidInr,
-      });
-    }
-
-    // Now merge in data from placement rows if summary row data was missing
-    for (const row of preparedRows) {
-      if (!leadUpdates.has(row.leadId)) {
-        leadUpdates.set(row.leadId, {
-          leadId: row.leadId,
-          yearlyPlacementTarget: null,
-          yearlyRevenueTarget: null,
-          placementDone: null,
-          placementAchPercent: null,
-          revenueAch: null,
-          revenueTargetAchievedPercent: null,
-          totalRevenue: null,
-          slabQualified: null,
-          totalIncentiveAmount: null,
-          totalIncentivePaid: null,
-        });
-      }
-      const update = leadUpdates.get(row.leadId);
-      // Only use placement row data if summary row data didn't already provide it
-      if (update.yearlyPlacementTarget === null && row.yearlyPlacementTarget !== null && row.yearlyPlacementTarget !== undefined) {
-        update.yearlyPlacementTarget = row.yearlyPlacementTarget;
-      }
-      if (update.yearlyRevenueTarget === null && row.yearlyRevenueTarget !== null && row.yearlyRevenueTarget !== undefined) {
-        update.yearlyRevenueTarget = row.yearlyRevenueTarget;
-      }
-      if (update.placementDone === null && row.placementDone !== null && row.placementDone !== undefined) {
-        update.placementDone = row.placementDone;
-      }
-      if (update.placementAchPercent === null && row.placementAchPercent !== null && row.placementAchPercent !== undefined) {
-        update.placementAchPercent = row.placementAchPercent;
-      }
-      if (update.revenueAch === null && row.revenueAch !== null && row.revenueAch !== undefined) {
-        update.revenueAch = row.revenueAch;
-      }
-      if (update.revenueTargetAchievedPercent === null && row.revenueTargetAchievedPercent !== null && row.revenueTargetAchievedPercent !== undefined) {
-        update.revenueTargetAchievedPercent = row.revenueTargetAchievedPercent;
-      }
-      if (update.totalRevenue === null && row.totalRevenueGenerated !== null && row.totalRevenueGenerated !== undefined) {
-        update.totalRevenue = row.totalRevenueGenerated;
-      }
-      if (update.slabQualified === null && row.slabQualified !== null && row.slabQualified !== undefined) {
-        update.slabQualified = row.slabQualified;
-      }
-      if (update.totalIncentiveAmount === null && row.totalIncentiveInr !== null && row.totalIncentiveInr !== undefined) {
-        update.totalIncentiveAmount = row.totalIncentiveInr;
-      }
-      if (update.totalIncentivePaid === null && row.totalIncentivePaidInr !== null && row.totalIncentivePaidInr !== undefined) {
-        update.totalIncentivePaid = row.totalIncentivePaidInr;
-      }
-      if (update.individualSynopsis === null && row.individualSynopsis !== null && row.individualSynopsis !== undefined) {
-        update.individualSynopsis = row.individualSynopsis;
-      }
-    }
-
-    // Fetch teams to identify Vantage teams
-    const teams = await tx.team.findMany({ select: { id: true, name: true } });
-    const vantageTeamIds = new Set(
-      teams.filter(t => t.name.toLowerCase().includes('vant')).map(t => t.id)
+    // When this import added real placement rows for a lead, remove their old summary-only placeholder row
+    const leadIdsWithRealPlacementsInThisImport = new Set(
+      preparedRows.filter((r) => !(r.plcId && String(r.plcId).startsWith(SUMMARY_PLC_PREFIX))).map((r) => r.leadId)
     );
-
-    // Update each lead's profile
-    console.log(`Updating ${leadUpdates.size} lead profiles...`);
-    let leadUpdateCounter = 0;
-    for (const [leadId, data] of leadUpdates) {
-      leadUpdateCounter++;
-      console.log(`Updating lead profile ${leadUpdateCounter}/${leadUpdates.size}: ${leadId}`);
-      const profile = await tx.employeeProfile.findUnique({
-        where: { id: leadId },
-        include: { team: { select: { id: true, name: true } } },
+    if (leadIdsWithRealPlacementsInThisImport.size > 0) {
+      await tx.teamPlacement.deleteMany({
+        where: {
+          leadId: { in: [...leadIdsWithRealPlacementsInThisImport] },
+          plcId: { startsWith: SUMMARY_PLC_PREFIX },
+        },
       });
-
-      if (!profile) continue;
-
-      const isVantage = profile.teamId && vantageTeamIds.has(profile.teamId);
-      const updateData = {};
-
-      if (isVantage) {
-        // Vantage: REVENUE-based targets (but also have placement targets)
-        if (data.yearlyRevenueTarget !== null) {
-          updateData.yearlyTarget = data.yearlyRevenueTarget;
-          updateData.yearlyRevenueTarget = data.yearlyRevenueTarget;
-        } else if (profile.yearlyRevenueTarget !== null) {
-          updateData.yearlyTarget = profile.yearlyRevenueTarget;
-        }
-        updateData.targetType = 'REVENUE';
-        // Store placement target if provided (for dual-target display)
-        if (data.yearlyPlacementTarget !== null) {
-          updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
-        }
-      } else {
-        // Non-Vantage: Usually PLACEMENTS-based, but could be REVENUE-based
-      if (data.yearlyPlacementTarget !== null) {
-        updateData.yearlyTarget = data.yearlyPlacementTarget;
-        updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
-        updateData.targetType = 'PLACEMENTS';
-        // Use placement-specific achievement percent if available
-        if (data.placementAchPercent !== null) {
-          updateData.revenueTargetAchievedPercent = data.placementAchPercent;
-        }
-      } else if (data.yearlyRevenueTarget !== null) {
-          // Fallback to revenue target if no placement target is provided
-          updateData.yearlyTarget = data.yearlyRevenueTarget;
-          updateData.yearlyRevenueTarget = data.yearlyRevenueTarget;
-          updateData.targetType = 'REVENUE';
-        } else if (profile.yearlyTarget !== null) {
-          // Keep existing target if no new target is provided
-          updateData.yearlyTarget = profile.yearlyTarget;
-        }
-      }
-
-      // Update all summary fields from summary data
-      if (data.placementDone !== null) {
-        updateData.placementsDone = data.placementDone;
-      }
-      if (data.revenueAch !== null) {
-        updateData.revenueAch = data.revenueAch;
-      }
-      if (data.revenueTargetAchievedPercent !== null) {
-        updateData.revenueTargetAchievedPercent = data.revenueTargetAchievedPercent;
-      }
-      if (data.totalRevenue !== null) {
-        updateData.totalRevenue = data.totalRevenue;
-      }
-      if (data.slabQualified !== null) {
-        updateData.slabQualified = data.slabQualified;
-      }
-      if (data.totalIncentiveAmount !== null) {
-        updateData.totalIncentiveAmount = data.totalIncentiveAmount;
-      }
-      if (data.totalIncentivePaid !== null) {
-        updateData.totalIncentivePaid = data.totalIncentivePaid;
-      }
-      if (data.individualSynopsis !== null) {
-        updateData.individualSynopsis = data.individualSynopsis;
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        await tx.employeeProfile.update({
-          where: { id: leadId },
-          data: updateData,
-        });
-      }
     }
+
+    // Do NOT update EmployeeProfile from team import. Team summary lives only in TeamPlacement
+    // and is read via getTeamPlacementOverview. Updating profile here would overwrite the lead's
+    // personal target/summary (e.g. L2's personal 450000) with team-sheet data and jumble team vs personal.
 
     await tx.auditLog.create({
       data: {
@@ -2673,15 +2883,23 @@ export async function importTeamPlacements(payload, actorId) {
       summary: {
         placementsCreated: insertedCount,
         placementsUpdated: updatedCount,
-        employeesUpdated: leadUpdates.size,
+        employeesUpdated: 0,
       },
       batchId: batch.id,
     };
   }, {
-    timeout: 60000, // 60 seconds timeout for large imports
+    timeout: 60000,
   });
 
-  return { ...result, errors: [] };
+  report.placementsCreated = result.summary?.placementsCreated ?? 0;
+  report.placementsUpdated = result.summary?.placementsUpdated ?? 0;
+
+  return {
+    ...result,
+    insertedCount: result.summary?.placementsCreated ?? 0,
+    errors: [],
+    report,
+  };
 }
 
 export async function deletePlacement(id, actorId) {

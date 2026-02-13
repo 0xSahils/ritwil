@@ -111,9 +111,18 @@ const TeamPage = () => {
     })
   }
 
-  const handleMemberClick = useCallback((member, lead, team) => {
+  const handleMemberClick = useCallback((member, lead, team, viewParam) => {
     const slug = member.name.replace(/\s+/g, '-').toLowerCase()
-    navigate(`/employee/${slug}`, {
+    
+    // Normalize viewParam to include ?view= if it's a raw string like 'team' or 'personal'
+    if (!viewParam) {
+      const isLead = member.role === 'TEAM_LEAD' || (member.level && ['L2', 'L3'].includes(member.level.toUpperCase()));
+      viewParam = isLead ? '?view=team' : '?view=personal';
+    } else if (!viewParam.startsWith('?')) {
+      viewParam = `?view=${viewParam}`;
+    }
+    
+    navigate(`/employee/${slug}${viewParam}`, {
       state: {
         employeeId: member.id,
       },

@@ -12,7 +12,8 @@
     "prisma:migrate-dev": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
     "test": "node tests/api.test.js",
-    "test:sheets": "node scripts/comprehensive_sheet_test.js"
+    "test:sheets": "node scripts/comprehensive_sheet_test.js",
+    "sync-target-types": "node scripts/sync-target-types-from-teams.js"
   },
   "dependencies": {
     "@prisma/client": "^5.16.0",

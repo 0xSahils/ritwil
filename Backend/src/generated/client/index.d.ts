@@ -11779,7 +11779,7 @@ export namespace Prisma {
     incentiveInr: Decimal | null
     incentivePaidInr: Decimal | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     targetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     totalIncentiveInr: Decimal | null
@@ -11793,7 +11793,7 @@ export namespace Prisma {
     incentiveInr: Decimal | null
     incentivePaidInr: Decimal | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     targetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     totalIncentiveInr: Decimal | null
@@ -11822,7 +11822,7 @@ export namespace Prisma {
     recruiterName: string | null
     teamLeadName: string | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     targetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     slabQualified: string | null
@@ -11853,7 +11853,7 @@ export namespace Prisma {
     recruiterName: string | null
     teamLeadName: string | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     targetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     slabQualified: string | null
@@ -12125,7 +12125,7 @@ export namespace Prisma {
     recruiterName: string | null
     teamLeadName: string | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     targetAchievedPercent: Decimal | null
     totalRevenueGenerated: Decimal | null
     slabQualified: string | null
@@ -12287,7 +12287,7 @@ export namespace Prisma {
       recruiterName: string | null
       teamLeadName: string | null
       yearlyPlacementTarget: Prisma.Decimal | null
-      placementDone: number | null
+      placementDone: Prisma.Decimal | null
       targetAchievedPercent: Prisma.Decimal | null
       totalRevenueGenerated: Prisma.Decimal | null
       slabQualified: string | null
@@ -12710,7 +12710,7 @@ export namespace Prisma {
     readonly recruiterName: FieldRef<"PersonalPlacement", 'String'>
     readonly teamLeadName: FieldRef<"PersonalPlacement", 'String'>
     readonly yearlyPlacementTarget: FieldRef<"PersonalPlacement", 'Decimal'>
-    readonly placementDone: FieldRef<"PersonalPlacement", 'Int'>
+    readonly placementDone: FieldRef<"PersonalPlacement", 'Decimal'>
     readonly targetAchievedPercent: FieldRef<"PersonalPlacement", 'Decimal'>
     readonly totalRevenueGenerated: FieldRef<"PersonalPlacement", 'Decimal'>
     readonly slabQualified: FieldRef<"PersonalPlacement", 'String'>
@@ -13083,7 +13083,7 @@ export namespace Prisma {
     incentiveInr: Decimal | null
     incentivePaidInr: Decimal | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     placementAchPercent: Decimal | null
     yearlyRevenueTarget: Decimal | null
     revenueAch: Decimal | null
@@ -13100,7 +13100,7 @@ export namespace Prisma {
     incentiveInr: Decimal | null
     incentivePaidInr: Decimal | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     placementAchPercent: Decimal | null
     yearlyRevenueTarget: Decimal | null
     revenueAch: Decimal | null
@@ -13133,7 +13133,7 @@ export namespace Prisma {
     incentivePaidInr: Decimal | null
     vbCode: string | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     placementAchPercent: Decimal | null
     yearlyRevenueTarget: Decimal | null
     revenueAch: Decimal | null
@@ -13168,7 +13168,7 @@ export namespace Prisma {
     incentivePaidInr: Decimal | null
     vbCode: string | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     placementAchPercent: Decimal | null
     yearlyRevenueTarget: Decimal | null
     revenueAch: Decimal | null
@@ -13466,7 +13466,7 @@ export namespace Prisma {
     incentivePaidInr: Decimal | null
     vbCode: string | null
     yearlyPlacementTarget: Decimal | null
-    placementDone: number | null
+    placementDone: Decimal | null
     placementAchPercent: Decimal | null
     yearlyRevenueTarget: Decimal | null
     revenueAch: Decimal | null
@@ -13644,7 +13644,7 @@ export namespace Prisma {
       incentivePaidInr: Prisma.Decimal | null
       vbCode: string | null
       yearlyPlacementTarget: Prisma.Decimal | null
-      placementDone: number | null
+      placementDone: Prisma.Decimal | null
       placementAchPercent: Prisma.Decimal | null
       yearlyRevenueTarget: Prisma.Decimal | null
       revenueAch: Prisma.Decimal | null
@@ -14071,7 +14071,7 @@ export namespace Prisma {
     readonly incentivePaidInr: FieldRef<"TeamPlacement", 'Decimal'>
     readonly vbCode: FieldRef<"TeamPlacement", 'String'>
     readonly yearlyPlacementTarget: FieldRef<"TeamPlacement", 'Decimal'>
-    readonly placementDone: FieldRef<"TeamPlacement", 'Int'>
+    readonly placementDone: FieldRef<"TeamPlacement", 'Decimal'>
     readonly placementAchPercent: FieldRef<"TeamPlacement", 'Decimal'>
     readonly yearlyRevenueTarget: FieldRef<"TeamPlacement", 'Decimal'>
     readonly revenueAch: FieldRef<"TeamPlacement", 'Decimal'>
@@ -15770,7 +15770,7 @@ export namespace Prisma {
     recruiterName?: StringNullableFilter<"PersonalPlacement"> | string | null
     teamLeadName?: StringNullableFilter<"PersonalPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableFilter<"PersonalPlacement"> | number | null
+    placementDone?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableFilter<"PersonalPlacement"> | string | null
@@ -15839,7 +15839,7 @@ export namespace Prisma {
     recruiterName?: StringNullableFilter<"PersonalPlacement"> | string | null
     teamLeadName?: StringNullableFilter<"PersonalPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableFilter<"PersonalPlacement"> | number | null
+    placementDone?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableFilter<"PersonalPlacement"> | string | null
@@ -15911,7 +15911,7 @@ export namespace Prisma {
     recruiterName?: StringNullableWithAggregatesFilter<"PersonalPlacement"> | string | null
     teamLeadName?: StringNullableWithAggregatesFilter<"PersonalPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableWithAggregatesFilter<"PersonalPlacement"> | number | null
+    placementDone?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableWithAggregatesFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableWithAggregatesFilter<"PersonalPlacement"> | string | null
@@ -15946,7 +15946,7 @@ export namespace Prisma {
     incentivePaidInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     vbCode?: StringNullableFilter<"TeamPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableFilter<"TeamPlacement"> | number | null
+    placementDone?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     revenueAch?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
@@ -16023,7 +16023,7 @@ export namespace Prisma {
     incentivePaidInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     vbCode?: StringNullableFilter<"TeamPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableFilter<"TeamPlacement"> | number | null
+    placementDone?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     revenueAch?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
@@ -16103,7 +16103,7 @@ export namespace Prisma {
     incentivePaidInr?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     vbCode?: StringNullableWithAggregatesFilter<"TeamPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableWithAggregatesFilter<"TeamPlacement"> | number | null
+    placementDone?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     revenueAch?: DecimalNullableWithAggregatesFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
@@ -17126,7 +17126,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -17159,7 +17159,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -17188,7 +17188,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17221,7 +17221,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17252,7 +17252,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -17281,7 +17281,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17312,7 +17312,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17342,7 +17342,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -17379,7 +17379,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -17412,7 +17412,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -17449,7 +17449,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -17484,7 +17484,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -17517,7 +17517,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -17552,7 +17552,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -20512,7 +20512,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -20543,7 +20543,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -20583,7 +20583,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -20618,7 +20618,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -21021,7 +21021,7 @@ export namespace Prisma {
     recruiterName?: StringNullableFilter<"PersonalPlacement"> | string | null
     teamLeadName?: StringNullableFilter<"PersonalPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableFilter<"PersonalPlacement"> | number | null
+    placementDone?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: DecimalNullableFilter<"PersonalPlacement"> | Decimal | DecimalJsLike | number | string | null
     slabQualified?: StringNullableFilter<"PersonalPlacement"> | string | null
@@ -21072,7 +21072,7 @@ export namespace Prisma {
     incentivePaidInr?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     vbCode?: StringNullableFilter<"TeamPlacement"> | string | null
     yearlyPlacementTarget?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
-    placementDone?: IntNullableFilter<"TeamPlacement"> | number | null
+    placementDone?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
     revenueAch?: DecimalNullableFilter<"TeamPlacement"> | Decimal | DecimalJsLike | number | string | null
@@ -22068,7 +22068,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -22099,7 +22099,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -22139,7 +22139,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -22174,7 +22174,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -22834,7 +22834,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -22865,7 +22865,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -23253,7 +23253,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23284,7 +23284,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23314,7 +23314,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23344,7 +23344,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -23379,7 +23379,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -23413,7 +23413,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -23474,7 +23474,7 @@ export namespace Prisma {
     recruiterName?: string | null
     teamLeadName?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: Decimal | DecimalJsLike | number | string | null
     slabQualified?: string | null
@@ -23505,7 +23505,7 @@ export namespace Prisma {
     incentivePaidInr?: Decimal | DecimalJsLike | number | string | null
     vbCode?: string | null
     yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    placementDone?: number | null
+    placementDone?: Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
     revenueAch?: Decimal | DecimalJsLike | number | string | null
@@ -23537,7 +23537,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23568,7 +23568,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23598,7 +23598,7 @@ export namespace Prisma {
     recruiterName?: NullableStringFieldUpdateOperationsInput | string | null
     teamLeadName?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     targetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     totalRevenueGenerated?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23628,7 +23628,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -23663,7 +23663,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
@@ -23697,7 +23697,7 @@ export namespace Prisma {
     incentivePaidInr?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     vbCode?: NullableStringFieldUpdateOperationsInput | string | null
     yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    placementDone?: NullableIntFieldUpdateOperationsInput | number | null
+    placementDone?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     placementAchPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null

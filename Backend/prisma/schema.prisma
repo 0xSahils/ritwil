@@ -276,7 +276,7 @@ model PersonalPlacement {
   recruiterName          String?
   teamLeadName          String?
   yearlyPlacementTarget  Decimal? @db.Decimal(14, 2)
-  placementDone          Int?
+  placementDone          Decimal? @db.Decimal(14, 2)
   targetAchievedPercent  Decimal? @db.Decimal(5, 2)
   totalRevenueGenerated  Decimal? @db.Decimal(14, 2)
   slabQualified          String?
@@ -323,7 +323,7 @@ model TeamPlacement {
   // Summary snapshot fields from sheet (team-level)
   vbCode                    String?
   yearlyPlacementTarget     Decimal? @db.Decimal(14, 2)
-  placementDone             Int?
+  placementDone             Decimal? @db.Decimal(14, 2)
   placementAchPercent       Decimal? @db.Decimal(5, 2)
   yearlyRevenueTarget       Decimal? @db.Decimal(14, 2)
   revenueAch                Decimal? @db.Decimal(14, 2)

@@ -54,14 +54,14 @@ router.post(
   }
 );
 
-// Import Team Lead Placement (Team data)
+// Import Team Lead Placement (Team data). teamId = panel team; only that team's data is accepted.
 router.post(
   "/import/team",
   requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
-      const { headers, rows } = req.body;
-      const result = await importTeamPlacements({ headers, rows }, req.user.id);
+      const { headers, rows, teamId } = req.body;
+      const result = await importTeamPlacements({ headers, rows, teamId }, req.user.id);
       res.status(201).json(result);
     } catch (err) {
       const message = err.message || "Failed to import team placements";

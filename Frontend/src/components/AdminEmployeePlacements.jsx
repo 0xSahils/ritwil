@@ -826,37 +826,31 @@ const AdminEmployeePlacements = () => {
                         throw new Error("Sheet is empty");
                       }
 
-                      // Find header row dynamically (contains "candidate name" and "recruiter name")
+                      // Find first header row (summary block: Team/VB Code, or placement block: Candidate Name/Recruiter Name)
+                      // Send entire sheet so backend receives both summary and placement rows for correct summary upload
                       let headerIndex = -1;
                       for (let i = 0; i < jsonData.length; i++) {
                         const row = jsonData[i];
                         if (!row || !row.length) continue;
                         const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
-                        if (rowLower.includes("candidate name") && rowLower.includes("recruiter name")) {
+                        const hasSummaryHeader = rowLower.includes("team") && rowLower.includes("vb code");
+                        const hasPlacementHeader = rowLower.includes("candidate name") && (rowLower.includes("recruiter name") || rowLower.includes("lead name"));
+                        if (hasSummaryHeader || hasPlacementHeader) {
                           headerIndex = i;
                           break;
                         }
                       }
 
                       if (headerIndex === -1) {
-                        throw new Error("Could not find header row with 'Candidate Name' and 'Recruiter Name'");
+                        throw new Error("Could not find header row (expected 'Team' & 'VB Code' or 'Candidate Name' & 'Recruiter Name')");
                       }
 
                       const headers = jsonData[headerIndex];
-                      const allRows = [];
-
-                      // Extract data rows from the header block
-                      for (let i = headerIndex + 1; i < jsonData.length; i++) {
-                        const row = jsonData[i];
-                        if (!row || !row.length) continue;
-                        // Stop if we hit a summary header block starting with "Team"
-                        const firstCell = String(row[0] || "").trim().toLowerCase();
-                        if (firstCell === "team") break;
-                        allRows.push(row);
-                      }
+                      // Send all rows after header so backend gets summary rows and placement rows (do not break at "team")
+                      const allRows = jsonData.slice(headerIndex + 1).filter((row) => row && row.length > 0);
 
                       if (!allRows.length) {
-                        throw new Error("No valid placement rows found in sheet");
+                        throw new Error("No data rows found in sheet");
                       }
 
                       const response = await apiRequest("/placements/import/personal", {
@@ -867,7 +861,8 @@ const AdminEmployeePlacements = () => {
                       if (!response.ok) {
                         throw new Error(result.error || "Import failed");
                       }
-                      alert(`Personal placements imported (${result.insertedCount || 0} rows).`);
+                      const totalRows = (result.summary?.placementsCreated ?? result.insertedCount ?? 0) + (result.summary?.placementsUpdated ?? 0);
+                      alert(`Personal placements imported (${totalRows} rows: ${result.summary?.placementsCreated ?? 0} created, ${result.summary?.placementsUpdated ?? 0} updated).`);
                       setShowPersonalImportModal(false);
                       setPersonalFile(null);
                       await fetchPlacements();
@@ -936,37 +931,31 @@ const AdminEmployeePlacements = () => {
                         throw new Error("Sheet is empty");
                       }
 
-                      // Find header row dynamically (contains "candidate name" and "lead" or "lead name")
+                      // Find first header row (summary: Team/VB Code, or placement: Candidate Name/Lead)
+                      // Send entire sheet so backend receives both summary and placement rows for correct summary upload
                       let headerIndex = -1;
                       for (let i = 0; i < jsonData.length; i++) {
                         const row = jsonData[i];
                         if (!row || !row.length) continue;
                         const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
-                        if (rowLower.includes("candidate name") && (rowLower.includes("lead") || rowLower.includes("lead name"))) {
+                        const hasSummaryHeader = rowLower.includes("team") && rowLower.includes("vb code");
+                        const hasPlacementHeader = rowLower.includes("candidate name") && (rowLower.includes("lead") || rowLower.includes("lead name"));
+                        if (hasSummaryHeader || hasPlacementHeader) {
                           headerIndex = i;
                           break;
                         }
                       }
 
                       if (headerIndex === -1) {
-                        throw new Error("Could not find header row with 'Candidate Name' and 'Lead'");
+                        throw new Error("Could not find header row (expected 'Team' & 'VB Code' or 'Candidate Name' & 'Lead')");
                       }
 
                       const headers = jsonData[headerIndex];
-                      const allRows = [];
-
-                      // Extract data rows from the header block
-                      for (let i = headerIndex + 1; i < jsonData.length; i++) {
-                        const row = jsonData[i];
-                        if (!row || !row.length) continue;
-                        // Stop if we hit a summary header block starting with "Team"
-                        const firstCell = String(row[0] || "").trim().toLowerCase();
-                        if (firstCell === "team") break;
-                        allRows.push(row);
-                      }
+                      // Send all rows after header so backend gets summary rows and placement rows (do not break at "team")
+                      const allRows = jsonData.slice(headerIndex + 1).filter((row) => row && row.length > 0);
 
                       if (!allRows.length) {
-                        throw new Error("No valid placement rows found in sheet");
+                        throw new Error("No data rows found in sheet");
                       }
 
                       const response = await apiRequest("/placements/import/team", {
@@ -977,7 +966,8 @@ const AdminEmployeePlacements = () => {
                       if (!response.ok) {
                         throw new Error(result.error || "Import failed");
                       }
-                      alert(`Team placements imported (${result.insertedCount || 0} rows).`);
+                      const totalRows = (result.summary?.placementsCreated ?? result.insertedCount ?? 0) + (result.summary?.placementsUpdated ?? 0);
+                      alert(`Team placements imported (${totalRows} rows: ${result.summary?.placementsCreated ?? 0} created, ${result.summary?.placementsUpdated ?? 0} updated).`);
                       setShowTeamImportModal(false);
                       setTeamFile(null);
                     } catch (e) {

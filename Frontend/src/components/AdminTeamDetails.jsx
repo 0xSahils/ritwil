@@ -43,6 +43,7 @@ const AdminTeamDetails = () => {
   const [teamFile, setTeamFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [importResult, setImportResult] = useState(null); // { summary, report } after successful team import
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const handleUpdateTeam = (data) => {
@@ -133,37 +134,30 @@ const AdminTeamDetails = () => {
         throw new Error("Sheet is empty");
       }
 
-      // Find header row dynamically (contains "candidate name" and "recruiter name")
+      // Find first header row (summary: Team/VB Code, or placement: Candidate Name/Recruiter Name)
+      // Send entire sheet so backend receives both summary and placement rows
       let headerIndex = -1;
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
         if (!row || !row.length) continue;
         const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
-        if (rowLower.includes("candidate name") && rowLower.includes("recruiter name")) {
+        const hasSummaryHeader = rowLower.includes("team") && rowLower.includes("vb code");
+        const hasPlacementHeader = rowLower.includes("candidate name") && (rowLower.includes("recruiter name") || rowLower.includes("lead name"));
+        if (hasSummaryHeader || hasPlacementHeader) {
           headerIndex = i;
           break;
         }
       }
 
       if (headerIndex === -1) {
-        throw new Error("Could not find header row with 'Candidate Name' and 'Recruiter Name'");
+        throw new Error("Could not find header row (expected 'Team' & 'VB Code' or 'Candidate Name' & 'Recruiter Name')");
       }
 
       const headers = jsonData[headerIndex];
-      const allRows = [];
-
-      // Extract data rows from the header block
-      for (let i = headerIndex + 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (!row || !row.length) continue;
-        // Stop if we hit a summary header block starting with "Team"
-        const firstCell = String(row[0] || "").trim().toLowerCase();
-        if (firstCell === "team") break;
-        allRows.push(row);
-      }
+      const allRows = jsonData.slice(headerIndex + 1).filter((row) => row && row.length > 0);
 
       if (!allRows.length) {
-        throw new Error("No valid placement rows found in sheet");
+        throw new Error("No data rows found in sheet");
       }
 
       const response = await apiRequest("/placements/import/personal", {
@@ -174,7 +168,8 @@ const AdminTeamDetails = () => {
       if (!response.ok) {
         throw new Error(result.error || "Import failed");
       }
-      alert(`Personal placements imported (${result.insertedCount || 0} rows).`);
+      const totalRows = (result.summary?.placementsCreated ?? result.insertedCount ?? 0) + (result.summary?.placementsUpdated ?? 0);
+      alert(`Personal placements imported (${totalRows} rows: ${result.summary?.placementsCreated ?? 0} created, ${result.summary?.placementsUpdated ?? 0} updated).`);
       setShowPersonalImportModal(false);
       setPersonalFile(null);
       refetch();
@@ -202,50 +197,44 @@ const AdminTeamDetails = () => {
         throw new Error("Sheet is empty");
       }
 
-      // Find header row dynamically (contains "candidate name" and "lead" or "lead name")
+      // Find first header row (summary: Team/VB Code, or placement: Candidate Name/Lead)
+      // Send entire sheet so backend receives both summary and placement rows
       let headerIndex = -1;
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
         if (!row || !row.length) continue;
         const rowLower = row.map((c) => String(c || "").trim().toLowerCase());
-        if (rowLower.includes("candidate name") && (rowLower.includes("lead") || rowLower.includes("lead name"))) {
+        const hasSummaryHeader = rowLower.includes("team") && rowLower.includes("vb code");
+        const hasPlacementHeader = rowLower.includes("candidate name") && (rowLower.includes("lead") || rowLower.includes("lead name"));
+        if (hasSummaryHeader || hasPlacementHeader) {
           headerIndex = i;
           break;
         }
       }
 
       if (headerIndex === -1) {
-        throw new Error("Could not find header row with 'Candidate Name' and 'Lead'");
+        throw new Error("Could not find header row (expected 'Team' & 'VB Code' or 'Candidate Name' & 'Lead')");
       }
 
       const headers = jsonData[headerIndex];
-      const allRows = [];
-
-      // Extract data rows from the header block
-      for (let i = headerIndex + 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (!row || !row.length) continue;
-        // Stop if we hit a summary header block starting with "Team"
-        const firstCell = String(row[0] || "").trim().toLowerCase();
-        if (firstCell === "team") break;
-        allRows.push(row);
-      }
+      const allRows = jsonData.slice(headerIndex + 1).filter((row) => row && row.length > 0);
 
       if (!allRows.length) {
-        throw new Error("No valid placement rows found in sheet");
+        throw new Error("No data rows found in sheet");
       }
 
       const response = await apiRequest("/placements/import/team", {
         method: "POST",
-        body: JSON.stringify({ headers, rows: allRows }),
+        body: JSON.stringify({ headers, rows: allRows, teamId: team?.id }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(result.error || "Import failed");
       }
-      alert(`Team placements imported (${result.insertedCount || 0} rows).`);
       setShowTeamImportModal(false);
       setTeamFile(null);
+      setImportError("");
+      setImportResult(result);
       refetch();
     } catch (e) {
       setImportError(e.message || "Import failed");
@@ -637,9 +626,9 @@ const AdminTeamDetails = () => {
               <div className="bg-violet-50 p-4 rounded-lg text-sm text-violet-700">
                 <p className="font-medium mb-2">Instructions for Team Sheet:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Upload an Excel file containing team lead / snapshot data.</li>
-                  <li>The sheet must have headers like "Candidate Name" and "Lead".</li>
-                  <li>Data will be saved as team placements (TeamPlacement) and update lead snapshots.</li>
+                  <li>Upload an Excel file with summary and placement headers for this team only.</li>
+                  <li>Only rows for team &quot;{team?.name}&quot; will be imported; other teams in the sheet are skipped.</li>
+                  <li>Summary headers: Team, VB Code, Lead Name, Yearly Placement Target, … Placement headers: Lead Name, Candidate Name, PLC ID, …</li>
                 </ul>
               </div>
               {importError && (
@@ -658,7 +647,7 @@ const AdminTeamDetails = () => {
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button 
-                  onClick={() => { setShowTeamImportModal(false); setImportError(""); }} 
+                  onClick={() => { setShowTeamImportModal(false); setImportError(""); setTeamFile(null); }} 
                   disabled={importing}
                   className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
                 >
@@ -672,6 +661,43 @@ const AdminTeamDetails = () => {
                   {importing ? "Importing..." : "Upload & Process"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {importResult && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setImportResult(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-slate-800 mb-4">Import Result</h2>
+            <div className="space-y-3 text-sm">
+              <p className="text-slate-600 font-medium">Validation</p>
+              <ul className="list-none space-y-1 pl-0">
+                <li className="flex justify-between"><span>Summary headers</span><span className="text-emerald-600 font-medium">OK</span></li>
+                <li className="flex justify-between"><span>Placement headers</span><span className={importResult.report?.placementHeaderValid ? "text-emerald-600 font-medium" : "text-amber-600"}>{importResult.report?.placementHeaderValid ? "OK" : "N/A"}</span></li>
+              </ul>
+              <p className="text-slate-600 font-medium pt-2">Summary rows</p>
+              <ul className="list-none space-y-1 pl-0">
+                <li className="flex justify-between"><span>Checked</span><span>{importResult.report?.summaryRowsChecked ?? 0}</span></li>
+                <li className="flex justify-between"><span>Accepted</span><span className="text-emerald-600">{importResult.report?.summaryRowsAccepted ?? 0}</span></li>
+                <li className="flex justify-between"><span>Rejected (wrong team)</span><span className="text-amber-600">{importResult.report?.summaryRowsRejectedWrongTeam ?? 0}</span></li>
+              </ul>
+              <p className="text-slate-600 font-medium pt-2">Placement rows</p>
+              <ul className="list-none space-y-1 pl-0">
+                <li className="flex justify-between"><span>Checked</span><span>{importResult.report?.placementRowsChecked ?? 0}</span></li>
+                <li className="flex justify-between"><span>Uploaded (created)</span><span className="text-emerald-600">{importResult.report?.placementsCreated ?? importResult.summary?.placementsCreated ?? 0}</span></li>
+                <li className="flex justify-between"><span>Updated</span><span className="text-emerald-600">{importResult.report?.placementsUpdated ?? importResult.summary?.placementsUpdated ?? 0}</span></li>
+                <li className="flex justify-between"><span>Rejected (wrong team)</span><span className="text-amber-600">{importResult.report?.placementsRejectedWrongTeam ?? 0}</span></li>
+                <li className="flex justify-between"><span>Rejected (lead not found)</span><span className="text-red-600">{importResult.report?.placementsRejectedLeadNotFound ?? 0}</span></li>
+              </ul>
+            </div>
+            <div className="flex justify-end mt-6">
+              <button 
+                onClick={() => setImportResult(null)} 
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

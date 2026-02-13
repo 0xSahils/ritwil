@@ -64,13 +64,7 @@ const processEmployeeData = async (employee) => {
     percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
   }
 
-  const filteredIncentives = employee.incentives || [];
-  const latestIncentive =
-    filteredIncentives.length > 0
-      ? filteredIncentives.reduce((a, b) =>
-          a.periodEnd > b.periodEnd ? a : b
-        )
-      : null;
+  const latestIncentive = null;
 
   const oldPlacementIncentive = (employee.placements || []).reduce(
     (sum, p) => sum + Number(p.incentiveAmountInr || 0),
@@ -116,7 +110,7 @@ const processEmployeeData = async (employee) => {
   }));
 
   // Convert team placements to same format
-  const convertedTeamPlacements = filteredTeamPlacements.map(p => ({
+  const convertedTeamPlacements = teamPlacements.map(p => ({
     id: p.id,
     candidateName: p.candidateName,
     candidateId: null,
@@ -146,7 +140,7 @@ const processEmployeeData = async (employee) => {
 
   // Combine all placements
   const allPlacements = [
-    ...filteredPlacements.map((p) => ({
+    ...(employee.placements || []).map((p) => ({
       id: p.id,
       candidateName: p.candidateName,
       candidateId: p.candidateId,
@@ -264,7 +258,6 @@ router.get(
           placements: {
             include: { monthlyBillings: true },
           },
-          incentives: true,
         },
       });
 
@@ -307,7 +300,6 @@ router.get(
           placements: {
             include: { monthlyBillings: true },
           },
-          incentives: true,
         },
       });
 

@@ -17,6 +17,17 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
   // L2/L3 should be treated as leaf nodes in team view to hide their personal placements/targets
   const isLeaf = !hasChildren;
   
+  const handleMemberClickWithView = (member, lead, team, forceView) => {
+    const slug = member.name.replace(/\s+/g, '-').toLowerCase();
+    const isLead = member.role === 'TEAM_LEAD' || (member.level && ['L2', 'L3'].includes(member.level.toUpperCase()));
+    
+    // Use forced view if provided (e.g. from "(Team)" or "(Personal)" clicks), 
+    // otherwise default to team view for leads and personal for members
+    let viewParam = forceView ? `?view=${forceView}` : (isLead ? '?view=team' : '?view=personal');
+
+    handleMemberClick(member, lead, team, viewParam);
+  };
+
   if (hasChildren && !isLeaf) {
     const achievedValue = isPlacementTeam 
       ? (teamSummary.placementDone || member.totalPlacements || member.placements || 0)
@@ -31,7 +42,7 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
           className={`relative z-10 bg-white/80 backdrop-blur-md border border-slate-200 p-3.5 rounded-2xl hover:shadow-md hover:border-blue-300 transition-all duration-200 group`}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleMemberClick(member, lead, team)}>
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleMemberClickWithView(member, lead, team, 'team')}>
               <div className={`relative ${isL3 ? 'bg-teal-500' : 'bg-blue-500'} text-white w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shadow-md group-hover:scale-110 transition-transform duration-300`}>
                 <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -88,7 +99,7 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
             <div className="relative animate-fadeIn">
               <div className="absolute left-[-24px] top-1/2 w-[24px] h-[2px] bg-slate-200/80 rounded-l-full"></div>
               <div
-                onClick={() => handleMemberClick(member, lead, team)}
+                onClick={() => handleMemberClickWithView(member, lead, team, 'personal')}
                 className="relative z-10 bg-blue-50/40 backdrop-blur-sm border border-blue-100 p-4 rounded-xl hover:border-blue-300 hover:bg-blue-50/60 hover:shadow-md transition-all duration-200 group cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-2">
@@ -164,7 +175,7 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
       <div className="absolute left-[-24px] top-1/2 w-[24px] h-[2px] bg-slate-200/80 rounded-l-full"></div>
       
       <div
-        onClick={() => handleMemberClick(member, lead, team)}
+        onClick={() => handleMemberClickWithView(member, lead, team, 'personal')}
         className="relative z-10 bg-white/60 backdrop-blur-sm border border-slate-100 p-4 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 hover:shadow-md transition-all duration-200 group cursor-pointer"
       >
         <div className="flex items-center justify-between mb-3">

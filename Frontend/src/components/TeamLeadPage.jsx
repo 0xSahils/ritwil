@@ -176,8 +176,18 @@ const TeamLeadPage = () => {
     })
   }
 
-  const handleMemberClick = (member, lead, team) => {
-    navigate(`/employee/${member.name.replace(/\s+/g, '-').toLowerCase()}`, {
+  const handleMemberClick = (member, lead, team, viewParam) => {
+    const slug = member.name.replace(/\s+/g, '-').toLowerCase();
+    
+    // If viewParam is not provided, determine it based on role/level
+    if (!viewParam) {
+      const isLead = member.role === 'TEAM_LEAD' || (member.level && ['L2', 'L3'].includes(member.level.toUpperCase()));
+      viewParam = isLead ? '?view=team' : '?view=personal';
+    } else if (!viewParam.startsWith('?')) {
+      viewParam = `?view=${viewParam}`;
+    }
+
+    navigate(`/employee/${slug}${viewParam}`, {
       state: {
         employeeId: member.id,
         employeeName: member.name,
@@ -491,11 +501,14 @@ const TeamLeadPage = () => {
                else if (memberPercentage >= 50) progressColor = "text-yellow-500";
 
                return (
-                <div 
-                  key={member.id}
-                  onClick={() => handleMemberClick(member, teamLeadData, teamData)}
-                  className="bg-white border border-slate-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group"
-                >
+                 <div 
+                   key={member.id}
+                   onClick={() => {
+                     const isLead = member.role === 'TEAM_LEAD' || (member.level && ['L2', 'L3'].includes(member.level.toUpperCase()));
+                     handleMemberClick(member, teamLeadData, teamData, isLead ? 'team' : 'personal');
+                   }}
+                   className="bg-white border border-slate-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                 >
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-slate-800 group-hover:text-white transition-colors duration-300">

@@ -6,7 +6,8 @@ const PieChart = ({ percentage, size = 50 }) => {
   const radius = size / 2 - 4;
   const center = size / 2;
   const innerRadius = radius * 0.65;
-  const angle = (percentage / 100) * 360;
+  const fillPercent = Math.min(percentage, 100);
+  const angle = (fillPercent / 100) * 360;
   const largeArcFlag = angle > 180 ? 1 : 0;
   const endAngle = (angle * Math.PI) / 180;
   const endX = center + radius * Math.sin(endAngle);
@@ -17,6 +18,8 @@ const PieChart = ({ percentage, size = 50 }) => {
   const innerEndY = center - innerRadius * Math.cos(endAngle);
   const innerStartX = center;
   const innerStartY = center - innerRadius;
+  const fullDonutPath = `M ${center} ${center} L ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center} ${center + radius} A ${radius} ${radius} 0 1 1 ${center} ${center - radius} L ${center} ${center - innerRadius} A ${innerRadius} ${innerRadius} 0 1 0 ${center} ${center + innerRadius} A ${innerRadius} ${innerRadius} 0 1 0 ${center} ${center - innerRadius} Z`;
+  const slicePath = `M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} L ${innerEndX} ${innerEndY} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY} Z`;
 
   const getGradientColors = (value) => {
     if (value <= 30) {
@@ -99,8 +102,7 @@ const PieChart = ({ percentage, size = 50 }) => {
           fill="none"
           stroke="currentColor"
           strokeWidth="4"
-          className="text-slate-200/60"
-          opacity="0.8"
+          className="text-slate-200"
         />
         <circle
           cx={center}
@@ -111,7 +113,7 @@ const PieChart = ({ percentage, size = 50 }) => {
         />
         {percentage > 0 && (
           <path
-            d={`M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} L ${innerEndX} ${innerEndY} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY} Z`}
+            d={fillPercent >= 100 ? fullDonutPath : slicePath}
             fill={`url(#${gradientId})`}
             filter={`url(#shadow-${gradientId})`}
             className="transition-all duration-500 ease-out animate-scaleIn"

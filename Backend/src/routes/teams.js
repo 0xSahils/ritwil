@@ -10,6 +10,7 @@ import {
   bulkAssignEmployeesToTeam,
   assignTeamLead,
   getTeamDetails,
+  resolveTeamId,
   removeMemberFromTeam,
   updateMemberTarget,
   importTeamTargets,
@@ -55,8 +56,8 @@ router.post("/", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
 
 router.put("/:id", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const team = await updateTeam(id, req.body, req.user.id);
+    const teamId = await resolveTeamId(req.params.id);
+    const team = await updateTeam(teamId, req.body, req.user.id);
     res.json(team);
   } catch (err) {
     if (err.statusCode) {
@@ -68,8 +69,8 @@ router.put("/:id", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
 
 router.delete("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
   try {
-    const { id } = req.params;
-    await deleteTeam(id, req.user.id);
+    const teamId = await resolveTeamId(req.params.id);
+    await deleteTeam(teamId, req.user.id);
     res.status(204).send();
   } catch (err) {
     if (err.statusCode) {
@@ -84,9 +85,9 @@ router.post(
   requireRole(Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
-      const { id } = req.params;
+      const teamId = await resolveTeamId(req.params.id);
       const { userIds, managerId, yearlyTarget } = req.body;
-      await bulkAssignEmployeesToTeam(id, userIds || [], req.user.id, { managerId, yearlyTarget });
+      await bulkAssignEmployeesToTeam(teamId, userIds || [], req.user.id, { managerId, yearlyTarget });
       res.status(204).send();
     } catch (err) {
       if (err.statusCode) {
@@ -102,9 +103,9 @@ router.post(
   requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
-      const { id } = req.params;
+      const teamId = await resolveTeamId(req.params.id);
       const { userId } = req.body;
-      const updated = await assignTeamLead(id, userId, req.user.id);
+      const updated = await assignTeamLead(teamId, userId, req.user.id);
       res.json({
         id: updated.id,
         email: updated.email,
@@ -125,8 +126,9 @@ router.delete(
   requireRole(Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
-      const { id, userId } = req.params;
-      await removeMemberFromTeam(id, userId, req.user.id);
+      const teamId = await resolveTeamId(req.params.id);
+      const { userId } = req.params;
+      await removeMemberFromTeam(teamId, userId, req.user.id);
       res.status(204).send();
     } catch (err) {
       if (err.statusCode) {
@@ -160,9 +162,9 @@ router.post(
   requireRole(Role.S1_ADMIN),
   async (req, res, next) => {
     try {
-      const { id } = req.params;
+      const teamId = await resolveTeamId(req.params.id);
       const { targets } = req.body;
-      const results = await importTeamTargets(id, targets, req.user.id);
+      const results = await importTeamTargets(teamId, targets, req.user.id);
       res.json(results);
     } catch (err) {
       if (err.statusCode) {

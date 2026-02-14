@@ -5,6 +5,11 @@ import { useTeams } from "../hooks/useTeams";
 import { Skeleton } from "./common/Skeleton";
 import CalculationService from "../utils/calculationService";
 
+/** URL-safe slug from team name (matches backend resolution). */
+function teamSlug(team) {
+  return (team?.name ?? "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || team?.id;
+}
+
 const AdminTeamManagement = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -157,7 +162,7 @@ const AdminTeamManagement = () => {
 
                 <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
                   <button
-                    onClick={() => navigate(`/admin/teams/${team.id}`)}
+                    onClick={() => navigate(`/admin/teams/${teamSlug(team)}`)}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
                   >
                     Manage Team

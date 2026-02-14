@@ -8,6 +8,7 @@ import {
   getTeamLeadOverview,
   getPersonalPlacementOverview,
   getTeamPlacementOverview,
+  resolveEmployeeId,
 } from "../controllers/dashboardController.js";
 
 const router = express.Router();
@@ -279,16 +280,26 @@ router.get(
   requireRole(Role.SUPER_ADMIN, Role.TEAM_LEAD, Role.EMPLOYEE),
   async (req, res, next) => {
     try {
-      const { id } = req.params;
-
+      const { id: idOrSlug } = req.params;
       const viewerId = req.user.id;
+
+      let employeeId;
+      try {
+        employeeId = await resolveEmployeeId(idOrSlug);
+      } catch (err) {
+        if (err.statusCode === 404) {
+          return res.status(404).json({ error: "Employee not found" });
+        }
+        throw err;
+      }
+
       const viewer = await prisma.user.findUnique({
         where: { id: viewerId },
         include: { employeeProfile: true },
       });
 
       const employee = await prisma.user.findUnique({
-        where: { id },
+        where: { id: employeeId },
         include: {
           employeeProfile: {
             include: {
@@ -307,7 +318,7 @@ router.get(
         return res.status(404).json({ error: "Employee not found" });
       }
 
-      const isSelf = id === viewerId;
+      const isSelf = employeeId === viewerId;
       const hasFullAccess = viewer.role === Role.SUPER_ADMIN || viewer.role === Role.S1_ADMIN;
 
       if (!isSelf && !hasFullAccess) {
@@ -316,7 +327,6 @@ router.get(
             return res.status(403).json({ error: "Forbidden: Not your subordinate" });
           }
         } else {
-          // Regular employees cannot view others
           return res.status(403).json({ error: "Forbidden" });
         }
       }
@@ -324,6 +334,9 @@ router.get(
       const processedData = await processEmployeeData(employee);
       res.json(processedData);
     } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message });
+      }
       next(err);
     }
   }

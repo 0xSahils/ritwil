@@ -7,6 +7,45 @@ function toCurrency(value) {
   return Number(value || 0);
 }
 
+/** CUIDs are 25 chars and start with 'c'. */
+function looksLikeCuid(value) {
+  return typeof value === "string" && value.length >= 24 && value.length <= 26 && /^c[a-z0-9]+$/i.test(value);
+}
+
+/** Normalize name to URL slug (matches frontend). */
+function toEmployeeSlug(name) {
+  return (name ?? "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+/** Resolve employee id or slug to user id (for users with employeeProfile). */
+export async function resolveEmployeeId(idOrSlug) {
+  if (looksLikeCuid(idOrSlug)) {
+    const u = await prisma.user.findFirst({
+      where: { id: idOrSlug, employeeProfile: { isNot: null } },
+      select: { id: true },
+    });
+    if (!u) {
+      const err = new Error("Employee not found");
+      err.statusCode = 404;
+      throw err;
+    }
+    return u.id;
+  }
+  const slug = String(idOrSlug).toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const users = await prisma.user.findMany({
+    where: { isActive: true, employeeProfile: { isNot: null } },
+    select: { id: true, name: true },
+    orderBy: { id: "asc" },
+  });
+  const match = users.find((u) => toEmployeeSlug(u.name) === slug);
+  if (!match) {
+    const err = new Error("Employee not found");
+    err.statusCode = 404;
+    throw err;
+  }
+  return match.id;
+}
+
 export async function getSuperAdminOverview(currentUser, year) {
   try {
     console.log(`[getSuperAdminOverview] Called for ${currentUser.id} (${currentUser.role}) with year: ${year}`);
@@ -577,7 +616,14 @@ export async function getTeamLeadOverview(currentUser, year) {
 
 export async function getPersonalPlacementOverview(currentUser, userId) {
   try {
-    const targetId = userId || currentUser.id;
+    // Only allow viewing another user's data for SUPER_ADMIN/S1_ADMIN; otherwise restrict to self
+    let targetId = userId || currentUser.id;
+    if (userId && userId !== currentUser.id) {
+      const canViewOthers = currentUser.role === Role.SUPER_ADMIN || currentUser.role === Role.S1_ADMIN;
+      if (!canViewOthers) {
+        targetId = currentUser.id;
+      }
+    }
 
     // Fetch placement data (include summary-only rows)
     const allRows = await prisma.personalPlacement.findMany({
@@ -631,49 +677,73 @@ export async function getPersonalPlacementOverview(currentUser, userId) {
 
 export async function getTeamPlacementOverview(currentUser, leadId) {
   try {
-    const targetId = leadId || currentUser.id;
+    // Only allow viewing another lead's data for SUPER_ADMIN/S1_ADMIN, or if current user is that lead's manager
+    let targetId = leadId || currentUser.id;
+    if (leadId && leadId !== currentUser.id) {
+      const canViewOthers = currentUser.role === Role.SUPER_ADMIN || currentUser.role === Role.S1_ADMIN;
+      if (!canViewOthers) {
+        const isManagerOfLead = await prisma.employeeProfile.findFirst({
+          where: { userId: leadId, managerId: currentUser.id },
+        });
+        if (!isManagerOfLead) {
+          targetId = currentUser.id;
+        } else {
+          targetId = leadId;
+        }
+      } else {
+        targetId = leadId;
+      }
+    }
 
-    const placements = await prisma.teamPlacement.findMany({
+    const allRows = await prisma.teamPlacement.findMany({
       where: {
         leadId: targetId,
       },
       orderBy: { doj: "desc" },
     });
 
-    const latestPlacement = placements[0];
     const isSummaryOnlyRow = (p) => p.candidateName === "(Summary only)" || (p.plcId && String(p.plcId).startsWith("SUMMARY-"));
-    const placementList = placements.filter((p) => !isSummaryOnlyRow(p));
+    const summaryRow = allRows.find(isSummaryOnlyRow);
+    const placementList = allRows.filter((p) => !isSummaryOnlyRow(p));
+
+    const pick = (field) => {
+      const fromSummary = summaryRow?.[field];
+      if (fromSummary != null && fromSummary !== "") return fromSummary;
+      const fromAny = allRows.find((r) => r[field] != null && r[field] !== "");
+      return fromAny?.[field] ?? null;
+    };
+
+    const summary = (summaryRow || allRows.length > 0) ? {
+      yearlyPlacementTarget: pick("yearlyPlacementTarget"),
+      placementDone: pick("placementDone") ?? (placementList.length > 0 ? placementList.length : null),
+      placementAchPercent: pick("placementAchPercent"),
+      yearlyRevenueTarget: pick("yearlyRevenueTarget"),
+      revenueAch: pick("revenueAch"),
+      revenueTargetAchievedPercent: pick("revenueTargetAchievedPercent"),
+      totalRevenueGenerated: pick("totalRevenueGenerated"),
+      slabQualified: pick("slabQualified"),
+      totalIncentiveInr: pick("totalIncentiveInr"),
+      totalIncentivePaidInr: pick("totalIncentivePaidInr"),
+      leadName: pick("leadName"),
+      splitWith: pick("splitWith"),
+    } : null;
 
     return {
       placements: placementList.map(p => ({
         ...p,
-        // Map fields for frontend consistency
         revenueLeadUsd: Number(p.revenueLeadUsd),
-        revenue: Number(p.revenueLeadUsd), // Add alias for generic table use
+        revenue: Number(p.revenueLeadUsd),
         incentiveInr: Number(p.incentiveInr),
-        incentiveAmountINR: Number(p.incentiveInr), // Add alias for generic table use
+        incentiveAmountINR: Number(p.incentiveInr),
         incentivePaidInr: Number(p.incentivePaidInr || 0),
         totalBilledHours: p.totalBilledHours,
-        billedHours: p.totalBilledHours, // Add alias for generic table use
+        billedHours: p.totalBilledHours,
         recruiter: p.recruiterName,
         teamLead: p.leadName,
         leadName: p.leadName,
         splitWith: p.splitWith,
       })),
-      summary: latestPlacement ? {
-        yearlyPlacementTarget: latestPlacement.yearlyPlacementTarget,
-        placementDone: latestPlacement.placementDone,
-        placementAchPercent: latestPlacement.placementAchPercent,
-        yearlyRevenueTarget: latestPlacement.yearlyRevenueTarget,
-        revenueAch: latestPlacement.revenueAch,
-        revenueTargetAchievedPercent: latestPlacement.revenueTargetAchievedPercent,
-        totalRevenueGenerated: latestPlacement.totalRevenueGenerated,
-        slabQualified: latestPlacement.slabQualified,
-        totalIncentiveInr: latestPlacement.totalIncentiveInr,
-        totalIncentivePaidInr: latestPlacement.totalIncentivePaidInr,
-        leadName: latestPlacement.leadName,
-        splitWith: latestPlacement.splitWith
-      } : null
+      summary,
     };
   } catch (error) {
     console.error("[getTeamPlacementOverview] Error:", error);

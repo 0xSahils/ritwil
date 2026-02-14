@@ -3,11 +3,27 @@ import { useParams, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 
+/** CUID-like id (backend user id); slug is name-based. */
+function looksLikeCuid(value) {
+  return typeof value === "string" && value.length >= 24 && value.length <= 26 && /^c[a-z0-9]+$/i.test(value);
+}
+
+function toSlug(name) {
+  return (name ?? "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
 const EditProfile = () => {
-  const { id } = useParams();
+  const { id: idOrSlug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
+  const userIdForApi = (() => {
+    if (!user) return null;
+    if (looksLikeCuid(idOrSlug)) return idOrSlug;
+    if (toSlug(user.name) === idOrSlug) return user.id;
+    return null;
+  })();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -18,15 +34,13 @@ const EditProfile = () => {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    // Verify user is editing their own profile
-    if (user && user.id !== id) {
+    if (user && !userIdForApi) {
       setError("You are not authorized to edit this profile");
       setLoading(false);
       return;
     }
-    
     fetchUserData();
-  }, [id, user]);
+  }, [idOrSlug, user, userIdForApi]);
 
   const fetchUserData = async () => {
     try {
@@ -74,7 +88,7 @@ const EditProfile = () => {
 
       // Note: This will likely fail with 403 Forbidden if the backend requires SUPER_ADMIN for PUT /users/:id
       // We will fix the backend in the next step.
-      const response = await apiRequest(`/users/${id}`, {
+      const response = await apiRequest(`/users/${userIdForApi}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });

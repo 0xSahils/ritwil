@@ -112,7 +112,7 @@ const TeamPage = () => {
   }
 
   const handleMemberClick = useCallback((member, lead, team, viewParam) => {
-    const slug = member.name.replace(/\s+/g, '-').toLowerCase()
+    const slug = (member.name ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || member.id
     
     // Normalize viewParam to include ?view= if it's a raw string like 'team' or 'personal'
     if (!viewParam) {

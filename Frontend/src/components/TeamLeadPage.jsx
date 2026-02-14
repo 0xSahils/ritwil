@@ -4,6 +4,7 @@ import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
 import PieChart from './PieChart'
+import { Skeleton } from './common/Skeleton'
 
 const TeamLeadPage = () => {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ const TeamLeadPage = () => {
   const [viewMode, setViewMode] = useState('personal') // 'personal' | 'team'
   const [personalSheetData, setPersonalSheetData] = useState(null)
   const [teamSheetData, setTeamSheetData] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     let isMounted = true
@@ -83,7 +85,7 @@ const TeamLeadPage = () => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [retryCount])
 
   // Load sheet-backed personal/team placements for this lead
   useEffect(() => {
@@ -177,7 +179,7 @@ const TeamLeadPage = () => {
   }
 
   const handleMemberClick = (member, lead, team, viewParam) => {
-    const slug = member.name.replace(/\s+/g, '-').toLowerCase();
+    const slug = (member.name ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || member.id;
     
     // If viewParam is not provided, determine it based on role/level
     if (!viewParam) {
@@ -198,17 +200,29 @@ const TeamLeadPage = () => {
     })
   }
 
-  if (isLoading) {
-    return <TeamLeadSkeleton />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 p-6 animate-pulse">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Skeleton className="h-10 w-48 rounded-lg" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </div>
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      </div>
+    )
   }
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg px-8 py-6 max-w-md w-full text-center">
-          <p className="text-red-600 font-medium mb-4">{error.message || 'Something went wrong'}</p>
+          <p className="text-red-600 font-medium mb-4">{error || 'Something went wrong'}</p>
           <button
-            onClick={() => refetch()}
+            onClick={() => { setError(''); setLoading(true); setRetryCount(c => c + 1); }}
             className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
           >
             Retry
@@ -224,33 +238,40 @@ const TeamLeadPage = () => {
   const colorClasses = getTeamColorClasses(teamData.color)
   const members = teamLeadData.members || []
   const isPlacementTeam = teamLeadData.targetType === 'PLACEMENTS'
-  
-  // Use target from backend if available, otherwise calculate from members
+
+  // Prefer sheet summary for header when viewing that tab (so summary matches the table)
+  const sheetSummary = viewMode === 'team' ? teamSheetData?.summary : personalSheetData?.summary
+  const hasSheetSummary = !!sheetSummary
+
   const leadTarget = teamLeadData.target || members.reduce((sum, member) => sum + (Number(member.target) || 0), 0)
-  
-  // Update teamLeadData target for consistency in this render cycle
   const currentLeadData = {
     ...teamLeadData,
     target: leadTarget
   }
 
-  const formattedTeamTarget = isPlacementTeam 
-    ? leadTarget 
-    : CalculationService.formatCurrency(leadTarget)
-  
-  // Calculate total achievement percentage
-   const achievedValue = isPlacementTeam 
-     ? (currentLeadData.totalPlacements || 0)
-     : (currentLeadData.totalRevenue || currentLeadData.targetAchieved || 0)
-   
-   const totalTarget = leadTarget || 1
-   const achievementPercentage = Math.min(Math.round((achievedValue / totalTarget) * 100), 100)
+  const displayTarget = hasSheetSummary
+    ? (isPlacementTeam ? (sheetSummary.yearlyPlacementTarget ?? leadTarget) : (sheetSummary.yearlyRevenueTarget ?? leadTarget))
+    : leadTarget
+  const formattedTeamTarget = isPlacementTeam
+    ? String(displayTarget)
+    : CalculationService.formatCurrency(Number(displayTarget) || 0)
+
+  const achievedValue = hasSheetSummary
+    ? (isPlacementTeam ? (sheetSummary.placementDone ?? currentLeadData.totalPlacements ?? 0) : (Number(sheetSummary.totalRevenueGenerated) ?? currentLeadData.totalRevenue ?? 0))
+    : (isPlacementTeam ? (currentLeadData.totalPlacements || 0) : (currentLeadData.totalRevenue || 0))
+  const totalTarget = Number(displayTarget) || 1
+  const sheetPct = sheetSummary && (sheetSummary.revenueTargetAchievedPercent != null || sheetSummary.placementAchPercent != null || sheetSummary.targetAchievedPercent != null)
+  const achievementPercentage = hasSheetSummary && sheetPct
+    ? Math.round(Number(isPlacementTeam ? (sheetSummary.placementAchPercent ?? sheetSummary.targetAchievedPercent) : (sheetSummary.revenueTargetAchievedPercent ?? sheetSummary.targetAchievedPercent)) || 0)
+    : Math.min(Math.round((achievedValue / totalTarget) * 100), 100)
  
    // Helper for Circular Progress
   const CircularProgress = ({ percentage, color = "text-green-500" }) => {
     const radius = 16
     const circumference = 2 * Math.PI * radius
-    const strokeDashoffset = circumference - (percentage / 100) * circumference
+    // Cap fill at 100% so circle stays full green; number still shows actual percentage
+    const fillPercent = Math.min(percentage, 100)
+    const strokeDashoffset = circumference - (fillPercent / 100) * circumference
 
     return (
       <div className="relative flex items-center justify-center w-12 h-12">
@@ -262,7 +283,7 @@ const TeamLeadPage = () => {
             stroke="currentColor"
             strokeWidth="4"
             fill="transparent"
-            className="text-slate-100"
+            className="text-slate-200"
           />
           <circle
             cx="24"
@@ -270,6 +291,7 @@ const TeamLeadPage = () => {
             r={radius}
             stroke="currentColor"
             strokeWidth="4"
+            strokeOpacity={1}
             fill="transparent"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
@@ -382,6 +404,54 @@ const TeamLeadPage = () => {
           <div className="text-sm text-slate-600 mb-2">
             Data below is read directly from the uploaded Excel sheet. No additional calculations are done in the app.
           </div>
+          {hasSheetSummary && sheetSummary && (
+            <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm">
+              {!isPlacementTeam && (
+                <>
+                  <div>
+                    <span className="text-slate-500 block">Yearly Revenue Target</span>
+                    <span className="font-semibold text-slate-800">{sheetSummary.yearlyRevenueTarget != null ? CalculationService.formatCurrency(Number(sheetSummary.yearlyRevenueTarget)) : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Revenue Generated</span>
+                    <span className="font-semibold text-slate-800">{sheetSummary.totalRevenueGenerated != null ? CalculationService.formatCurrency(Number(sheetSummary.totalRevenueGenerated)) : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Target Achieved %</span>
+                    <span className="font-semibold text-slate-800">{sheetSummary.revenueTargetAchievedPercent != null ? `${sheetSummary.revenueTargetAchievedPercent}%` : '-'}</span>
+                  </div>
+                </>
+              )}
+              {isPlacementTeam && (
+                <>
+                  <div>
+                    <span className="text-slate-500 block">Yearly Placement Target</span>
+                    <span className="font-semibold text-slate-800">{sheetSummary.yearlyPlacementTarget != null ? String(sheetSummary.yearlyPlacementTarget) : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Placements Done</span>
+                    <span className="font-semibold text-slate-800">{sheetSummary.placementDone != null ? String(sheetSummary.placementDone) : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Target Achieved %</span>
+                    <span className="font-semibold text-slate-800">{sheetSummary.placementAchPercent != null ? `${sheetSummary.placementAchPercent}%` : '-'}</span>
+                  </div>
+                </>
+              )}
+              <div>
+                <span className="text-slate-500 block">Slab Qualified</span>
+                <span className="font-semibold text-slate-800">{sheetSummary.slabQualified ?? '-'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Total Incentive (INR)</span>
+                <span className="font-semibold text-slate-800">{sheetSummary.totalIncentiveInr != null ? CalculationService.formatCurrency(Number(sheetSummary.totalIncentiveInr), 'INR') : '-'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Incentive Paid (INR)</span>
+                <span className="font-semibold text-slate-800">{sheetSummary.totalIncentivePaidInr != null ? CalculationService.formatCurrency(Number(sheetSummary.totalIncentivePaidInr), 'INR') : '-'}</span>
+              </div>
+            </div>
+          )}
           <div className="mt-4">
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <table className="w-full text-sm">
@@ -487,13 +557,15 @@ const TeamLeadPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {members.filter(m => m.name !== 'pass through').map((member) => {
-                const memberIsPlacement = member.targetType === 'PLACEMENTS' || isPlacementTeam;
-                const memberTarget = member.target || 0;
-                const memberAchieved = memberIsPlacement 
-                  ? (member.totalPlacements || member.placements || 0) 
-                  : (member.totalRevenue || member.revenue || member.targetAchieved || 0);
-                
-                const memberPercentage = memberTarget > 0 ? Math.min(Math.round((memberAchieved / memberTarget) * 100), 100) : 0;
+                // Display by team target type: placement team -> placement target/done/%; revenue team -> revenue target/achieved/%
+                const memberIsPlacement = isPlacementTeam || member.targetType === 'PLACEMENTS';
+                const memberTarget = Number(member.target || 0);
+                const memberAchieved = memberIsPlacement
+                  ? (member.totalPlacements ?? member.placements ?? 0)
+                  : (member.totalRevenue ?? member.revenue ?? 0);
+                const memberPercentage = memberTarget > 0
+                  ? Math.round((Number(memberAchieved) / memberTarget) * 100)
+                  : (member.targetAchieved ?? 0);
                 
                 // Dynamic color based on percentage
                let progressColor = "text-red-500";

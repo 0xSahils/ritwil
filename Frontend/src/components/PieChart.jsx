@@ -6,24 +6,29 @@ const PieChart = ({ percentage, size = 50, colorClass }) => {
   const innerRadius = radius * 0.65 // For donut effect
   const circumference = 2 * Math.PI * radius
   
-  // Calculate the angle for the pie slice
-  const angle = (Math.min(percentage, 100) / 100) * 360
+  // Cap visual fill at 100%; for 100% we use two 180° arcs (SVG arc with start=end draws nothing)
+  const fillPercent = Math.min(percentage, 100)
+  const angle = (fillPercent / 100) * 360
   const largeArcFlag = angle > 180 ? 1 : 0
-  
+
   // Calculate end point of the arc
   const endAngle = (angle * Math.PI) / 180
   const endX = center + radius * Math.sin(endAngle)
   const endY = center - radius * Math.cos(endAngle)
-  
+
   // Start from top (12 o'clock position)
   const startX = center
   const startY = center - radius
-  
+
   // Inner circle points for donut effect
   const innerEndX = center + innerRadius * Math.sin(endAngle)
   const innerEndY = center - innerRadius * Math.cos(endAngle)
   const innerStartX = center
   const innerStartY = center - innerRadius
+
+  // Full donut path when 100%: two 180° arcs (single 360° arc has start=end and SVG omits it)
+  const fullDonutPath = `M ${center} ${center} L ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center} ${center + radius} A ${radius} ${radius} 0 1 1 ${center} ${center - radius} L ${center} ${center - innerRadius} A ${innerRadius} ${innerRadius} 0 1 0 ${center} ${center + innerRadius} A ${innerRadius} ${innerRadius} 0 1 0 ${center} ${center - innerRadius} Z`
+  const slicePath = `M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} L ${innerEndX} ${innerEndY} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY} Z`
   
   // Get gradient colors based on percentage
   const getGradientColors = (percentage) => {
@@ -75,7 +80,7 @@ const PieChart = ({ percentage, size = 50, colorClass }) => {
           </filter>
         </defs>
         
-        {/* Background circle with subtle shadow */}
+        {/* Background circle - visible track so 0% doesn't look blank */}
         <circle
           cx={center}
           cy={center}
@@ -83,8 +88,7 @@ const PieChart = ({ percentage, size = 50, colorClass }) => {
           fill="none"
           stroke="currentColor"
           strokeWidth="4"
-          className="text-slate-200/60"
-          opacity="0.8"
+          className="text-slate-200"
         />
         
         {/* Inner background circle for donut effect */}
@@ -96,10 +100,10 @@ const PieChart = ({ percentage, size = 50, colorClass }) => {
           className="drop-shadow-sm"
         />
         
-        {/* Progress pie slice with gradient */}
+        {/* Progress pie slice with gradient; use full donut path when >= 100% so arc is drawn */}
         {percentage > 0 && (
           <path
-            d={`M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} L ${innerEndX} ${innerEndY} A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY} Z`}
+            d={fillPercent >= 100 ? fullDonutPath : slicePath}
             fill={`url(#${gradientId})`}
             filter={`url(#shadow-${gradientId})`}
             className="transition-all duration-500 ease-out animate-scaleIn"

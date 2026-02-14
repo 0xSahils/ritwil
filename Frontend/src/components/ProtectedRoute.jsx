@@ -30,7 +30,7 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
       return <Navigate to="/teamlead" replace />;
     }
     if (user.role === "EMPLOYEE") {
-      const slug = user.name.replace(/\s+/g, "-").toLowerCase();
+      const slug = (user.name ?? "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || user.id;
       return <Navigate to={`/employee/${slug}`} replace />;
     }
     return <Navigate to="/" replace />;

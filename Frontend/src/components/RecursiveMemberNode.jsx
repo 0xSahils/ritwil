@@ -6,7 +6,10 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
   const hasChildren = member.members && member.members.length > 0
   const isExpanded = expandedMembers[member.id]
   const level = member.level || 'L4'
-  const isPlacementTeam = team?.isPlacementTeam || member.targetType === 'PLACEMENTS'
+  // Display target/achieved/% by team target type when available: placement -> placement target, done, %; revenue -> revenue target, achieved, %
+  const isPlacementTeam = (team?.isPlacementTeam !== undefined && team?.isPlacementTeam !== null)
+    ? Boolean(team.isPlacementTeam)
+    : (member.targetType === 'PLACEMENTS')
 
   const isL3 = level === 'L3'
 

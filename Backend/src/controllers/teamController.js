@@ -306,24 +306,65 @@ export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId, option
   });
 }
 
-export async function getTeamDetails(id) {
-  const team = await prisma.team.findUnique({
-    where: { id },
-    include: {
-      employees: {
-        where: { isActive: true },
-        include: {
-          user: {
-            include: {
-              placements: true,
-              personalPlacements: true,
-            },
+/** CUIDs are 25 chars and start with 'c'; used to tell id from slug in URL */
+function looksLikeCuid(value) {
+  return typeof value === "string" && value.length >= 24 && value.length <= 26 && /^c[a-z0-9]+$/i.test(value);
+}
+
+/** Resolve team id or slug to team CUID (for routes that need raw id). */
+export async function resolveTeamId(idOrSlug) {
+  if (looksLikeCuid(idOrSlug)) {
+    const t = await prisma.team.findUnique({ where: { id: idOrSlug }, select: { id: true } });
+    if (!t) {
+      const err = new Error("Team not found");
+      err.statusCode = 404;
+      throw err;
+    }
+    return t.id;
+  }
+  const slug = String(idOrSlug).toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const allTeams = await prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true } });
+  const toSlug = (name) => (name ?? "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const team = allTeams.find((t) => toSlug(t.name) === slug);
+  if (!team) {
+    const err = new Error("Team not found");
+    err.statusCode = 404;
+    throw err;
+  }
+  return team.id;
+}
+
+export async function getTeamDetails(idOrSlug) {
+  let team = null;
+  const teamInclude = {
+    employees: {
+      where: { isActive: true },
+      include: {
+        user: {
+          include: {
+            placements: true,
+            personalPlacements: true,
           },
-          manager: true, // Manager is a User model, no need to include user again
         },
+        manager: true,
       },
     },
-  });
+  };
+
+  if (looksLikeCuid(idOrSlug)) {
+    team = await prisma.team.findUnique({
+      where: { id: idOrSlug },
+      include: teamInclude,
+    });
+  } else {
+    const slug = String(idOrSlug).toLowerCase().replace(/[^a-z0-9-]/g, "");
+    const allTeams = await prisma.team.findMany({
+      where: { isActive: true },
+      include: teamInclude,
+    });
+    const toSlug = (name) => (name ?? "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    team = allTeams.find((t) => toSlug(t.name) === slug) || null;
+  }
 
   if (!team) {
     const error = new Error("Team not found");
@@ -357,6 +398,8 @@ export async function getTeamDetails(id) {
     (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
   const teamPlacements = allTeamPlacements.filter((p) => !isSummaryOnlyRow(p));
 
+  const excludeSummaryOnly = (arr) => (arr || []).filter((p) => !isSummaryOnlyRow(p));
+
   // Group team placements by leadId
   const teamPlacementsByLead = new Map();
   teamPlacements.forEach(tp => {
@@ -372,10 +415,11 @@ export async function getTeamDetails(id) {
   );
 
   const aggregatedRevenue = team.employees.reduce((total, member) => {
-    const combinedPlacements = [
+    const raw = [
       ...(member.user.placements || []),
       ...(member.user.personalPlacements || [])
     ];
+    const combinedPlacements = excludeSummaryOnly(raw);
     const memberRevenue = combinedPlacements.reduce(
       (sum, entry) => sum + Number(entry.revenue || entry.revenueUsd || 0),
       0
@@ -395,10 +439,11 @@ export async function getTeamDetails(id) {
   }, 0);
 
   const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
-    const combinedPlacements = [
+    const raw = [
       ...(member.user.placements || []),
       ...(member.user.personalPlacements || [])
     ];
+    const combinedPlacements = excludeSummaryOnly(raw);
     let count = combinedPlacements.length;
     
     // For leads, also add team placement count
@@ -445,10 +490,11 @@ export async function getTeamDetails(id) {
       };
     }),
     members: members.map((p) => {
-      const combinedPlacements = [
+      const raw = [
         ...(p.user.placements || []),
         ...(p.user.personalPlacements || [])
       ];
+      const combinedPlacements = excludeSummaryOnly(raw);
       return {
         id: p.id,
         userId: p.user.id,

@@ -42,6 +42,8 @@ const EmployeeDetails = () => {
     user?.role,
     user?.id
   )
+  const isCuid = (v) => typeof v === 'string' && v.length >= 24 && /^c[a-z0-9]+$/i.test(v)
+  const resolvedEmployeeId = rawData?.id ?? (isCuid(employeeIdToFetch) ? employeeIdToFetch : null)
   const updateVbidMutation = useUpdateVbid()
 
   const [isEditingVbid, setIsEditingVbid] = useState(false)
@@ -301,12 +303,13 @@ const EmployeeDetails = () => {
   }, [viewMode, hasTeamData, hasPersonalData, teamSheetData, personalSheetData]);
 
   useEffect(() => {
+    if (!resolvedEmployeeId) return;
     let cancelled = false;
     const load = async () => {
       try {
         const [personalRes, teamRes] = await Promise.all([
-          apiRequest(`/dashboard/personal-placements?userId=${employeeIdToFetch}`),
-          apiRequest(`/dashboard/team-placements?leadId=${employeeIdToFetch}`),
+          apiRequest(`/dashboard/personal-placements?userId=${resolvedEmployeeId}`),
+          apiRequest(`/dashboard/team-placements?leadId=${resolvedEmployeeId}`),
         ]);
         if (!cancelled) {
           if (personalRes.ok) {
@@ -333,7 +336,7 @@ const EmployeeDetails = () => {
     return () => {
       cancelled = true;
     };
-  }, [employeeIdToFetch]);
+  }, [resolvedEmployeeId]);
 
   const handleBack = () => {
     if (user?.role === 'SUPER_ADMIN') {

@@ -1264,12 +1264,15 @@ export async function bulkUpdateMetrics(metricsData, actorId) {
 
 // Slab qualified must not be a placement type value (FTE, CONTRACT, PERMANENT) - often wrong column is mapped
 const PLACEMENT_TYPE_SLAB_BLACKLIST = new Set(["fte", "contract", "permanent", "permanent full time", "pft"]);
+// Summary slabQualified: only allow numeric percentage value (e.g. 85, 85.5, "85%"); store as string. Text/string -> null.
 const sanitizeSlabQualified = (val) => {
   if (val == null || val === "") return null;
   const s = String(val).trim().toLowerCase();
   if (!s) return null;
   if (PLACEMENT_TYPE_SLAB_BLACKLIST.has(s)) return null;
-  return String(val).trim();
+  const num = parseNum(val);
+  if (num === null) return null;
+  return String(num);
 };
 
 // Helper to extract ALL summary fields from a row (using header mapping)
@@ -1778,11 +1781,12 @@ export async function importPersonalPlacements(payload, actorId) {
           : null);
     
     const slabFromRow = getVal(row, "slab qualified");
-    const finalSlabQualified = (slabFromRow !== null && slabFromRow !== undefined && String(slabFromRow).trim() !== "")
+    const rawSlab = (slabFromRow !== null && slabFromRow !== undefined && String(slabFromRow).trim() !== "")
       ? String(slabFromRow).trim()
       : (summaryData.slabQualified !== null && summaryData.slabQualified !== undefined
           ? String(summaryData.slabQualified).trim()
           : null);
+    const finalSlabQualified = sanitizeSlabQualified(rawSlab);
     
     const finalTotalIncentiveInr = (totalIncentiveInr !== null && totalIncentiveInr !== undefined)
       ? totalIncentiveInr

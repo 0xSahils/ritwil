@@ -376,9 +376,7 @@ const AdminTeamDetails = () => {
                   <tr className="border-b border-slate-200 text-slate-500 text-sm">
                     <th className="pb-3 font-medium pl-4">Name</th>
                     <th className="pb-3 font-medium">Email</th>
-                    <th className="pb-3 font-medium">Target</th>
                     <th className="pb-3 font-medium">Achievement</th>
-                    <th className="pb-3 font-medium">Slab Qualified</th>
                     {activeTab === "members" && <th className="pb-3 font-medium">Manager</th>}
                     <th className="pb-3 font-medium text-right pr-4">Actions</th>
                   </tr>
@@ -395,63 +393,11 @@ const AdminTeamDetails = () => {
                         </div>
                       </td>
                       <td className="py-4 text-slate-600">{user.email}</td>
-                      <td className="py-4">
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            defaultValue={user.target}
-                            disabled={!canEditTarget}
-                            onBlur={(e) => {
-                              if (Number(e.target.value) !== user.target) {
-                                handleUpdateTarget(user.userId, e.target.value, user.targetType || "REVENUE");
-                              }
-                            }}
-                            className={`w-24 px-2 py-1 border border-transparent rounded bg-transparent transition-all outline-none ${
-                              canEditTarget 
-                                ? "hover:border-slate-300 focus:border-blue-500" 
-                                : "cursor-not-allowed opacity-70"
-                            }`}
-                            title={!canEditTarget ? "Only Admin can edit targets" : ""}
-                          />
-                          <select
-                            defaultValue={user.targetType || "REVENUE"}
-                            disabled={!canEditTarget}
-                            onChange={(e) => {
-                              const newTargetType = e.target.value;
-                              if (newTargetType !== user.targetType) {
-                                const promptMessage = newTargetType === "PLACEMENTS" 
-                                  ? "Enter target number of placements:" 
-                                  : "Enter target revenue amount:";
-                                const newValue = window.prompt(promptMessage, "0");
-                                
-                                if (newValue !== null && !isNaN(Number(newValue))) {
-                                  handleUpdateTarget(user.userId, newValue, newTargetType);
-                                } else {
-                                  // Reset selection if cancelled or invalid
-                                  e.target.value = user.targetType || "REVENUE";
-                                }
-                              }
-                            }}
-                            className={`w-28 px-2 py-1 border border-transparent rounded bg-transparent transition-all outline-none text-xs ${
-                              canEditTarget
-                                ? "hover:border-slate-300 focus:border-blue-500"
-                                : "cursor-not-allowed opacity-70"
-                            }`}
-                            title={!canEditTarget ? "Only Admin can edit targets" : ""}
-                          >
-                            <option value="REVENUE">Revenue</option>
-                            <option value="PLACEMENTS">Placements</option>
-                          </select>
-                        </div>
-                      </td>
                       <td className="py-4 text-emerald-600 font-medium">
                         {user.targetType === "PLACEMENTS" 
                           ? `${user.placementsCount || 0} Placements` 
                           : CalculationService.formatCurrency(user.revenue)
                         }
-                      </td>
-                      <td className="py-4 text-slate-600 font-medium">
-                        {user.slabQualified || "-"}
                       </td>
                       {activeTab === "members" && (
                         <td className="py-4 text-slate-600">{user.managerName || "-"}</td>
@@ -468,7 +414,7 @@ const AdminTeamDetails = () => {
                   ))}
                   {(activeTab === "leads" ? team.leads : team.members).length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                      <td colSpan={activeTab === "members" ? 5 : 4} className="py-8 text-center text-slate-400">
                         No {activeTab === "leads" ? "leads" : "members"} found.
                       </td>
                     </tr>

@@ -25,7 +25,7 @@ const LoginForm = () => {
         } else if (user.role === 'TEAM_LEAD') {
           navigate('/teamlead')
         } else if (user.role === 'EMPLOYEE') {
-          const slug = user.name.replace(/\s+/g, '-').toLowerCase()
+          const slug = (user.name ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || user.id
           navigate(`/employee/${slug}`, {
             state: {
               employeeId: user.id,

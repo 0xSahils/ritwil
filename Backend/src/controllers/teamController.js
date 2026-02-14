@@ -345,13 +345,17 @@ export async function getTeamDetails(id) {
     return false;
   });
 
-  // Fetch team placements for all leads
+  // Fetch team placements for all leads (exclude summary-only placeholder rows from counts)
   const leadIds = leads.map(l => l.user.id);
-  const teamPlacements = leadIds.length > 0 ? await prisma.teamPlacement.findMany({
+  const allTeamPlacements = leadIds.length > 0 ? await prisma.teamPlacement.findMany({
     where: {
       leadId: { in: leadIds },
     },
   }) : [];
+  const isSummaryOnlyRow = (p) =>
+    (p.plcId && String(p.plcId).startsWith("SUMMARY-")) ||
+    (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
+  const teamPlacements = allTeamPlacements.filter((p) => !isSummaryOnlyRow(p));
 
   // Group team placements by leadId
   const teamPlacementsByLead = new Map();
@@ -417,25 +421,14 @@ export async function getTeamDetails(id) {
     targetType,
     totalRevenue: aggregatedRevenue,
     totalPlacements: aggregatedPlacementsCount,
+    // Team Leads tab: show only team-sheet data (placements under this lead from team import), not personal/recruiter data
     leads: leads.map((p) => {
-      const combinedPlacements = [
-        ...(p.user.placements || []),
-        ...(p.user.personalPlacements || [])
-      ];
-      const personalRevenue = combinedPlacements.reduce(
-        (sum, e) => sum + Number(e.revenue || e.revenueUsd || 0),
-        0
-      );
-      const personalPlacementsCount = combinedPlacements.length;
-      
-      // Add team placements for this lead
       const leadTeamPlacements = teamPlacementsByLead.get(p.user.id) || [];
       const teamRevenue = leadTeamPlacements.reduce(
         (sum, tp) => sum + Number(tp.revenueLeadUsd || 0),
         0
       );
       const teamPlacementsCount = leadTeamPlacements.length;
-      
       return {
         id: p.id,
         userId: p.user.id,
@@ -446,8 +439,8 @@ export async function getTeamDetails(id) {
         target: Number(p.yearlyTarget || 0),
         targetType: p.targetType,
         slabQualified: p.slabQualified,
-        revenue: personalRevenue + teamRevenue,
-        placementsCount: personalPlacementsCount + teamPlacementsCount,
+        revenue: teamRevenue,
+        placementsCount: teamPlacementsCount,
         joinedAt: p.createdAt,
       };
     }),

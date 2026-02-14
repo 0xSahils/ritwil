@@ -118,65 +118,82 @@ const EmployeeDetails = () => {
        return sum + (Number(p.totalRevenue) || 0);
     }, 0);
 
-    // Use sheet summary values when available, otherwise fallback to calculated/rawData
+    // Use sheet summary values when available. When in personal/team view but no sheet data, show 0 (do not use merged totals).
     const isTeamView = viewMode === 'team' && teamSheetData?.summary;
     const isPersonalView = viewMode === 'personal' && personalSheetData?.summary;
+    const personalViewNoData = viewMode === 'personal' && !personalSheetData?.summary;
+    const teamViewNoData = viewMode === 'team' && !teamSheetData?.summary;
 
     const activeSummary = isTeamView ? teamSheetData.summary : (isPersonalView ? personalSheetData.summary : null);
 
-    // Revenue and placement targets: team view prefers profile (correct 450000) over wrong sheet value
+    // Revenue and placement targets: when in personal/team view with no sheet, show 0
     const profileRevenueTarget = Number(rawData.yearlyRevenueTarget ?? rawData.yearlyTarget ?? 0) || null;
-    const revenueTarget = isTeamView
-      ? (profileRevenueTarget ?? activeSummary.yearlyRevenueTarget ?? 0)
-      : (isPersonalView
-          ? (activeSummary.yearlyRevenueTarget ?? rawData.yearlyRevenueTarget ?? 0)
-          : (rawData.targetType === 'REVENUE' ? yearlyTarget : 0));
+    const revenueTarget = personalViewNoData || teamViewNoData
+      ? 0
+      : (isTeamView
+          ? (profileRevenueTarget ?? activeSummary?.yearlyRevenueTarget ?? 0)
+          : (isPersonalView
+              ? (activeSummary?.yearlyRevenueTarget ?? rawData.yearlyRevenueTarget ?? 0)
+              : (rawData.targetType === 'REVENUE' ? yearlyTarget : 0)));
 
-    const placementTarget = isTeamView
-      ? (activeSummary.yearlyPlacementTarget || 0)
-      : (isPersonalView
-          ? (activeSummary.yearlyPlacementTarget || (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0))
-          : (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0));
+    const placementTarget = personalViewNoData || teamViewNoData
+      ? 0
+      : (isTeamView
+          ? (activeSummary?.yearlyPlacementTarget || 0)
+          : (isPersonalView
+              ? (activeSummary?.yearlyPlacementTarget || (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0))
+              : (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0)));
 
-    // Achieved values: when sheet summary exists, use ONLY backend summary snapshot (no calculated fallbacks)
-    const achievedRevenue = isTeamView
-      ? (activeSummary.revenueAch ?? activeSummary.totalRevenueGenerated ?? 0)
-      : (isPersonalView
-          ? (activeSummary.totalRevenueGenerated ?? 0)
-          : revenueGenerated);
+    // Achieved values: when in personal/team view with no sheet data, show 0 (do not use merged dashboard totals)
+    const achievedRevenue = personalViewNoData || teamViewNoData
+      ? 0
+      : (isTeamView
+          ? (activeSummary?.revenueAch ?? activeSummary?.totalRevenueGenerated ?? 0)
+          : (isPersonalView
+              ? (activeSummary?.totalRevenueGenerated ?? 0)
+              : revenueGenerated));
 
-    const achievedPlacements = isTeamView
-      ? (activeSummary.placementDone ?? 0)
-      : (isPersonalView
-          ? (activeSummary.placementDone ?? rawData.placementsCount ?? placements.length)
-          : (rawData.placementsCount ?? placements.length));
+    const achievedPlacements = personalViewNoData || teamViewNoData
+      ? 0
+      : (isTeamView
+          ? (activeSummary?.placementDone ?? 0)
+          : (isPersonalView
+              ? (activeSummary?.placementDone ?? rawData.placementsCount ?? placements.length)
+              : (rawData.placementsCount ?? placements.length)));
 
-    // Achievement percentages: from summary snapshot when available
-    const revenuePercent = isTeamView && activeSummary.revenueTargetAchievedPercent != null
-      ? activeSummary.revenueTargetAchievedPercent
-      : (isPersonalView && activeSummary.revenueTargetAchievedPercent != null
+    // Achievement percentages: 0 when no sheet data for this view; otherwise from summary or calculated
+    const revenuePercent = personalViewNoData || teamViewNoData
+      ? 0
+      : (isTeamView && activeSummary?.revenueTargetAchievedPercent != null
           ? activeSummary.revenueTargetAchievedPercent
-          : (revenueTarget > 0 ? (achievedRevenue / revenueTarget) * 100 : 0));
+          : (isPersonalView && activeSummary?.revenueTargetAchievedPercent != null
+              ? activeSummary.revenueTargetAchievedPercent
+              : (revenueTarget > 0 ? (achievedRevenue / revenueTarget) * 100 : 0)));
 
-    const placementPercent = isTeamView && activeSummary.placementAchPercent != null
-      ? activeSummary.placementAchPercent
-      : (isPersonalView && activeSummary.targetAchievedPercent != null
-          ? activeSummary.targetAchievedPercent
-          : (placementTarget > 0 ? (achievedPlacements / placementTarget) * 100 : 0));
+    const placementPercent = personalViewNoData || teamViewNoData
+      ? 0
+      : (isTeamView && activeSummary?.placementAchPercent != null
+          ? activeSummary.placementAchPercent
+          : (isPersonalView && activeSummary?.targetAchievedPercent != null
+              ? activeSummary.targetAchievedPercent
+              : (placementTarget > 0 ? (achievedPlacements / placementTarget) * 100 : 0)));
 
-    // Slab and incentives: from backend summary snapshot only when sheet summary exists (no calculation)
-    const slab = isTeamView
-      ? (activeSummary.slabQualified ?? null)
-      : (isPersonalView
-          ? (activeSummary.slabQualified ?? null)
-          : (rawData.slabQualified ?? null));
+    // Slab and incentives: when no sheet data for this view, show nothing; otherwise from summary or calculated
+    const slab = personalViewNoData || teamViewNoData
+      ? null
+      : (isTeamView
+          ? (activeSummary?.slabQualified ?? null)
+          : (isPersonalView
+              ? (activeSummary?.slabQualified ?? null)
+              : (rawData.slabQualified ?? null)));
 
-    // When sheet summary exists, use snapshot only (null if not in snapshot); otherwise use calculated
-    const incentiveInr = isTeamView
-      ? (activeSummary.totalIncentiveInr ?? null)
-      : (isPersonalView
-          ? (activeSummary.totalIncentiveInr ?? null)
-          : totalPlacementIncentiveInr);
+    const incentiveInr = personalViewNoData || teamViewNoData
+      ? null
+      : (isTeamView
+          ? (activeSummary?.totalIncentiveInr ?? null)
+          : (isPersonalView
+              ? (activeSummary?.totalIncentiveInr ?? null)
+              : totalPlacementIncentiveInr));
     const incentiveInrNum = incentiveInr ?? 0;
 
     return {
@@ -195,16 +212,20 @@ const EmployeeDetails = () => {
       // Achieved values (from backend summary snapshot when sheet summary exists)
       rawRevenueGenerated: achievedRevenue,
       rawPlacementsCount: achievedPlacements,
-      revenueGenerated: (isTeamView || isPersonalView) && achievedRevenue === 0 && activeSummary?.totalRevenueGenerated == null
-        ? null
-        : CalculationService.formatCurrency(achievedRevenue),
+      revenueGenerated: (personalViewNoData || teamViewNoData)
+        ? CalculationService.formatCurrency(0)
+        : ((isTeamView || isPersonalView) && achievedRevenue === 0 && activeSummary?.totalRevenueGenerated == null
+            ? null
+            : CalculationService.formatCurrency(achievedRevenue)),
       placementsAchieved: String(achievedPlacements),
       // Percentages
       targetAchieved: CalculationService.formatPercentage(placementPercent),
       rawPercentage: placementPercent,
       revenueGeneratedPercentage: CalculationService.formatPercentage(revenuePercent),
-      // Other
-      calculatedRevenueGenerated: CalculationService.formatCurrency(totalPlacementRevenue),
+      // Other: when no sheet data for this view, do not use merged-list total
+      calculatedRevenueGenerated: (personalViewNoData || teamViewNoData)
+        ? CalculationService.formatCurrency(0)
+        : CalculationService.formatCurrency(totalPlacementRevenue),
       totalRevenue: rawData.targetType === 'PLACEMENTS' ? String(placementTarget) : CalculationService.formatCurrency(revenueTarget),
       targetPlacements: String(placementTarget),
       slabQualified: slab,
@@ -250,10 +271,10 @@ const EmployeeDetails = () => {
   const isVantageL4 = employeeData?.teamName && employeeData.teamName.toLowerCase().includes('vant') && 
                       ['L2', 'L3', 'L4'].includes(employeeData?.level?.toUpperCase());
   
-  // Show toggle if user has both personal and team data
+  // Show toggle if user has personal and/or team data (so profile can switch views; one may be empty)
   const hasPersonalData = !!(personalSheetData?.placements?.length || personalSheetData?.summary);
   const hasTeamData = !!(teamSheetData?.placements?.length || teamSheetData?.summary);
-  const canToggleView = hasPersonalData && hasTeamData;
+  const canToggleView = hasPersonalData || hasTeamData;
 
   // Auto-switch viewMode if only one type of data is available and no explicit view is set in URL
   useEffect(() => {
@@ -266,17 +287,18 @@ const EmployeeDetails = () => {
     }
   }, [hasPersonalData, hasTeamData, searchParams]);
 
-  // Explicit data separation check: ensure we don't mix personal and team data in the wrong views
+  // Explicit data separation: personal view shows only personal sheet data; team view only team sheet data.
+  // When there is no personal (or team) sheet, show empty list — do not fall back to merged dashboard placements.
   const currentPlacements = useMemo(() => {
     if (viewMode === 'team' && hasTeamData) {
       return teamSheetData?.placements || [];
-    } else if (viewMode === 'personal' && hasPersonalData) {
+    }
+    if (viewMode === 'personal' && hasPersonalData) {
       return personalSheetData?.placements || [];
     }
-    
-    // Fallback for L4s or users without dual data
-    return employeeData?.placements || [];
-  }, [viewMode, hasTeamData, hasPersonalData, teamSheetData, personalSheetData, employeeData]);
+    // No sheet data for this view: show empty (e.g. L2 personal view with no personal sheet)
+    return [];
+  }, [viewMode, hasTeamData, hasPersonalData, teamSheetData, personalSheetData]);
 
   useEffect(() => {
     let cancelled = false;
@@ -619,7 +641,7 @@ const EmployeeDetails = () => {
             
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-end gap-3">
-                {/* Personal/Team Toggle - Show for any user with team sheet data */}
+                {/* Personal/Team Toggle - Show when user has personal and/or team data */}
                 {canToggleView && (
                   <div className="bg-white/20 backdrop-blur-sm rounded-full px-1 py-1 flex items-center gap-1 border border-white/30">
                     <button
@@ -1247,15 +1269,14 @@ const EmployeeDetails = () => {
                              </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600">
-                             <div className="relative inline-block">
-                               {(placement.placementType && (placement.placementType.toUpperCase().includes('PERMANENT') || placement.placementType.toUpperCase().includes('FTE'))) ? (
-                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                   placement.billingStatus === 'Done' ? 'bg-green-100 text-green-700' : 
-                                   placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                                 }`}>
-                                   {placement.billingStatus}
-                                 </span>
-                               ) : (
+                             <div className="relative inline-flex items-center gap-2">
+                               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                 (placement.billingStatus === 'Done' || placement.billingStatus === 'BILLED') ? 'bg-green-100 text-green-700' :
+                                 (placement.billingStatus === 'Pending' || placement.billingStatus === 'PENDING') ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                               }`}>
+                                 {placement.billingStatus === 'BILLED' ? 'Done' : placement.billingStatus === 'PENDING' ? 'Pending' : (placement.billingStatus || '-')}
+                               </span>
+                               {placement.monthlyBilling && placement.monthlyBilling.length > 0 && (
                                  <>
                                    <InfoIcon
                                      onClick={handleInfoIconClick}
@@ -1344,15 +1365,14 @@ const EmployeeDetails = () => {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600">
-                            <div className="relative inline-block">
-                              {placement.placementType === 'FTE' ? (
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                  placement.billingStatus === 'Done' ? 'bg-green-100 text-green-700' : 
-                                  placement.billingStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                                }`}>
-                                  {placement.billingStatus}
-                                </span>
-                              ) : (
+                            <div className="relative inline-flex items-center gap-2">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                (placement.billingStatus === 'Done' || placement.billingStatus === 'BILLED') ? 'bg-green-100 text-green-700' :
+                                (placement.billingStatus === 'Pending' || placement.billingStatus === 'PENDING') ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {placement.billingStatus === 'BILLED' ? 'Done' : placement.billingStatus === 'PENDING' ? 'Pending' : (placement.billingStatus || '-')}
+                              </span>
+                              {placement.monthlyBilling && placement.monthlyBilling.length > 0 && (
                                 <>
                                   <InfoIcon
                                     onClick={handleInfoIconClick}

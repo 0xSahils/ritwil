@@ -390,8 +390,15 @@ export async function getPlacementsByUser(userId) {
 
   const results = await Promise.all(fetchPromises);
   const oldPlacements = results[0];
-  const personalPlacements = results[1];
-  const teamPlacements = results[2] || [];
+  const rawPersonalPlacements = results[1];
+  const rawTeamPlacements = results[2] || [];
+
+  // Exclude summary-only placeholder rows from personal (and team) lists
+  const isSummaryOnlyRow = (p) =>
+    (p.plcId && String(p.plcId).startsWith("SUMMARY-")) ||
+    (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
+  const personalPlacements = rawPersonalPlacements.filter((p) => !isSummaryOnlyRow(p));
+  const teamPlacements = rawTeamPlacements.filter((p) => !isSummaryOnlyRow(p));
 
   // Convert PersonalPlacement to Placement-like format for compatibility
   const convertedPersonalPlacements = personalPlacements.map(pp => ({
@@ -421,6 +428,7 @@ export async function getPlacementsByUser(userId) {
     totalRevenue: pp.totalRevenueGenerated,
     revenueAsLead: null,
     createdAt: pp.createdAt,
+    source: "personal",
   }));
 
   // Convert TeamPlacement to Placement-like format
@@ -451,10 +459,14 @@ export async function getPlacementsByUser(userId) {
     totalRevenue: tp.totalRevenueGenerated,
     revenueAsLead: tp.revenueLeadUsd,
     createdAt: tp.createdAt,
+    source: "team",
   }));
 
+  // Add source for frontend to show Personal vs Team sections; legacy has no source in DB
+  const legacyWithSource = oldPlacements.map((p) => ({ ...p, source: "legacy" }));
+
   // Combine and sort by createdAt descending
-  const allPlacements = [...oldPlacements, ...convertedPersonalPlacements, ...convertedTeamPlacements].sort(
+  const allPlacements = [...legacyWithSource, ...convertedPersonalPlacements, ...convertedTeamPlacements].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
 

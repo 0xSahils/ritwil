@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
 import { useEmployeeDetails, useUpdateVbid } from '../hooks/useEmployee'
 import { Skeleton, CardSkeleton, TableRowSkeleton } from './common/Skeleton'
+import L4DashboardView from './L4DashboardView'
 
 const EmployeeDetails = () => {
   const navigate = useNavigate()
@@ -580,6 +581,20 @@ const EmployeeDetails = () => {
           </button>
         </div>
       </div>
+    )
+  }
+
+  const isL4ViewingSelf = user?.role === 'EMPLOYEE' && employeeData?.id === user?.id
+  if (isL4ViewingSelf && employeeData) {
+    return (
+      <L4DashboardView
+        employeeData={employeeData}
+        currentPlacements={personalSheetData?.placements ?? []}
+        formatPlacementDate={formatPlacementDate}
+        personalSheetData={personalSheetData}
+        teamSheetData={teamSheetData}
+        onLogout={handleLogout}
+      />
     )
   }
 

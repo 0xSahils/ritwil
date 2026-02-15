@@ -12,9 +12,13 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
     : (member.targetType === 'PLACEMENTS')
 
   const isL3 = level === 'L3'
+  const isL2OrL3 = level === 'L2' || level === 'L3'
 
-  // Team summary data from lead's perspective (for L2/L3 leads)
+  // Team summary data from lead's perspective (for L2/L3 leads) — from team placement sheet
   const teamSummary = member.teamSummary || {}
+  const hasTeamSummary = isL2OrL3 && Object.keys(teamSummary).length > 0
+  const targetLabel = hasTeamSummary ? (isPlacementTeam ? 'Placement Target' : 'Revenue Target') : 'Total Target'
+  const achievedLabel = hasTeamSummary ? (isPlacementTeam ? 'Placements Done' : 'Revenue Achieved') : 'Achieved'
   
   // Decide whether to show this node as a parent (team lead) or leaf (member)
   // L2/L3 should be treated as leaf nodes in team view to hide their personal placements/targets
@@ -51,13 +55,13 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
               <div>
                 <div className="font-bold text-slate-700 text-sm group-hover:text-blue-700 transition-colors">{member.name}</div>
                 <div className="text-xs text-slate-500 mt-1 flex items-center">
-                   <span className="font-medium text-slate-600">Total Target: <span className="text-slate-900">
+                   <span className="font-medium text-slate-600">{targetLabel}: <span className="text-slate-900">
                       {isPlacementTeam 
-                        ? (teamSummary.yearlyPlacementTarget || member.target || 0) 
-                        : CalculationService.formatCurrency(teamSummary.yearlyRevenueTarget || member.target || 0)}
+                        ? (teamSummary.yearlyPlacementTarget ?? member.target ?? 0) 
+                        : CalculationService.formatCurrency(teamSummary.yearlyRevenueTarget ?? member.target ?? 0)}
                    </span></span>
                    <span className="mx-2 text-slate-300">|</span>
-                   <span className="font-medium text-slate-600">Achieved: <span className="text-green-600">
+                   <span className="font-medium text-slate-600">{achievedLabel}: <span className="text-green-600">
                       {isPlacementTeam 
                         ? achievedValue 
                         : CalculationService.formatCurrency(achievedValue)}

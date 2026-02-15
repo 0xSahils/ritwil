@@ -132,6 +132,9 @@ export async function getSuperAdminOverview(currentUser, year) {
         select: {
           revenueUsd: true,
           doj: true,
+          plcId: true,
+          candidateName: true,
+          placementDone: true,
         },
       },
       teamPlacements: {
@@ -145,6 +148,42 @@ export async function getSuperAdminOverview(currentUser, year) {
 
   console.log(`[getSuperAdminOverview] Found ${employeesWithRevenue.length} employees with revenue potential`);
 
+  // Fetch summary-row placementDone so S1 Admin hierarchy matches employee profile (same source as getPersonalPlacementOverview)
+  // Use User ids: EmployeeProfile.id === User.id; PersonalPlacement.employeeId references User.id; hierarchy report.id is profile id = user id
+  const userIds = employeesWithRevenue.filter((e) => e.employeeProfile).map((e) => e.id);
+  const summaryRows = userIds.length > 0
+    ? await prisma.personalPlacement.findMany({
+        where: { employeeId: { in: userIds }, plcId: { startsWith: "SUMMARY-" } },
+        select: { employeeId: true, placementDone: true },
+      })
+    : [];
+  const placementDoneByUserId = new Map();
+  const toNum = (v) => {
+    if (v == null || v === "") return null;
+    if (typeof v === "number" && Number.isFinite(v) && v >= 0) return Math.floor(v);
+    if (typeof v === "object" && v !== null) {
+      if (typeof v.toNumber === "function") {
+        const n = v.toNumber();
+        if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+      }
+      if (typeof v.toString === "function") {
+        const s = String(v.toString()).trim();
+        if (s && s !== "[object Object]") {
+          const n = parseFloat(s);
+          if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+        }
+      }
+    }
+    const s = String(v).trim();
+    if (s === "" || s === "[object Object]") return null;
+    const n = parseFloat(s);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+  };
+  summaryRows.forEach((row) => {
+    const done = toNum(row.placementDone);
+    if (done != null) placementDoneByUserId.set(row.employeeId, done);
+  });
+
   const revenueByEmployee = new Map();
   const placementsByEmployee = new Map();
   const availableYears = new Set();
@@ -155,7 +194,7 @@ export async function getSuperAdminOverview(currentUser, year) {
       // 1. Old placements
       let filteredOldPlacements = emp.placements || [];
       
-      // 2. Personal Placements
+      // 2. Personal Placements — use summary row placementDone when present (matches employee profile)
       let filteredPersonalPlacements = emp.personalPlacements || [];
 
       // 3. Team Placements
@@ -188,15 +227,88 @@ export async function getSuperAdminOverview(currentUser, year) {
       const teamRev = filteredTeamPlacements.reduce((sum, p) => sum + Number(p.revenueLeadUsd || 0), 0);
       
       const totalRev = oldRev + personalRev + teamRev;
-      const totalCount = filteredOldPlacements.length + filteredPersonalPlacements.length + filteredTeamPlacements.length;
+      // Match getPersonalPlacementOverview: summary row placementDone first, then pick from any row, then count non-summary rows (users like M Harinath may have no SUMMARY row but placementDone on a placement row)
+      const isSummaryRow = (p) =>
+        (p.plcId && String(p.plcId).startsWith("SUMMARY-")) || (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
+      let summaryDone = placementDoneByUserId.get(emp.id);
+      if (summaryDone == null && (emp.personalPlacements || []).length > 0) {
+        const summaryRow = emp.personalPlacements.find(isSummaryRow);
+        if (summaryRow) summaryDone = toNum(summaryRow.placementDone);
+        if (summaryDone == null) {
+          const fromAny = emp.personalPlacements.find((r) => r.placementDone != null && r.placementDone !== "");
+          if (fromAny) summaryDone = toNum(fromAny.placementDone);
+        }
+      }
+      const personalCount =
+        summaryDone != null
+          ? summaryDone
+          : (filteredPersonalPlacements || []).filter((p) => !isSummaryRow(p)).length;
+      const totalCount = filteredOldPlacements.length + personalCount + filteredTeamPlacements.length;
 
-      revenueByEmployee.set(emp.employeeProfile.id, totalRev);
-      placementsByEmployee.set(emp.employeeProfile.id, totalCount);
+      revenueByEmployee.set(emp.id, totalRev);
+      placementsByEmployee.set(emp.id, totalCount);
     }
   }
 
   const yearList = Array.from(availableYears).sort((a, b) => b - a);
   console.log(`[getSuperAdminOverview] User: ${currentUser.role}, Available Years Count: ${yearList.length}, Years: ${yearList}`);
+
+  // L2/L3: show target/done/% from team placement sheet (same source as getTeamPlacementOverview). Fetch all rows per lead and resolve summary in memory.
+  const levelL2L3 = (e) => {
+    const l = String(e.level || "").trim().toUpperCase();
+    return l === "L2" || l === "L3";
+  };
+  const l2l3LeadIds = [...new Set(teams.flatMap((t) => t.employees.filter(levelL2L3).map((e) => e.id)))];
+  const teamPlacementAllRows = l2l3LeadIds.length > 0
+    ? await prisma.teamPlacement.findMany({
+        where: { leadId: { in: l2l3LeadIds } },
+        select: {
+          leadId: true,
+          plcId: true,
+          candidateName: true,
+          yearlyPlacementTarget: true,
+          placementDone: true,
+          placementAchPercent: true,
+          yearlyRevenueTarget: true,
+          revenueAch: true,
+          revenueTargetAchievedPercent: true,
+          totalRevenueGenerated: true,
+        },
+      })
+    : [];
+  const toNumTeam = (v) => {
+    if (v == null || v === "") return null;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "object" && v !== null && typeof v.toNumber === "function") return v.toNumber();
+    const n = parseFloat(String(v).trim());
+    return Number.isFinite(n) ? n : null;
+  };
+  const isSummaryOnlyRow = (p) =>
+    (p.plcId && String(p.plcId).startsWith("SUMMARY-")) ||
+    (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
+  const teamSummaryByLeadId = new Map();
+  l2l3LeadIds.forEach((leadId) => {
+    const rows = teamPlacementAllRows.filter((r) => r.leadId === leadId);
+    if (rows.length === 0) return;
+    const summaryRow = rows.find(isSummaryOnlyRow);
+    const placementList = rows.filter((p) => !isSummaryOnlyRow(p));
+    const pick = (field) => {
+      const fromSummary = summaryRow?.[field];
+      if (fromSummary != null && fromSummary !== "") return fromSummary;
+      const fromAny = rows.find((r) => r[field] != null && r[field] !== "");
+      return fromAny?.[field] ?? null;
+    };
+    const placementDoneVal = pick("placementDone");
+    teamSummaryByLeadId.set(leadId, {
+      yearlyPlacementTarget: toNumTeam(pick("yearlyPlacementTarget")),
+      placementDone: placementDoneVal != null ? toNumTeam(placementDoneVal) : (placementList.length > 0 ? placementList.length : null),
+      placementAchPercent: toNumTeam(pick("placementAchPercent")),
+      yearlyRevenueTarget: toNumTeam(pick("yearlyRevenueTarget")),
+      revenueAch: toNumTeam(pick("revenueAch")),
+      revenueTargetAchievedPercent: toNumTeam(pick("revenueTargetAchievedPercent")),
+      totalRevenueGenerated: toNumTeam(pick("totalRevenueGenerated")),
+    });
+  });
 
   const responseTeams = teams.map((team) => {
     // Build manager -> employees map for this team
@@ -225,124 +337,145 @@ export async function getSuperAdminOverview(currentUser, year) {
       return descendants;
     };
 
+    // Vantage: same placement columns but display as revenue ($). Use placement target/done/%; isPlacementTeam false so frontend adds $.
+    const isVantageTeam = team.name.toLowerCase().includes('vant');
+    const isPlacementTeam = !team.name.toLowerCase().includes('vant');
+
     // Recursive function to build hierarchical structure for UI
     const buildHierarchy = (managerId) => {
         const directReports = employeesByManager.get(managerId) || [];
         return directReports.map(report => {
             const children = buildHierarchy(report.id);
             
-            let target = Number(report.yearlyTarget || 0);
             const targetType = report.targetType || "REVENUE";
-
-            // If user has subordinates, their target is the sum of subordinates' targets + their own target
-            // ONLY if types match. If types mismatch, we can't sum.
-            if (children.length > 0) {
-               // Filter children with same target type
-               const matchingChildren = children.filter(c => c.targetType === targetType);
-               if (matchingChildren.length > 0) {
-                   target += matchingChildren.reduce((sum, child) => sum + child.target, 0);
-               }
-            }
-            
             const ownRevenue = revenueByEmployee.get(report.id) || 0;
             const ownPlacements = placementsByEmployee.get(report.id) || 0;
-
             const childrenTotalRevenue = children.reduce((sum, child) => sum + (child.totalRevenue || 0), 0);
             const childrenTotalPlacements = children.reduce((sum, child) => sum + (child.totalPlacements || 0), 0);
-
-            const totalRevenue = ownRevenue + childrenTotalRevenue;
             const totalPlacements = ownPlacements + childrenTotalPlacements;
 
-            // Calculate percentage based on target type
-            let pct = 0;
-            if (targetType === "PLACEMENTS") {
-                 pct = target > 0 ? Math.round((totalPlacements / target) * 100) : 0;
+            let target;
+            let totalRevenue;
+            let pct;
+            const isL2OrL3 = levelL2L3(report);
+            const teamSheetSummary = isL2OrL3 ? teamSummaryByLeadId.get(report.id) : null;
+
+            if (teamSheetSummary) {
+                // L2/L3: show only team placement sheet data (Placement Target/Done/% or Revenue Target/Achieved/%)
+                if (isVantageTeam) {
+                    target = Number(teamSheetSummary.yearlyRevenueTarget ?? 0);
+                    totalRevenue = Number(teamSheetSummary.revenueAch ?? teamSheetSummary.totalRevenueGenerated ?? 0);
+                    pct = Number(teamSheetSummary.revenueTargetAchievedPercent ?? 0);
+                } else {
+                    target = Number(teamSheetSummary.yearlyPlacementTarget ?? 0);
+                    totalRevenue = Number(teamSheetSummary.placementDone ?? 0);
+                    pct = Number(teamSheetSummary.placementAchPercent ?? 0);
+                }
+            } else if (isVantageTeam) {
+                target = Number(report.yearlyPlacementTarget ?? report.yearlyTarget ?? 0);
+                if (children.length > 0) target += children.reduce((sum, child) => sum + (child.target || 0), 0);
+                totalRevenue = totalPlacements;
+                pct = target > 0 ? Math.round((totalPlacements / target) * 100) : 0;
             } else {
-                 pct = target > 0 ? Math.round((totalRevenue / target) * 100) : 0;
+                target = Number(report.yearlyTarget || 0);
+                if (children.length > 0) {
+                    const matchingChildren = children.filter(c => c.targetType === targetType);
+                    if (matchingChildren.length > 0) target += matchingChildren.reduce((sum, child) => sum + child.target, 0);
+                }
+                totalRevenue = ownRevenue + childrenTotalRevenue;
+                pct = targetType === "PLACEMENTS"
+                    ? (target > 0 ? Math.round((totalPlacements / target) * 100) : 0)
+                    : (target > 0 ? Math.round((totalRevenue / target) * 100) : 0);
             }
-            
-            return {
+
+            const node = {
                 id: report.id,
                 name: report.user.name,
                 level: report.level || "L4",
                 target: target,
                 targetType: targetType,
                 targetAchieved: pct,
-                revenue: ownRevenue,
+                revenue: teamSheetSummary ? (isVantageTeam ? totalRevenue : totalRevenue) : (isVantageTeam ? ownPlacements : ownRevenue),
                 totalRevenue: totalRevenue,
                 placements: ownPlacements,
                 totalPlacements: totalPlacements,
-                members: children // Recursive nesting
+                members: children,
             };
+            if (teamSheetSummary) node.teamSummary = teamSheetSummary;
+            return node;
         });
     };
 
     const leads = team.employees.filter(
-      (p) => p.user.role === Role.TEAM_LEAD && p.level === "L2"
+      (p) => p.user.role === Role.TEAM_LEAD && levelL2L3(p)
     );
 
     const teamLeads = leads.map((lead) => {
-      const hierarchyMembers = buildHierarchy(lead.id); // For UI display
-
-      // Calculate total revenue for the lead (Own + Descendants)
+      const hierarchyMembers = buildHierarchy(lead.id);
       const ownRevenue = revenueByEmployee.get(lead.id) || 0;
       const ownPlacements = placementsByEmployee.get(lead.id) || 0;
-
       const descendantsRevenue = hierarchyMembers.reduce((sum, m) => sum + (m.totalRevenue || 0), 0);
       const descendantsPlacements = hierarchyMembers.reduce((sum, m) => sum + (m.totalPlacements || 0), 0);
-
-      const leadTotalRevenue = ownRevenue + descendantsRevenue;
-      const leadTotalPlacements = ownPlacements + descendantsPlacements;
-
-      // Calculate Lead Target from hierarchy (Sum of direct reports' targets) + own target
-      // If no reports, fallback to own target
-      let leadTarget = Number(lead.yearlyTarget || 0);
       const leadTargetType = lead.targetType || "REVENUE";
-      
-      if (hierarchyMembers.length > 0) {
-         const matchingMembers = hierarchyMembers.filter(m => m.targetType === leadTargetType);
-         if (matchingMembers.length > 0) {
-             leadTarget += matchingMembers.reduce((sum, m) => sum + m.target, 0);
-         }
-      }
 
-      let leadPercentage = 0;
-      if (leadTargetType === "PLACEMENTS") {
-          leadPercentage = leadTarget > 0 ? Math.round((leadTotalPlacements / leadTarget) * 100) : 0;
+      let leadTarget;
+      let leadTotalRevenue;
+      let leadTotalPlacements = ownPlacements + descendantsPlacements;
+      let leadPercentage;
+      const leadSheetSummary = levelL2L3(lead) ? teamSummaryByLeadId.get(lead.id) : null;
+      if (leadSheetSummary) {
+        if (isVantageTeam) {
+          leadTarget = Number(leadSheetSummary.yearlyRevenueTarget ?? 0);
+          leadTotalRevenue = Number(leadSheetSummary.revenueAch ?? leadSheetSummary.totalRevenueGenerated ?? 0);
+          leadPercentage = Number(leadSheetSummary.revenueTargetAchievedPercent ?? 0);
+        } else {
+          leadTarget = Number(leadSheetSummary.yearlyPlacementTarget ?? 0);
+          leadTotalRevenue = Number(leadSheetSummary.placementDone ?? 0);
+          leadPercentage = Number(leadSheetSummary.placementAchPercent ?? 0);
+        }
+      } else if (isVantageTeam) {
+        leadTarget = Number(lead.yearlyPlacementTarget ?? lead.yearlyTarget ?? 0);
+        if (hierarchyMembers.length > 0) leadTarget += hierarchyMembers.reduce((sum, m) => sum + (m.target || 0), 0);
+        leadTotalRevenue = leadTotalPlacements;
+        leadPercentage = leadTarget > 0 ? Math.round((leadTotalPlacements / leadTarget) * 100) : 0;
       } else {
-          leadPercentage = leadTarget > 0 ? Math.round((leadTotalRevenue / leadTarget) * 100) : 0;
+        leadTotalRevenue = ownRevenue + descendantsRevenue;
+        leadTarget = Number(lead.yearlyTarget || 0);
+        if (hierarchyMembers.length > 0) {
+          const matchingMembers = hierarchyMembers.filter(m => m.targetType === leadTargetType);
+          if (matchingMembers.length > 0) leadTarget += matchingMembers.reduce((sum, m) => sum + m.target, 0);
+        }
+        leadPercentage = leadTargetType === "PLACEMENTS"
+          ? (leadTarget > 0 ? Math.round((leadTotalPlacements / leadTarget) * 100) : 0)
+          : (leadTarget > 0 ? Math.round((leadTotalRevenue / leadTarget) * 100) : 0);
       }
 
-      return {
+      const leadNode = {
         id: lead.id,
         name: lead.user.name,
         level: lead.level || "L2",
         target: leadTarget,
         targetType: leadTargetType,
         targetAchieved: leadPercentage,
-        revenue: ownRevenue,
+        revenue: leadSheetSummary ? leadTotalRevenue : (isVantageTeam ? ownPlacements : ownRevenue),
         totalRevenue: leadTotalRevenue,
         placements: ownPlacements,
         totalPlacements: leadTotalPlacements,
-        members: hierarchyMembers, // Now nested
+        members: hierarchyMembers,
       };
+      if (leadSheetSummary) leadNode.teamSummary = leadSheetSummary;
+      return leadNode;
     });
 
-    const teamTarget = team.employees.reduce(
-      (sum, emp) => sum + Number(emp.yearlyTarget || 0),
-      0
-    );
+    const teamTarget = isVantageTeam
+      ? team.employees.reduce((sum, emp) => sum + Number(emp.yearlyPlacementTarget ?? emp.yearlyTarget ?? 0), 0)
+      : team.employees.reduce((sum, emp) => sum + Number(emp.yearlyTarget || 0), 0);
 
-    // Vantage team (name contains "vant") = revenue-based; all other teams = placement-based
-    const isPlacementTeam = !team.name.toLowerCase().includes('vant');
-
-    const teamAchievedValue = team.employees.reduce((sum, emp) => {
-        if (isPlacementTeam) {
-             return sum + (placementsByEmployee.get(emp.id) || 0);
-        } else {
-             return sum + (revenueByEmployee.get(emp.id) || 0);
-        }
-    }, 0);
+    const teamAchievedValue = isVantageTeam
+      ? team.employees.reduce((sum, emp) => sum + (placementsByEmployee.get(emp.id) || 0), 0)
+      : isPlacementTeam
+        ? team.employees.reduce((sum, emp) => sum + (placementsByEmployee.get(emp.id) || 0), 0)
+        : team.employees.reduce((sum, emp) => sum + (revenueByEmployee.get(emp.id) || 0), 0);
 
     const teamPercentage =
       teamTarget > 0 ? Math.round((teamAchievedValue / teamTarget) * 100) : 0;
@@ -437,6 +570,44 @@ export async function getTeamLeadOverview(currentUser, year) {
 
   // Combine for mapping
   const allTeamMembers = [...teamLeads, ...teamEmployees];
+  const teamUserIds = allTeamMembers.map((u) => u.id);
+
+  // Fetch summary-row placementDone from DB so hierarchy matches employee profile (same source as getPersonalPlacementOverview)
+  const summaryRows = teamUserIds.length > 0
+    ? await prisma.personalPlacement.findMany({
+        where: {
+          employeeId: { in: teamUserIds },
+          plcId: { startsWith: "SUMMARY-" },
+        },
+        select: { employeeId: true, placementDone: true },
+      })
+    : [];
+  const placementDoneByUserId = new Map();
+  const toNum = (v) => {
+    if (v == null || v === "") return null;
+    if (typeof v === "number" && Number.isFinite(v) && v >= 0) return Math.floor(v);
+    if (typeof v === "object" && v !== null) {
+      if (typeof v.toNumber === "function") {
+        const n = v.toNumber();
+        if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+      }
+      if (typeof v.toString === "function") {
+        const s = String(v.toString()).trim();
+        if (s && s !== "[object Object]") {
+          const n = parseFloat(s);
+          if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+        }
+      }
+    }
+    const s = String(v).trim();
+    if (s === "" || s === "[object Object]") return null;
+    const n = parseFloat(s);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+  };
+  summaryRows.forEach((row) => {
+    const done = toNum(row.placementDone);
+    if (done != null) placementDoneByUserId.set(row.employeeId, done);
+  });
 
   const employeesByManager = new Map();
   const revenueByEmployee = new Map();
@@ -466,14 +637,29 @@ export async function getTeamLeadOverview(currentUser, year) {
     const oldCount = filteredPlacements.length;
 
     // 2. Personal Placements
-    // For ALL users (L1-L4), personal placements are their own recruiter data
-    let personalPlacements = (emp.personalPlacements || []);
-    if (year && year !== 'All') {
+    // Use summary row placementDone (from sheet) so hierarchy matches employee profile; else count placement rows.
+    const allPersonal = emp.personalPlacements || [];
+    const isSummaryRow = (p) =>
+      (p.plcId && String(p.plcId).startsWith("SUMMARY-")) ||
+      (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
+    const summaryDoneFromDb = placementDoneByUserId.get(emp.id);
+    let personalCount;
+    if (summaryDoneFromDb != null) {
+      personalCount = summaryDoneFromDb;
+    } else {
+      let personalPlacementsFiltered = allPersonal.filter((p) => !isSummaryRow(p));
+      if (year && year !== 'All') {
         const targetYear = Number(year);
-        personalPlacements = personalPlacements.filter(p => p.doj && new Date(p.doj).getFullYear() === targetYear);
+        personalPlacementsFiltered = personalPlacementsFiltered.filter(p => p.doj && new Date(p.doj).getFullYear() === targetYear);
+      }
+      personalCount = personalPlacementsFiltered.length;
+    }
+    let personalPlacements = allPersonal.filter((p) => !isSummaryRow(p));
+    if (year && year !== 'All') {
+      const targetYear = Number(year);
+      personalPlacements = personalPlacements.filter(p => p.doj && new Date(p.doj).getFullYear() === targetYear);
     }
     const personalRev = personalPlacements.reduce((sum, p) => sum + Number(p.revenueUsd || 0), 0);
-    const personalCount = personalPlacements.length;
 
     // 3. Team Placements
     // Only L2s and L3s should have team placements. 
@@ -616,12 +802,20 @@ export async function getTeamLeadOverview(currentUser, year) {
 
 export async function getPersonalPlacementOverview(currentUser, userId) {
   try {
-    // Only allow viewing another user's data for SUPER_ADMIN/S1_ADMIN; otherwise restrict to self
+    // Only allow viewing another user's data for SUPER_ADMIN/S1_ADMIN, or if TEAM_LEAD and the user is their subordinate
     let targetId = userId || currentUser.id;
     if (userId && userId !== currentUser.id) {
       const canViewOthers = currentUser.role === Role.SUPER_ADMIN || currentUser.role === Role.S1_ADMIN;
       if (!canViewOthers) {
-        targetId = currentUser.id;
+        if (currentUser.role === Role.TEAM_LEAD) {
+          const isSubordinate = await prisma.employeeProfile.findFirst({
+            where: { id: userId, managerId: currentUser.id },
+          });
+          if (isSubordinate) targetId = userId;
+          else targetId = currentUser.id;
+        } else {
+          targetId = currentUser.id;
+        }
       }
     }
 
@@ -683,7 +877,7 @@ export async function getTeamPlacementOverview(currentUser, leadId) {
       const canViewOthers = currentUser.role === Role.SUPER_ADMIN || currentUser.role === Role.S1_ADMIN;
       if (!canViewOthers) {
         const isManagerOfLead = await prisma.employeeProfile.findFirst({
-          where: { userId: leadId, managerId: currentUser.id },
+          where: { id: leadId, managerId: currentUser.id },
         });
         if (!isManagerOfLead) {
           targetId = currentUser.id;

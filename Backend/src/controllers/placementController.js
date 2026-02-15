@@ -1681,7 +1681,7 @@ export async function importPersonalPlacements(payload, actorId) {
     }
 
     const plcIdRaw = getVal(row, "plc id") || getVal(row, "pls id");
-    const plcId = String(plcIdRaw || "").trim();
+    const plcId = (plcIdRaw === 0 || plcIdRaw === "0") ? "0" : String(plcIdRaw || "").trim();
     if (!plcId) {
       throw new Error(`Row ${rowIndex}: missing PLC ID`);
     }
@@ -2601,7 +2601,7 @@ export async function importTeamPlacements(payload, actorId) {
 
   // PLC ID
     const plcIdRaw = getVal(row, "plc id") || getVal(row, "pls id");
-    const plcId = String(plcIdRaw || "").trim();
+    const plcId = (plcIdRaw === 0 || plcIdRaw === "0") ? "0" : String(plcIdRaw || "").trim();
     if (!plcId) {
       throw new Error(`Row ${rowIndex}: missing PLC ID`);
     }

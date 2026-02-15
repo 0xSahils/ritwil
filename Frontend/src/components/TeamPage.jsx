@@ -259,12 +259,6 @@ const TeamPage = () => {
                 >
                   Manage Users
                 </button>
-                <button
-                  onClick={() => navigate('/admin/teams')}
-                  className="px-3 py-1.5 rounded-full font-medium transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                >
-                  Manage Teams
-                </button>
               </div>
               <button
                 onClick={handleLogout}
@@ -454,7 +448,21 @@ const TeamPage = () => {
                         const levelBorder = lead.level === 'L2' ? 'border-amber-200/50' : lead.level === 'L3' ? 'border-teal-200/50' : 'border-slate-200/50'
                         const levelText = lead.level === 'L2' ? 'text-amber-700' : lead.level === 'L3' ? 'text-teal-700' : 'text-slate-700'
                         const levelBadge = lead.level === 'L2' ? 'bg-amber-100' : lead.level === 'L3' ? 'bg-teal-100' : 'bg-slate-100'
-                        
+                        const isL2OrL3 = lead.level === 'L2' || lead.level === 'L3'
+                        const leadTeamSummary = lead.teamSummary || {}
+                        const hasLeadTeamSummary = isL2OrL3 && Object.keys(leadTeamSummary).length > 0
+                        const leadTargetLabel = hasLeadTeamSummary ? (isPlacementTeam ? 'Placement Target' : 'Revenue Target') : 'Total Target'
+                        const leadAchievedLabel = hasLeadTeamSummary ? (isPlacementTeam ? 'Placements Done' : 'Revenue Achieved') : 'Achieved'
+                        const leadTargetVal = hasLeadTeamSummary
+                          ? (isPlacementTeam ? (leadTeamSummary.yearlyPlacementTarget ?? lead.target ?? 0) : (leadTeamSummary.yearlyRevenueTarget ?? lead.target ?? 0))
+                          : lead.target
+                        const leadAchievedVal = hasLeadTeamSummary
+                          ? (isPlacementTeam ? (leadTeamSummary.placementDone ?? lead.totalPlacements ?? 0) : (leadTeamSummary.revenueAch ?? lead.totalRevenue ?? 0))
+                          : (isPlacementTeam ? (lead.totalPlacements || lead.placements || 0) : (lead.totalRevenue || 0))
+                        const leadPctVal = hasLeadTeamSummary
+                          ? (isPlacementTeam ? (leadTeamSummary.placementAchPercent ?? lead.targetAchieved) : (leadTeamSummary.revenueTargetAchievedPercent ?? lead.targetAchieved))
+                          : lead.targetAchieved
+
                         return (
                           <div key={lead.id} className="border-l border-slate-200 pl-4 relative">
                             {/* Connector Dot */}
@@ -479,29 +487,27 @@ const TeamPage = () => {
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                       </svg>
                                     </div>
-                                    {lead.target && (
+                                    {((leadTargetVal != null && leadTargetVal !== '') || lead.target) ? (
                                       <div className="text-xs text-slate-500 mt-1 flex items-center">
                                         <span className="font-medium text-slate-600">
-                                          Total Target: <span className="text-slate-900">
-                                            {isPlacementTeam ? lead.target : CalculationService.formatCurrency(lead.target)}
+                                          {leadTargetLabel}: <span className="text-slate-900">
+                                            {isPlacementTeam ? (leadTargetVal ?? 0) : CalculationService.formatCurrency(leadTargetVal ?? 0)}
                                           </span>
                                         </span>
                                         <span className="mx-2 text-slate-300">|</span>
                                         <span className="font-medium text-slate-600">
-                                          Achieved: <span className="text-green-600">
-                                            {isPlacementTeam 
-                                              ? (lead.totalPlacements || lead.placements || 0) 
-                                              : CalculationService.formatCurrency(lead.totalRevenue || 0)}
+                                          {leadAchievedLabel}: <span className="text-green-600">
+                                            {isPlacementTeam ? (leadAchievedVal ?? 0) : CalculationService.formatCurrency(leadAchievedVal ?? 0)}
                                           </span>
                                         </span>
                                       </div>
-                                    )}
+                                    ) : null}
                                   </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                  {lead.targetAchieved && (
+                                  {(leadPctVal != null && leadPctVal !== '') && (
                                     <PieChart 
-                                      percentage={Number(lead.targetAchieved || 0)} 
+                                      percentage={Number(leadPctVal || 0)} 
                                       size={45}
                                       colorClass={levelText}
                                     />

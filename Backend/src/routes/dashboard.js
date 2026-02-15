@@ -227,7 +227,6 @@ router.get(
 router.get(
   "/team-lead",
   requireRole(Role.TEAM_LEAD),
-  cacheMiddleware(60),
   async (req, res, next) => {
     try {
       const data = await getTeamLeadOverview(req.user);

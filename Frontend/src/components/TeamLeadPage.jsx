@@ -239,6 +239,10 @@ const TeamLeadPage = () => {
   const members = teamLeadData.members || []
   const isPlacementTeam = teamLeadData.targetType === 'PLACEMENTS'
 
+  // Same labels as Super Admin / Super User outside card: Placement Target / Placements Done or Revenue Target / Revenue Achieved
+  const targetLabel = isPlacementTeam ? 'Placement Target' : 'Revenue Target'
+  const achievedLabel = isPlacementTeam ? 'Placements Done' : 'Revenue Achieved'
+
   // Prefer sheet summary for header when viewing that tab (so summary matches the table)
   const sheetSummary = viewMode === 'team' ? teamSheetData?.summary : personalSheetData?.summary
   const hasSheetSummary = !!sheetSummary
@@ -249,21 +253,30 @@ const TeamLeadPage = () => {
     target: leadTarget
   }
 
-  const displayTarget = hasSheetSummary
-    ? (isPlacementTeam ? (sheetSummary.yearlyPlacementTarget ?? leadTarget) : (sheetSummary.yearlyRevenueTarget ?? leadTarget))
-    : leadTarget
+  // When Personal is selected but there's no personal sheet data, show 0 in header (don't use team totals)
+  const usePersonalHeader = viewMode === 'personal' && !personalSheetData?.summary
+
+  const displayTarget = usePersonalHeader
+    ? 0
+    : hasSheetSummary
+      ? (isPlacementTeam ? (sheetSummary.yearlyPlacementTarget ?? leadTarget) : (sheetSummary.yearlyRevenueTarget ?? leadTarget))
+      : leadTarget
   const formattedTeamTarget = isPlacementTeam
     ? String(displayTarget)
     : CalculationService.formatCurrency(Number(displayTarget) || 0)
 
-  const achievedValue = hasSheetSummary
-    ? (isPlacementTeam ? (sheetSummary.placementDone ?? currentLeadData.totalPlacements ?? 0) : (Number(sheetSummary.totalRevenueGenerated) ?? currentLeadData.totalRevenue ?? 0))
-    : (isPlacementTeam ? (currentLeadData.totalPlacements || 0) : (currentLeadData.totalRevenue || 0))
+  const achievedValue = usePersonalHeader
+    ? 0
+    : hasSheetSummary
+      ? (isPlacementTeam ? (sheetSummary.placementDone ?? currentLeadData.totalPlacements ?? 0) : (Number(sheetSummary.totalRevenueGenerated) ?? currentLeadData.totalRevenue ?? 0))
+      : (isPlacementTeam ? (currentLeadData.totalPlacements || 0) : (currentLeadData.totalRevenue || 0))
   const totalTarget = Number(displayTarget) || 1
   const sheetPct = sheetSummary && (sheetSummary.revenueTargetAchievedPercent != null || sheetSummary.placementAchPercent != null || sheetSummary.targetAchievedPercent != null)
-  const achievementPercentage = hasSheetSummary && sheetPct
-    ? Math.round(Number(isPlacementTeam ? (sheetSummary.placementAchPercent ?? sheetSummary.targetAchievedPercent) : (sheetSummary.revenueTargetAchievedPercent ?? sheetSummary.targetAchievedPercent)) || 0)
-    : Math.min(Math.round((achievedValue / totalTarget) * 100), 100)
+  const achievementPercentage = usePersonalHeader
+    ? 0
+    : hasSheetSummary && sheetPct
+      ? Math.round(Number(isPlacementTeam ? (sheetSummary.placementAchPercent ?? sheetSummary.targetAchievedPercent) : (sheetSummary.revenueTargetAchievedPercent ?? sheetSummary.targetAchievedPercent)) || 0)
+      : Math.min(Math.round((achievedValue / totalTarget) * 100), 100)
  
    // Helper for Circular Progress
   const CircularProgress = ({ percentage, color = "text-green-500" }) => {
@@ -367,12 +380,12 @@ const TeamLeadPage = () => {
              )}
 
              <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
-                <span className="text-xs text-slate-400 mr-2">Total Target:</span>
+                <span className="text-xs text-slate-400 mr-2">{targetLabel}:</span>
                 <span className="text-sm font-bold text-white">{formattedTeamTarget}</span>
              </div>
 
              <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
-                 <span className="text-xs text-slate-400 mr-2">Target Achieved:</span>
+                 <span className="text-xs text-slate-400 mr-2">{achievedLabel}:</span>
                  <span className="text-sm font-bold text-green-400">
                      {isPlacementTeam ? achievedValue : CalculationService.formatCurrency(achievedValue)}
                  </span>
@@ -438,6 +451,10 @@ const TeamLeadPage = () => {
                   </div>
                 </>
               )}
+              <div>
+                <span className="text-slate-500 block">Total Revenue Generated (USD)</span>
+                <span className="font-semibold text-slate-800">{sheetSummary.totalRevenueGenerated != null ? CalculationService.formatCurrency(Number(sheetSummary.totalRevenueGenerated)) : '-'}</span>
+              </div>
               <div>
                 <span className="text-slate-500 block">Slab Qualified</span>
                 <span className="font-semibold text-slate-800">{sheetSummary.slabQualified ?? '-'}</span>
@@ -598,13 +615,13 @@ const TeamLeadPage = () => {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Total Target:</span>
+                      <span className="text-slate-500 font-medium">{memberIsPlacement ? 'Placement Target:' : 'Revenue Target:'}</span>
                       <span className="text-slate-700 font-bold">
                         {memberIsPlacement ? memberTarget : CalculationService.formatCurrency(memberTarget)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Achieved:</span>
+                      <span className="text-slate-500 font-medium">{memberIsPlacement ? 'Placements Done:' : 'Revenue Achieved:'}</span>
                       <span className={`font-bold ${progressColor}`}>
                         {memberIsPlacement ? memberAchieved : CalculationService.formatCurrency(memberAchieved)}
                       </span>

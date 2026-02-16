@@ -1,10 +1,28 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
-import PieChart from './PieChart'
 import { Skeleton } from './common/Skeleton'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: (i = 1) => ({
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.04 * i },
+  }),
+  exit: { opacity: 0 },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 30 },
+  },
+}
 
 const TeamLeadPage = () => {
   const navigate = useNavigate()
@@ -202,33 +220,50 @@ const TeamLeadPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 p-6 animate-pulse">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Skeleton className="h-10 w-48 rounded-lg" />
-          <Skeleton className="h-32 w-full rounded-2xl" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.25 }}
+        className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/30 p-6"
+      >
+        <div className="max-w-5xl mx-auto space-y-6">
+          <Skeleton className="h-12 w-56 rounded-xl" />
+          <Skeleton className="h-36 w-full rounded-2xl" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Skeleton className="h-24 rounded-xl" />
-            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-28 rounded-2xl" />
+            <Skeleton className="h-28 rounded-2xl" />
           </div>
-          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="h-72 w-full rounded-2xl" />
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg px-8 py-6 max-w-md w-full text-center">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-violet-50/30 p-4"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="bg-white rounded-2xl border border-slate-200/80 shadow-lg shadow-slate-200/50 px-8 py-6 max-w-md w-full text-center"
+        >
           <p className="text-red-600 font-medium mb-4">{error || 'Something went wrong'}</p>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             onClick={() => { setError(''); setLoading(true); setRetryCount(c => c + 1); }}
-            className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 hover:shadow-lg hover:shadow-violet-500/20 transition-shadow"
           >
             Retry
-          </button>
-        </div>
-      </div>
+          </motion.button>
+        </motion.div>
+      </motion.div>
     )
   }
 
@@ -318,107 +353,130 @@ const TeamLeadPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header Section */}
-        <div className="bg-[#1e293b] text-white rounded-[2rem] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between shadow-xl relative overflow-hidden">
-           {/* Decorative Background Elements */}
-           <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-           <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/20 font-sans"
+    >
+      <div className="max-w-7xl mx-auto px-4 py-6 md:px-8 md:py-8 space-y-8">
+        {/* Hero Header */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-800 via-slate-800 to-violet-900/90 p-6 md:p-8 shadow-xl shadow-slate-900/10"
+        >
+          <div className="absolute top-0 right-0 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
 
-          {/* Left: Profile Info */}
-          <div className="flex items-center gap-6 relative z-10 w-full md:w-auto mb-6 md:mb-0">
-            <div className="w-20 h-20 bg-slate-600/50 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 shadow-inner">
-               <svg className="w-10 h-10 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+          <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-5">
+              <motion.div
+                variants={itemVariants}
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-inner"
+              >
+                <svg className="h-8 w-8 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-               </svg>
+                </svg>
+              </motion.div>
+              <div>
+                <motion.div variants={itemVariants} className="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  {teamLeadData.level || 'L2'} · Team Lead
+                </motion.div>
+                <motion.h1 variants={itemVariants} className="text-2xl md:text-3xl font-bold tracking-tight text-white mb-0.5">
+                  {teamLeadData.name}
+                </motion.h1>
+                <motion.p variants={itemVariants} className="text-slate-400 font-medium text-sm">{teamData.name}</motion.p>
+              </div>
             </div>
-            <div>
-               <div className="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
-                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                 {teamLeadData.level || 'L2'} • Team Lead
-               </div>
-               <h1 className="text-3xl font-bold tracking-tight mb-1">{teamLeadData.name}</h1>
-               <div className="text-slate-400 font-medium">{teamData.name}</div>
-            </div>
-          </div>
 
-          {/* Right: Stats & Actions */}
-          <div className="flex flex-wrap items-center gap-3 relative z-10">
-             <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 flex items-center gap-2 backdrop-blur-md">
-                <svg className="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+            <div className="flex flex-wrap items-center gap-3">
+              <motion.div
+                variants={itemVariants}
+                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm"
+              >
+                <svg className="h-4 w-4 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
                 <span className="text-sm font-medium text-slate-200">{members.filter(m => m.name !== 'pass through').length} Members</span>
-             </div>
+              </motion.div>
 
-             {/* View toggle for L2/L3 (TEAM_LEAD levels) */}
-             {(teamLeadData.level === 'L2' || teamLeadData.level === 'L3') && (
-               <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-1 py-1 flex items-center gap-1 backdrop-blur-md">
-                 <button
-                   onClick={() => setViewMode('personal')}
-                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                     viewMode === 'personal'
-                       ? 'bg-white text-slate-900'
-                       : 'text-slate-300 hover:text-white'
-                   }`}
-                 >
-                   Personal
-                 </button>
-                 <button
-                   onClick={() => setViewMode('team')}
-                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                     viewMode === 'team'
-                       ? 'bg-white text-slate-900'
-                       : 'text-slate-300 hover:text-white'
-                   }`}
-                 >
-                   Team
-                 </button>
-               </div>
-             )}
+              {(teamLeadData.level === 'L2' || teamLeadData.level === 'L3') && (
+                <motion.div variants={itemVariants} className="rounded-xl border border-white/10 bg-white/5 p-1 flex items-center gap-0.5 backdrop-blur-sm">
+                  <button
+                    onClick={() => setViewMode('personal')}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      viewMode === 'personal' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Personal
+                  </button>
+                  <button
+                    onClick={() => setViewMode('team')}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      viewMode === 'team' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Team
+                  </button>
+                </motion.div>
+              )}
 
-             <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
+              <motion.div variants={itemVariants} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
                 <span className="text-xs text-slate-400 mr-2">{targetLabel}:</span>
                 <span className="text-sm font-bold text-white">{formattedTeamTarget}</span>
-             </div>
-
-             <div className="bg-slate-700/50 border border-slate-600/50 rounded-full px-5 py-2.5 backdrop-blur-md">
-                 <span className="text-xs text-slate-400 mr-2">{achievedLabel}:</span>
-                 <span className="text-sm font-bold text-green-400">
-                     {isPlacementTeam ? achievedValue : CalculationService.formatCurrency(achievedValue)}
-                 </span>
-                 <span className="text-xs text-slate-400 ml-1">({achievementPercentage}%)</span>
-              </div>
-
-             <button 
+              </motion.div>
+              <motion.div variants={itemVariants} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
+                <span className="text-xs text-slate-400 mr-2">{achievedLabel}:</span>
+                <span className="text-sm font-bold text-emerald-400">
+                  {isPlacementTeam ? achievedValue : CalculationService.formatCurrency(achievedValue)}
+                </span>
+                <span className="text-xs text-slate-400 ml-1">({achievementPercentage}%)</span>
+              </motion.div>
+              <motion.button
+                variants={itemVariants}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                 onClick={handleLogout}
-                className="bg-transparent border border-slate-600 hover:bg-slate-700 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ml-2"
-             >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/10 hover:shadow-lg hover:shadow-slate-500/10 transition-all"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Logout
-             </button>
+                Log out
+              </motion.button>
+            </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* My Personal Performance Section (sheet-backed, no new calculations) */}
-        <div className="bg-white rounded-[2rem] shadow-sm p-8 border border-slate-100">
-          <div className="flex items-center gap-3 mb-4">
-            <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-            </svg>
+        {/* Placements (Sheet) Section */}
+        <motion.section
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="rounded-2xl border border-slate-200/80 bg-white p-6 md:p-8 shadow-sm"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600">
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            </span>
             <h2 className="text-xl font-bold text-slate-800">
               {viewMode === 'personal' ? 'My Personal Placements (Sheet)' : 'My Team Placements (Sheet)'}
             </h2>
           </div>
-          <div className="text-sm text-slate-600 mb-2">
+          <p className="text-sm text-slate-500 mb-6">
             Data below is read directly from the uploaded Excel sheet. No additional calculations are done in the app.
-          </div>
+          </p>
           {hasSheetSummary && sheetSummary && (
-            <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm">
+            <motion.div
+              variants={itemVariants}
+              className="mb-6 p-5 bg-slate-50/80 rounded-xl border border-slate-200/80 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm"
+            >
               {!isPlacementTeam && (
                 <>
                   <div>
@@ -467,45 +525,45 @@ const TeamLeadPage = () => {
                 <span className="text-slate-500 block">Incentive Paid (INR)</span>
                 <span className="font-semibold text-slate-800">{sheetSummary.totalIncentivePaidInr != null ? CalculationService.formatCurrency(Number(sheetSummary.totalIncentivePaidInr), 'INR') : '-'}</span>
               </div>
-            </div>
+            </motion.div>
           )}
-          <div className="mt-4">
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider">
+          <motion.div variants={itemVariants} className="overflow-hidden rounded-xl border border-slate-200/80">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-600">
                   {viewMode === 'personal' ? (
                     <tr>
-                      <th className="px-4 py-2 text-left">Candidate Name</th>
-                      <th className="px-4 py-2 text-left">Placement Year</th>
-                      <th className="px-4 py-2 text-left">DOJ</th>
-                      <th className="px-4 py-2 text-left">DOQ</th>
-                      <th className="px-4 py-2 text-left">Client</th>
-                      <th className="px-4 py-2 text-left">PLC ID</th>
-                      <th className="px-4 py-2 text-left">Placement Type</th>
-                      <th className="px-4 py-2 text-left">Billing Status</th>
-                      <th className="px-4 py-2 text-left">Collection Status</th>
-                      <th className="px-4 py-2 text-left">Total Billed Hours</th>
-                      <th className="px-4 py-2 text-left">Revenue (USD)</th>
-                      <th className="px-4 py-2 text-left">Incentive amount (INR)</th>
-                      <th className="px-4 py-2 text-left">Incentive Paid (INR)</th>
+                      <th className="px-4 py-3 text-left">Candidate Name</th>
+                      <th className="px-4 py-3 text-left">Placement Year</th>
+                      <th className="px-4 py-3 text-left">DOJ</th>
+                      <th className="px-4 py-3 text-left">DOQ</th>
+                      <th className="px-4 py-3 text-left">Client</th>
+                      <th className="px-4 py-3 text-left">PLC ID</th>
+                      <th className="px-4 py-3 text-left">Placement Type</th>
+                      <th className="px-4 py-3 text-left">Billing Status</th>
+                      <th className="px-4 py-3 text-left">Collection Status</th>
+                      <th className="px-4 py-3 text-left">Total Billed Hours</th>
+                      <th className="px-4 py-3 text-left">Revenue (USD)</th>
+                      <th className="px-4 py-3 text-left">Incentive amount (INR)</th>
+                      <th className="px-4 py-3 text-left">Incentive Paid (INR)</th>
                     </tr>
                   ) : (
                     <tr>
-                      <th className="px-4 py-2 text-left">Candidate Name</th>
-                      <th className="px-4 py-2 text-left">Recruiter Name</th>
-                      <th className="px-4 py-2 text-left">Split With</th>
-                      <th className="px-4 py-2 text-left">Placement Year</th>
-                      <th className="px-4 py-2 text-left">DOJ</th>
-                      <th className="px-4 py-2 text-left">DOQ</th>
-                      <th className="px-4 py-2 text-left">Client</th>
-                      <th className="px-4 py-2 text-left">PLC ID</th>
-                      <th className="px-4 py-2 text-left">Placement Type</th>
-                      <th className="px-4 py-2 text-left">Billing Status</th>
-                      <th className="px-4 py-2 text-left">Collection Status</th>
-                      <th className="px-4 py-2 text-left">Total Billed Hours</th>
-                      <th className="px-4 py-2 text-left">Revenue -Lead (USD)</th>
-                      <th className="px-4 py-2 text-left">Incentive amount (INR)</th>
-                      <th className="px-4 py-2 text-left">Incentive Paid (INR)</th>
+                      <th className="px-4 py-3 text-left">Candidate Name</th>
+                      <th className="px-4 py-3 text-left">Recruiter Name</th>
+                      <th className="px-4 py-3 text-left">Split With</th>
+                      <th className="px-4 py-3 text-left">Placement Year</th>
+                      <th className="px-4 py-3 text-left">DOJ</th>
+                      <th className="px-4 py-3 text-left">DOQ</th>
+                      <th className="px-4 py-3 text-left">Client</th>
+                      <th className="px-4 py-3 text-left">PLC ID</th>
+                      <th className="px-4 py-3 text-left">Placement Type</th>
+                      <th className="px-4 py-3 text-left">Billing Status</th>
+                      <th className="px-4 py-3 text-left">Collection Status</th>
+                      <th className="px-4 py-3 text-left">Total Billed Hours</th>
+                      <th className="px-4 py-3 text-left">Revenue -Lead (USD)</th>
+                      <th className="px-4 py-3 text-left">Incentive amount (INR)</th>
+                      <th className="px-4 py-3 text-left">Incentive Paid (INR)</th>
                     </tr>
                   )}
                 </thead>
@@ -560,20 +618,27 @@ const TeamLeadPage = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.section>
 
-        {/* Team Members Section */}
-        <div className="bg-white rounded-[2rem] shadow-sm p-8 border border-slate-100">
-          <div className="flex items-center gap-3 mb-8">
-            <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-               <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-            </svg>
+        {/* Team Members */}
+        <motion.section
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="rounded-2xl border border-slate-200/80 bg-white p-6 md:p-8 shadow-sm"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600">
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+              </svg>
+            </span>
             <h2 className="text-xl font-bold text-slate-800">Team Members</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {members.filter(m => m.name !== 'pass through').map((member) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {members.filter(m => m.name !== 'pass through').map((member, idx) => {
                 // Display by team target type: placement team -> placement target/done/%; revenue team -> revenue target/achieved/%
                 const memberIsPlacement = isPlacementTeam || member.targetType === 'PLACEMENTS';
                 const memberTarget = Number(member.target || 0);
@@ -590,24 +655,30 @@ const TeamLeadPage = () => {
                else if (memberPercentage >= 50) progressColor = "text-yellow-500";
 
                return (
-                 <div 
+                 <motion.div
                    key={member.id}
+                   variants={itemVariants}
+                   initial="hidden"
+                   animate="visible"
+                   transition={{ delay: idx * 0.06, type: 'spring', stiffness: 300, damping: 30 }}
+                   whileHover={{ y: -2, boxShadow: '0 20px 40px -12px rgba(139, 92, 246, 0.15)' }}
+                   whileTap={{ scale: 0.99 }}
                    onClick={() => {
                      const isLead = member.role === 'TEAM_LEAD' || (member.level && ['L2', 'L3'].includes(member.level.toUpperCase()));
                      handleMemberClick(member, teamLeadData, teamData, isLead ? 'team' : 'personal');
                    }}
-                   className="bg-white border border-slate-100 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                   className="group cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-colors hover:border-violet-200/80"
                  >
-                  <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-start justify-between mb-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-slate-800 group-hover:text-white transition-colors duration-300">
-                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-colors group-hover:bg-violet-500/10 group-hover:text-violet-600">
+                        <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                         </svg>
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-600 transition-colors">{member.name}</h3>
-                        <div className="text-slate-400 text-sm font-medium">{member.level || 'L4'}</div>
+                        <h3 className="font-bold text-slate-800 group-hover:text-violet-700 transition-colors">{member.name}</h3>
+                        <p className="text-slate-500 text-sm font-medium">{member.level || 'L4'}</p>
                       </div>
                     </div>
                     <CircularProgress percentage={memberPercentage} color={progressColor} />
@@ -616,24 +687,24 @@ const TeamLeadPage = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500 font-medium">{memberIsPlacement ? 'Placement Target:' : 'Revenue Target:'}</span>
-                      <span className="text-slate-700 font-bold">
+                      <span className="font-semibold text-slate-800">
                         {memberIsPlacement ? memberTarget : CalculationService.formatCurrency(memberTarget)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500 font-medium">{memberIsPlacement ? 'Placements Done:' : 'Revenue Achieved:'}</span>
-                      <span className={`font-bold ${progressColor}`}>
+                      <span className={`font-semibold ${progressColor}`}>
                         {memberIsPlacement ? memberAchieved : CalculationService.formatCurrency(memberAchieved)}
                       </span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
                )
             })}
           </div>
-        </div>
+        </motion.section>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

@@ -192,23 +192,48 @@ export default function L4DashboardView({
   const incentivePaidNum = incentivePaidInr ?? 0
   const incentivePendingNum = Math.max(0, incentiveEarnedNum - incentivePaidNum)
 
+  // When sheet has placement target/done (e.g. Vantedge), use them and display as revenue/dollars
+  const hasPlacementSheetData =
+    activeSummary &&
+    (activeSummary.yearlyPlacementTarget != null || activeSummary.placementDone != null)
+  const sheetPlacementTarget = hasPlacementSheetData
+    ? Number(activeSummary.yearlyPlacementTarget) || 0
+    : null
+  const sheetPlacementDone = hasPlacementSheetData && activeSummary.placementDone != null
+    ? Number(activeSummary.placementDone)
+    : null
+
   const isRevenueTarget = employeeData?.targetType === 'REVENUE'
-  const targetValue = isRevenueTarget
-    ? employeeData?.yearlyRevenueTarget
-    : employeeData?.yearlyPlacementTarget
-  const achievedValue = isRevenueTarget
-    ? employeeData?.rawRevenueGenerated
-    : employeeData?.rawPlacementsCount
-  const targetDisplay = isRevenueTarget
-    ? CalculationService.formatCurrency(targetValue || 0)
-    : String(targetValue || 0)
-  const achievedDisplay = isRevenueTarget
-    ? CalculationService.formatCurrency(achievedValue || 0)
-    : String(achievedValue ?? 0)
+  const targetValue =
+    hasPlacementSheetData && (sheetPlacementTarget > 0 || sheetPlacementDone != null)
+      ? sheetPlacementTarget
+      : isRevenueTarget
+        ? employeeData?.yearlyRevenueTarget
+        : employeeData?.yearlyPlacementTarget
+  const achievedValue =
+    hasPlacementSheetData && sheetPlacementDone != null
+      ? sheetPlacementDone
+      : isRevenueTarget
+        ? employeeData?.rawRevenueGenerated
+        : employeeData?.rawPlacementsCount
+  const targetDisplay =
+    hasPlacementSheetData
+      ? CalculationService.formatCurrency(targetValue || 0)
+      : isRevenueTarget
+        ? CalculationService.formatCurrency(targetValue || 0)
+        : String(targetValue || 0)
+  const achievedDisplay =
+    hasPlacementSheetData
+      ? CalculationService.formatCurrency(achievedValue ?? 0)
+      : isRevenueTarget
+        ? CalculationService.formatCurrency(achievedValue || 0)
+        : String(achievedValue ?? 0)
   const percent =
-    isRevenueTarget
-      ? (targetValue > 0 ? ((achievedValue || 0) / targetValue) * 100 : 0)
-      : (targetValue > 0 ? ((achievedValue || 0) / targetValue) * 100 : 0)
+    hasPlacementSheetData && (activeSummary.placementAchPercent != null || activeSummary.targetAchievedPercent != null)
+      ? Number(activeSummary.placementAchPercent ?? activeSummary.targetAchievedPercent) || 0
+      : targetValue > 0
+        ? ((achievedValue || 0) / targetValue) * 100
+        : 0
 
   const slabInfo = employeeData?.slabQualified
     ? CalculationService.getSlabFromIncentivePercentage(

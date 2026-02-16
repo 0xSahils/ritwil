@@ -934,17 +934,16 @@ const L1AdminsTab = () => {
                     <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
                        <th className="py-4 pl-6">Admin Name</th>
                        <th className="py-4">Role</th>
-                       <th className="py-4">Target</th>
                        <th className="py-4">Status</th>
                        <th className="py-4 text-right pr-6">Actions</th>
                     </tr>
                  </thead>
                  <tbody className="divide-y divide-white/60">
-                    <TableRowSkeleton cols={5} />
-                    <TableRowSkeleton cols={5} />
-                    <TableRowSkeleton cols={5} />
-                    <TableRowSkeleton cols={5} />
-                    <TableRowSkeleton cols={5} />
+                    <TableRowSkeleton cols={4} />
+                    <TableRowSkeleton cols={4} />
+                    <TableRowSkeleton cols={4} />
+                    <TableRowSkeleton cols={4} />
+                    <TableRowSkeleton cols={4} />
                  </tbody>
              </table>
           </div>
@@ -973,7 +972,6 @@ const L1AdminsTab = () => {
                 <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
                    <th className="py-4 pl-6">Admin Name</th>
                    <th className="py-4">Role</th>
-                   <th className="py-4">Target</th>
                    <th className="py-4">Status</th>
                    <th className="py-4 text-right pr-6">Actions</th>
                 </tr>
@@ -997,9 +995,6 @@ const L1AdminsTab = () => {
                             {getRoleDisplayName(admin.role, admin.level)}
                           </span>
                       </td>
-                      <td className="py-4 text-slate-600 font-mono text-sm">
-                          {admin.yearlyTarget ? CalculationService.formatCurrency(admin.yearlyTarget) : '-'}
-                      </td>
                       <td className="py-4">
                         {admin.isActive ? (
                             <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium border border-green-200">Active</span>
@@ -1014,7 +1009,7 @@ const L1AdminsTab = () => {
                    </tr>
                 ))}
                 {admins.length === 0 && (
-                    <tr><td colSpan="5" className="text-center py-8 text-slate-500">No Super Admins found</td></tr>
+                    <tr><td colSpan="4" className="text-center py-8 text-slate-500">No Super Admins found</td></tr>
                 )}
              </tbody>
           </table>

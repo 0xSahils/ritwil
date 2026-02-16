@@ -346,7 +346,8 @@ router.get(
   requireRole(Role.EMPLOYEE, Role.TEAM_LEAD, Role.S1_ADMIN, Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
-      const { userId } = req.query;
+      const canViewOthers = req.user.role === Role.S1_ADMIN || req.user.role === Role.SUPER_ADMIN;
+      const userId = canViewOthers ? req.query.userId : undefined;
       const data = await getPersonalPlacementOverview(req.user, userId);
       res.json(data);
     } catch (error) {
@@ -360,7 +361,8 @@ router.get(
   requireRole(Role.TEAM_LEAD, Role.S1_ADMIN, Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
-      const { leadId } = req.query;
+      const canViewOthers = req.user.role === Role.S1_ADMIN || req.user.role === Role.SUPER_ADMIN;
+      const leadId = canViewOthers ? req.query.leadId : undefined;
       const data = await getTeamPlacementOverview(req.user, leadId);
       res.json(data);
     } catch (error) {

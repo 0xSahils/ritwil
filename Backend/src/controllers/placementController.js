@@ -360,25 +360,17 @@ async function findExistingTeamPlacement(leadId, candidateName, client, doj, lev
 }
 
 export async function getPlacementsByUser(userId) {
-  // Check if user is a team lead
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { role: true },
   });
 
-  // Fetch old Placement model, PersonalPlacement model, and TeamPlacement (if lead)
   const fetchPromises = [
-    prisma.placement.findMany({
-      where: { employeeId: userId },
-      orderBy: { createdAt: "desc" },
-    }),
     prisma.personalPlacement.findMany({
       where: { employeeId: userId },
       orderBy: { createdAt: "desc" },
     }),
   ];
-
-  // If user is a team lead, also fetch team placements
   if (user?.role === Role.TEAM_LEAD) {
     fetchPromises.push(
       prisma.teamPlacement.findMany({
@@ -389,9 +381,8 @@ export async function getPlacementsByUser(userId) {
   }
 
   const results = await Promise.all(fetchPromises);
-  const oldPlacements = results[0];
-  const rawPersonalPlacements = results[1];
-  const rawTeamPlacements = results[2] || [];
+  const rawPersonalPlacements = results[0];
+  const rawTeamPlacements = results[1] || [];
 
   // Exclude summary-only placeholder rows from personal (and team) lists
   const isSummaryOnlyRow = (p) =>
@@ -462,11 +453,7 @@ export async function getPlacementsByUser(userId) {
     source: "team",
   }));
 
-  // Add source for frontend to show Personal vs Team sections; legacy has no source in DB
-  const legacyWithSource = oldPlacements.map((p) => ({ ...p, source: "legacy" }));
-
-  // Combine and sort by createdAt descending
-  const allPlacements = [...legacyWithSource, ...convertedPersonalPlacements, ...convertedTeamPlacements].sort(
+  const allPlacements = [...convertedPersonalPlacements, ...convertedTeamPlacements].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
 
@@ -474,6 +461,9 @@ export async function getPlacementsByUser(userId) {
 }
 
 export async function createPlacement(userId, data, actorId) {
+  const err = new Error("Legacy placements are no longer supported. Use placement import.");
+  err.statusCode = 410;
+  throw err;
   const {
     candidateName,
     candidateId,
@@ -546,7 +536,9 @@ export async function createPlacement(userId, data, actorId) {
 }
 
 export async function updatePlacement(id, data, actorId) {
-  // Recalculate if DOJ changes
+  const err = new Error("Legacy placements are no longer supported. Use placement import.");
+  err.statusCode = 410;
+  throw err;
   let updates = { ...data };
   
   // Handle numeric conversions
@@ -605,6 +597,9 @@ export async function updatePlacement(id, data, actorId) {
 }
 
 export async function updatePlacementBilling(id, billingData, actorId) {
+  const err = new Error("Legacy placements are no longer supported. Use placement import.");
+  err.statusCode = 410;
+  throw err;
   // billingData should be an array of { month, hours, status }
   
   // 1. Delete existing billings for this placement (simple replacement strategy)
@@ -651,6 +646,9 @@ export async function updatePlacementBilling(id, billingData, actorId) {
 }
 
 export async function bulkCreatePlacements(userId, placementsData, actorId) {
+  const err = new Error("Legacy placements are no longer supported. Use placement import.");
+  err.statusCode = 410;
+  throw err;
   const createdPlacements = [];
   const updatedPlacements = [];
   const unchangedPlacements = [];
@@ -800,6 +798,9 @@ export async function bulkCreatePlacements(userId, placementsData, actorId) {
 }
 
 export async function bulkCreateGlobalPlacements(placementsData, actorId, campaignId = null) {
+  const err = new Error("Legacy placements are no longer supported. Use placement import.");
+  err.statusCode = 410;
+  throw err;
   const createdPlacements = [];
   const updatedPlacements = [];
   const unchangedPlacements = [];
@@ -2919,10 +2920,16 @@ export async function importTeamPlacements(payload, actorId) {
 }
 
 export async function deletePlacement(id, actorId) {
-  const placement = await prisma.placement.delete({
-    where: { id },
-  });
-
+  const [personalDeleted, teamDeleted] = await Promise.all([
+    prisma.personalPlacement.deleteMany({ where: { id } }),
+    prisma.teamPlacement.deleteMany({ where: { id } }),
+  ]);
+  const count = personalDeleted.count + teamDeleted.count;
+  if (count === 0) {
+    const err = new Error("Placement not found");
+    err.statusCode = 404;
+    throw err;
+  }
   await prisma.auditLog.create({
     data: {
       actorId,
@@ -2931,37 +2938,30 @@ export async function deletePlacement(id, actorId) {
       entityId: id,
     },
   });
-
-  return placement;
+  return { id, deleted: true };
 }
 
 export async function bulkDeletePlacements(placementIds, actorId) {
-  const result = await prisma.placement.deleteMany({
-    where: {
-      id: { in: placementIds },
-    },
-  });
-
+  const [personalResult, teamResult] = await Promise.all([
+    prisma.personalPlacement.deleteMany({ where: { id: { in: placementIds } } }),
+    prisma.teamPlacement.deleteMany({ where: { id: { in: placementIds } } }),
+  ]);
+  const count = personalResult.count + teamResult.count;
   await prisma.auditLog.create({
     data: {
       actorId,
       action: "PLACEMENT_BULK_DELETED",
       entityType: "Placement",
-      changes: { count: result.count, ids: placementIds },
+      changes: { count, ids: placementIds },
     },
   });
-
-  return result;
+  return { count };
 }
 
 export async function deleteAllPlacements(actorId) {
   return await prisma.$transaction(async (tx) => {
-    // Delete from all three placement models
     const personalCount = await tx.personalPlacement.deleteMany({});
     const teamCount = await tx.teamPlacement.deleteMany({});
-    const oldPlacementCount = await tx.placement.deleteMany({});
-    
-    // Also delete import batches to be thorough
     const batchCount = await tx.placementImportBatch.deleteMany({});
 
     await tx.auditLog.create({
@@ -2972,7 +2972,6 @@ export async function deleteAllPlacements(actorId) {
         changes: {
           personal: personalCount.count,
           team: teamCount.count,
-          old: oldPlacementCount.count,
           batches: batchCount.count,
         },
       },
@@ -2981,7 +2980,6 @@ export async function deleteAllPlacements(actorId) {
     return {
       personal: personalCount.count,
       team: teamCount.count,
-      old: oldPlacementCount.count,
       batches: batchCount.count,
     };
   });

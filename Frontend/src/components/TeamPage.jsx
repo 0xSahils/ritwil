@@ -5,6 +5,7 @@ import { useSuperAdminDashboard } from '../hooks/useDashboard'
 import { apiRequest } from '../api/client'
 import { Skeleton } from './common/Skeleton'
 import AdminUserManagement from './AdminUserManagement'
+import HeadPlacementsView from './HeadPlacementsView'
 import CalculationService from '../utils/calculationService'
 import PieChart from './PieChart'
 import RecursiveMemberNode from './RecursiveMemberNode'
@@ -462,7 +463,6 @@ const TeamPage = () => {
   const totalMembers = teamData?.teams?.reduce((acc, team) => 
     acc + (team.teamLeads?.reduce((sum, lead) => sum + (lead.members?.length || 0), 0) || 0), 0
   ) || 0
-  const totalRevenue = teamData?.teams?.reduce((acc, team) => acc + (Number(team.totalRevenue) || 0), 0) || 0
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40">
@@ -489,6 +489,7 @@ const TeamPage = () => {
         <nav className="flex flex-1 flex-col gap-1 p-2">
           {[
             { id: 'hierarchy', label: 'Dashboard', icon: 'dashboard' },
+            { id: 'placements', label: 'Placements', icon: 'placements' },
             { id: 'users', label: 'Users', icon: 'users' },
           ].map((item) => (
             <motion.button
@@ -508,6 +509,11 @@ const TeamPage = () => {
               {item.icon === 'dashboard' && (
                 <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              )}
+              {item.icon === 'placements' && (
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
               )}
               {item.icon === 'users' && (
@@ -568,7 +574,7 @@ const TeamPage = () => {
               transition={{ duration: 0.4, delay: 0.1 }}
             >
               <h1 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                {activeSection === 'hierarchy' ? 'Organization Dashboard' : 'User Management'}
+                {activeSection === 'hierarchy' ? 'Organization Dashboard' : activeSection === 'placements' ? 'Head Placements' : 'User Management'}
               </h1>
             </motion.div>
           </div>
@@ -581,6 +587,7 @@ const TeamPage = () => {
             >
               {[
                 { id: 'hierarchy', label: 'Dashboard' },
+                { id: 'placements', label: 'Placements' },
                 { id: 'users', label: 'Users' },
               ].map((tab) => (
                 <motion.button
@@ -674,19 +681,6 @@ const TeamPage = () => {
                     accentBorder="border-emerald-400"
                     accentText="text-emerald-600"
                     delay={0.3}
-                  />
-                  <StatCard
-                    label="Total Revenue"
-                    value={CalculationService.formatCurrency(totalRevenue)}
-                    icon={
-                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    }
-                    iconGradient="from-amber-400 to-orange-500"
-                    accentBorder="border-amber-400"
-                    accentText="text-amber-600"
-                    delay={0.4}
                   />
                 </motion.div>
 
@@ -876,30 +870,11 @@ const TeamPage = () => {
                                     <span className="font-medium">{teamMembersCount} Members</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-4 mt-3">
-                                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100/80">
-                                    <span className="text-xs font-semibold text-slate-500">Target</span>
-                                    <span className="text-sm font-bold text-slate-800">{formattedTeamTarget}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/60">
-                                    <span className="text-xs font-semibold text-emerald-600">Achieved</span>
-                                    <span className="text-sm font-bold text-emerald-700">
-                                      {isPlacementTeam 
-                                        ? (team.totalRevenue || 0) 
-                                        : CalculationService.formatCurrency(team.totalRevenue || 0)}
-                                    </span>
-                                  </div>
-                                </div>
                               </div>
                             </div>
                             
-                            {/* Right side - Chart and Expand */}
+                            {/* Right side - Expand */}
                             <div className="flex items-center gap-4">
-                              <PieChart 
-                                percentage={Number(team.targetAchieved || 0)} 
-                                size={60}
-                                colorClass={colorClasses.text}
-                              />
                               <motion.button
                                 onClick={() => toggleTeam(team.id)}
                                 whileHover={{ scale: 1.1 }}
@@ -1104,6 +1079,18 @@ const TeamPage = () => {
                     )
                   })}
                 </motion.div>
+              </motion.div>
+            )}
+            {activeSection === 'placements' && (
+              <motion.div
+                key="placements"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.3 }}
+                className="relative z-10"
+              >
+                <HeadPlacementsView />
               </motion.div>
             )}
           </AnimatePresence>

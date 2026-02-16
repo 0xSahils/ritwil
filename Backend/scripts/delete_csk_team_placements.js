@@ -29,26 +29,7 @@ async function main() {
     return;
   }
 
-  // 1. Legacy Placement: delete MonthlyBilling first (FK), then Placement
-  const legacyPlacements = await prisma.placement.findMany({
-    where: { employeeId: { in: userIds } },
-    select: { id: true },
-  });
-  const legacyIds = legacyPlacements.map((p) => p.id);
-  if (legacyIds.length > 0) {
-    const monthlyDeleted = await prisma.monthlyBilling.deleteMany({
-      where: { placementId: { in: legacyIds } },
-    });
-    console.log(`Deleted ${monthlyDeleted.count} monthly billing row(s) for legacy placements`);
-    const legacyDeleted = await prisma.placement.deleteMany({
-      where: { employeeId: { in: userIds } },
-    });
-    console.log(`Deleted ${legacyDeleted.count} legacy Placement(s)`);
-  } else {
-    console.log("No legacy placements to delete");
-  }
-
-  // 2. PersonalPlacement (includes summary rows with plcId SUMMARY-* etc.)
+  // PersonalPlacement (includes summary rows with plcId SUMMARY-* etc.)
   const personalDeleted = await prisma.personalPlacement.deleteMany({
     where: { employeeId: { in: userIds } },
   });

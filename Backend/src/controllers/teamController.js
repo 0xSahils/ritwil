@@ -46,7 +46,6 @@ export async function listTeamsWithMembers(currentUser) {
         include: {
           user: {
             include: {
-              placements: true,
               personalPlacements: true,
             },
           },
@@ -80,19 +79,16 @@ export async function listTeamsWithMembers(currentUser) {
     );
 
     const aggregatedRevenue = team.employees.reduce((total, member) => {
-      const combinedPlacements = [
-        ...(member.user.placements || []),
-        ...(member.user.personalPlacements || [])
-      ];
+      const combinedPlacements = member.user.personalPlacements || [];
       const memberRevenue = combinedPlacements.reduce(
-        (sum, entry) => sum + Number(entry.revenue || entry.revenueUsd || 0),
+        (sum, entry) => sum + Number(entry.revenueUsd || 0),
         0
       );
       return total + memberRevenue;
     }, 0);
 
     const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
-      const combinedCount = (member.user.placements?.length || 0) + (member.user.personalPlacements?.length || 0);
+      const combinedCount = (member.user.personalPlacements?.length || 0);
       return total + combinedCount;
     }, 0);
 
@@ -122,10 +118,7 @@ export async function listTeamsWithMembers(currentUser) {
         level: p.level,
         target: Number(p.yearlyTarget || 0),
         targetType: p.targetType,
-        revenue: (p.user.placements || []).reduce(
-          (sum, e) => sum + Number(e.revenue || 0),
-          0
-        ) + (p.user.personalPlacements || []).reduce(
+        revenue: (p.user.personalPlacements || []).reduce(
           (sum, e) => sum + Number(e.revenueUsd || 0),
           0
         ),
@@ -415,10 +408,7 @@ export async function getTeamDetails(idOrSlug) {
   );
 
   const aggregatedRevenue = team.employees.reduce((total, member) => {
-    const raw = [
-      ...(member.user.placements || []),
-      ...(member.user.personalPlacements || [])
-    ];
+    const raw = member.user.personalPlacements || [];
     const combinedPlacements = excludeSummaryOnly(raw);
     const memberRevenue = combinedPlacements.reduce(
       (sum, entry) => sum + Number(entry.revenue || entry.revenueUsd || 0),
@@ -439,10 +429,7 @@ export async function getTeamDetails(idOrSlug) {
   }, 0);
 
   const aggregatedPlacementsCount = team.employees.reduce((total, member) => {
-    const raw = [
-      ...(member.user.placements || []),
-      ...(member.user.personalPlacements || [])
-    ];
+    const raw = member.user.personalPlacements || [];
     const combinedPlacements = excludeSummaryOnly(raw);
     let count = combinedPlacements.length;
     
@@ -490,10 +477,7 @@ export async function getTeamDetails(idOrSlug) {
       };
     }),
     members: members.map((p) => {
-      const raw = [
-        ...(p.user.placements || []),
-        ...(p.user.personalPlacements || [])
-      ];
+      const raw = p.user.personalPlacements || [];
       const combinedPlacements = excludeSummaryOnly(raw);
       return {
         id: p.id,

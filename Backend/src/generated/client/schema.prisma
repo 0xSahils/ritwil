@@ -58,8 +58,6 @@ model User {
   updatedAt       DateTime         @updatedAt
   employeeProfile EmployeeProfile?
   refreshTokens   RefreshToken[]
-  dailyEntries    DailyEntry[]
-  placements      Placement[]
 
   leadEmployees EmployeeProfile[] @relation("LeadEmployees")
 
@@ -113,76 +111,6 @@ model EmployeeProfile {
   @@index([teamId])
   @@index([managerId])
   @@index([isActive])
-}
-
-model DailyEntry {
-  id            String        @id @default(cuid())
-  employeeId    String
-  employee      User          @relation(fields: [employeeId], references: [id])
-  date          DateTime
-  clientName    String
-  placementType PlacementType
-  revenue       Decimal       @db.Decimal(14, 2)
-  marginPercent Decimal       @db.Decimal(5, 2)
-  billingStatus BillingStatus
-  doi           DateTime
-  doj           DateTime
-  remarks       String?
-  createdAt     DateTime      @default(now())
-
-  @@index([employeeId, date])
-  @@index([billingStatus])
-}
-
-model Placement {
-  id                 String        @id @default(cuid())
-  employeeId         String
-  employee           User          @relation(fields: [employeeId], references: [id])
-  candidateName      String
-  candidateId        String?
-  placementYear      Int?
-  doi                DateTime?
-  doj                DateTime
-  doq                DateTime?
-  clientName         String
-  plcId              String?
-  placementType      PlacementType
-  billingStatus      BillingStatus
-  collectionStatus   String?
-  billedHours        Int?
-  revenue            Decimal       @db.Decimal(14, 2)
-  incentiveAmountInr Decimal       @db.Decimal(14, 2)
-  incentivePaidInr   Decimal?      @db.Decimal(14, 2)
-  incentivePayoutEta DateTime?
-
-  // L2 Fields Restored
-  sourcer          String?
-  accountManager   String?
-  teamLead         String?
-  placementSharing String?
-  placementCredit  Decimal? @db.Decimal(14, 2)
-  totalRevenue     Decimal? @db.Decimal(14, 2)
-  revenueAsLead    Decimal? @db.Decimal(14, 2)
-
-  createdAt DateTime @default(now())
-
-  monthlyBillings MonthlyBilling[]
-
-  @@unique([employeeId, candidateName, clientName, doj])
-  @@index([employeeId])
-  @@index([billingStatus])
-}
-
-model MonthlyBilling {
-  id          String        @id @default(cuid())
-  placementId String
-  placement   Placement     @relation(fields: [placementId], references: [id])
-  month       String
-  hours       Int?
-  status      BillingStatus
-
-  @@index([placementId])
-  @@index([status])
 }
 
 model RefreshToken {

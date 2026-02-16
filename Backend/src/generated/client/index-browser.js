@@ -172,58 +172,6 @@ exports.Prisma.EmployeeProfileScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.DailyEntryScalarFieldEnum = {
-  id: 'id',
-  employeeId: 'employeeId',
-  date: 'date',
-  clientName: 'clientName',
-  placementType: 'placementType',
-  revenue: 'revenue',
-  marginPercent: 'marginPercent',
-  billingStatus: 'billingStatus',
-  doi: 'doi',
-  doj: 'doj',
-  remarks: 'remarks',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.PlacementScalarFieldEnum = {
-  id: 'id',
-  employeeId: 'employeeId',
-  candidateName: 'candidateName',
-  candidateId: 'candidateId',
-  placementYear: 'placementYear',
-  doi: 'doi',
-  doj: 'doj',
-  doq: 'doq',
-  clientName: 'clientName',
-  plcId: 'plcId',
-  placementType: 'placementType',
-  billingStatus: 'billingStatus',
-  collectionStatus: 'collectionStatus',
-  billedHours: 'billedHours',
-  revenue: 'revenue',
-  incentiveAmountInr: 'incentiveAmountInr',
-  incentivePaidInr: 'incentivePaidInr',
-  incentivePayoutEta: 'incentivePayoutEta',
-  sourcer: 'sourcer',
-  accountManager: 'accountManager',
-  teamLead: 'teamLead',
-  placementSharing: 'placementSharing',
-  placementCredit: 'placementCredit',
-  totalRevenue: 'totalRevenue',
-  revenueAsLead: 'revenueAsLead',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.MonthlyBillingScalarFieldEnum = {
-  id: 'id',
-  placementId: 'placementId',
-  month: 'month',
-  hours: 'hours',
-  status: 'status'
-};
-
 exports.Prisma.RefreshTokenScalarFieldEnum = {
   id: 'id',
   token: 'token',
@@ -361,18 +309,6 @@ exports.TargetType = exports.$Enums.TargetType = {
   PLACEMENTS: 'PLACEMENTS'
 };
 
-exports.PlacementType = exports.$Enums.PlacementType = {
-  PERMANENT: 'PERMANENT',
-  CONTRACT: 'CONTRACT'
-};
-
-exports.BillingStatus = exports.$Enums.BillingStatus = {
-  PENDING: 'PENDING',
-  BILLED: 'BILLED',
-  CANCELLED: 'CANCELLED',
-  HOLD: 'HOLD'
-};
-
 exports.PlacementImportType = exports.$Enums.PlacementImportType = {
   PERSONAL: 'PERSONAL',
   TEAM: 'TEAM'
@@ -382,9 +318,6 @@ exports.Prisma.ModelName = {
   Team: 'Team',
   User: 'User',
   EmployeeProfile: 'EmployeeProfile',
-  DailyEntry: 'DailyEntry',
-  Placement: 'Placement',
-  MonthlyBilling: 'MonthlyBilling',
   RefreshToken: 'RefreshToken',
   AuditLog: 'AuditLog',
   PlacementImportBatch: 'PlacementImportBatch',

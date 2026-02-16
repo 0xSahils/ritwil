@@ -8,6 +8,7 @@ import {
   getTeamLeadOverview,
   getPersonalPlacementOverview,
   getTeamPlacementOverview,
+  getL1Placements,
   resolveEmployeeId,
 } from "../controllers/dashboardController.js";
 
@@ -41,11 +42,6 @@ const processEmployeeData = async (employee) => {
   const targetType = employee.employeeProfile.targetType || (employee.employeeProfile.level === "L4" ? "PLACEMENTS" : "REVENUE");
   const slabQualified = employee.employeeProfile.slabQualified || false;
   
-  // Calculate revenue from all sources
-  const oldPlacementRevenue = (employee.placements || []).reduce(
-    (sum, p) => sum + Number(p.revenue || 0),
-    0
-  );
   const personalPlacementRevenue = personalPlacements.reduce(
     (sum, p) => sum + Number(p.revenueUsd || 0),
     0
@@ -54,9 +50,9 @@ const processEmployeeData = async (employee) => {
     (sum, p) => sum + Number(p.revenueLeadUsd || 0),
     0
   );
-  const revenueGenerated = oldPlacementRevenue + personalPlacementRevenue + teamPlacementRevenue;
-  
-  const placementsCount = (employee.placements || []).length + personalPlacements.length + teamPlacements.length;
+  const revenueGenerated = personalPlacementRevenue + teamPlacementRevenue;
+
+  const placementsCount = personalPlacements.length + teamPlacements.length;
 
   let percentage = 0;
   if (targetType === "PLACEMENTS") {
@@ -67,10 +63,6 @@ const processEmployeeData = async (employee) => {
 
   const latestIncentive = null;
 
-  const oldPlacementIncentive = (employee.placements || []).reduce(
-    (sum, p) => sum + Number(p.incentiveAmountInr || 0),
-    0
-  );
   const personalPlacementIncentive = personalPlacements.reduce(
     (sum, p) => sum + Number(p.incentiveInr || 0),
     0
@@ -79,7 +71,7 @@ const processEmployeeData = async (employee) => {
     (sum, p) => sum + Number(p.incentiveInr || 0),
     0
   );
-  const totalIncentiveInr = oldPlacementIncentive + personalPlacementIncentive + teamPlacementIncentive;
+  const totalIncentiveInr = personalPlacementIncentive + teamPlacementIncentive;
 
   // Convert personal placements to same format
   const convertedPersonalPlacements = personalPlacements.map(p => ({
@@ -139,40 +131,7 @@ const processEmployeeData = async (employee) => {
     monthlyBilling: [],
   }));
 
-  // Combine all placements
   const allPlacements = [
-    ...(employee.placements || []).map((p) => ({
-      id: p.id,
-      candidateName: p.candidateName,
-      candidateId: p.candidateId,
-      placementYear: p.placementYear,
-      plcId: p.plcId,
-      sourcer: p.sourcer,
-      accountManager: p.accountManager,
-      teamLead: p.teamLead,
-      placementSharing: p.placementSharing,
-      placementCredit: p.placementCredit,
-      totalRevenue: p.totalRevenue,
-      revenueAsLead: p.revenueAsLead,
-      doi: p.doi,
-      doj: p.doj,
-      doq: p.doq,
-      client: p.clientName,
-      placementType: p.placementType,
-      billedHours: p.billedHours,
-      revenue: Number(p.revenue),
-      billingStatus: p.billingStatus,
-      collectionStatus: p.collectionStatus,
-      incentivePayoutEta: p.incentivePayoutEta,
-      incentiveAmountInr: Number(p.incentiveAmountInr),
-      incentivePaidInr: Number(p.incentivePaidInr || 0),
-      monthlyBilling: (p.monthlyBillings || []).map((mb) => ({
-        id: mb.id,
-        month: mb.month,
-        hours: mb.hours,
-        status: mb.status,
-      })),
-    })),
     ...convertedPersonalPlacements,
     ...convertedTeamPlacements,
   ].sort((a, b) => {
@@ -254,10 +213,6 @@ router.get(
               manager: true,
             },
           },
-          dailyEntries: true,
-          placements: {
-            include: { monthlyBillings: true },
-          },
         },
       });
 
@@ -305,10 +260,6 @@ router.get(
               team: true,
               manager: true,
             },
-          },
-          dailyEntries: true,
-          placements: {
-            include: { monthlyBillings: true },
           },
         },
       });
@@ -364,6 +315,26 @@ router.get(
       const canViewOthers = req.user.role === Role.S1_ADMIN || req.user.role === Role.SUPER_ADMIN;
       const leadId = canViewOthers ? req.query.leadId : undefined;
       const data = await getTeamPlacementOverview(req.user, leadId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.get(
+  "/head-placements",
+  requireRole(Role.SUPER_ADMIN),
+  async (req, res, next) => {
+    try {
+      const filters = {
+        teamId: req.query.teamId || undefined,
+        leadId: req.query.leadId || undefined,
+        year: req.query.year ?? undefined,
+        placementType: req.query.placementType || undefined,
+        source: req.query.source || undefined,
+      };
+      const data = await getL1Placements(req.user, filters);
       res.json(data);
     } catch (error) {
       next(error);

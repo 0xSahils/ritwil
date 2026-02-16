@@ -1,4 +1,5 @@
 import express from "express";
+import { body, validationResult } from "express-validator";
 import bcrypt from "bcryptjs";
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
@@ -40,15 +41,27 @@ async function createRefreshToken(userId) {
   return token;
 }
 
-router.post("/login", async (req, res, next) => {
+router.post(
+  "/login",
+  [
+    body("email").isEmail().normalizeEmail().withMessage("Valid email required"),
+    body("password").notEmpty().withMessage("Password required").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
+  ],
+  async (req, res, next) => {
   const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   const userAgent = req.headers['user-agent'];
 
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: "Validation failed", details: errors.array().map((e) => ({ field: e.path, message: e.msg })) });
+    }
+
     const { email, password } = req.body;
+    const emailLower = typeof email === "string" ? email.toLowerCase() : email;
 
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: emailLower },
       include: {
         employeeProfile: {
           include: {
@@ -223,13 +236,28 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-router.post("/logout", (req, res) => {
-  res.clearCookie("refreshToken", {
+router.post("/logout", async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/api/auth",
-  });
+  };
+  if (refreshToken) {
+    try {
+      const payload = verifyRefreshToken(refreshToken);
+      if (payload?.jti) {
+        await prisma.refreshToken.updateMany({
+          where: { id: payload.jti },
+          data: { isRevoked: true },
+        });
+      }
+    } catch {
+      // Token invalid or expired; still clear cookie
+    }
+  }
+  res.clearCookie("refreshToken", cookieOptions);
   res.json({ message: "Logged out" });
 });
 
@@ -257,7 +285,9 @@ router.post("/refresh", async (req, res, next) => {
       return res.status(401).json({ error: "Invalid refresh token" });
     }
 
-    // Check if revoked? (Optional, if we had revokedAt)
+    if (tokenRecord.isRevoked) {
+      return res.status(401).json({ error: "Session expired. Please login again." });
+    }
     
     const user = await prisma.user.findUnique({
         where: { id: payload.sub },

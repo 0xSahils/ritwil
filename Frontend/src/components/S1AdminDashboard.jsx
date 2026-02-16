@@ -654,33 +654,9 @@ const HierarchyTab = ({ user }) => {
                                                                     </svg>
                                                                     {team.teamLeads?.length || 0} Lead{team.teamLeads?.length !== 1 ? 's' : ''}
                                                                 </div>
-                                                                <div className="flex items-center gap-3 mt-2">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-xs text-slate-600 font-medium">Target:</span>
-                                                                        <span className="text-xs font-semibold text-slate-700">{formattedTeamTarget}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-xs text-slate-600 font-medium">Achieved:</span>
-                                                                        <span className="text-xs font-semibold text-green-600">
-                                                                            {isPlacementTeam 
-                                                                                ? CalculationService.calculateAchievedValue(calculatedTeamTarget, team.targetAchieved)
-                                                                                : CalculationService.formatCurrency(
-                                                                                    CalculationService.calculateAchievedValue(calculatedTeamTarget, team.targetAchieved)
-                                                                                )
-                                                                            }
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-3">
-                                                            <div className="hidden md:block">
-                                                                <PieChart 
-                                                                    percentage={Number(team.targetAchieved || 0)} 
-                                                                    size={50}
-                                                                    colorClass={colors.text}
-                                                                />
-                                                            </div>
                                                             <svg className={`w-5 h-5 ${colors.text} transition-transform duration-300 ${expandedTeams[team.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
                                                             </svg>

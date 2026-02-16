@@ -86,3 +86,28 @@ export const useTeamLeadDashboard = () => {
     staleTime: 1000 * 60 * 5,
   })
 }
+
+/** Head placements for Super User: team or personal, with filters (teamId, leadId, year, placementType, source). */
+export const useHeadPlacements = (filters = {}) => {
+  const params = new URLSearchParams()
+  if (filters.teamId) params.set('teamId', filters.teamId)
+  if (filters.leadId) params.set('leadId', filters.leadId)
+  if (filters.year != null && filters.year !== '' && filters.year !== 'all') params.set('year', String(filters.year))
+  if (filters.placementType) params.set('placementType', filters.placementType)
+  if (filters.source) params.set('source', filters.source)
+  const queryString = params.toString()
+
+  return useQuery({
+    queryKey: ['headPlacements', filters],
+    queryFn: async () => {
+      const url = `/dashboard/head-placements${queryString ? `?${queryString}` : ''}`
+      const response = await apiRequest(url)
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to load placements')
+      }
+      return response.json()
+    },
+    staleTime: 1000 * 60 * 2,
+  })
+}

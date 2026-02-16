@@ -11,7 +11,6 @@ import prisma from "./prisma.js";
 import authRouter from "./routes/auth.js";
 import userRouter from "./routes/users.js";
 import dashboardRouter from "./routes/dashboard.js";
-import dailyEntryRouter from "./routes/dailyEntries.js";
 import teamRouter from "./routes/teams.js";
 import placementRouter from "./routes/placements.js";
 import auditLogRouter from "./routes/auditLogs.js";
@@ -25,8 +24,30 @@ const __dirname = path.dirname(__filename);
 const app = express();
 // const prisma = new PrismaClient();
 
-// Security Middleware
-app.use(helmet());
+// Security Middleware: Helmet + in production HSTS and a balanced CSP (tuned to this codebase)
+const isProduction = process.env.NODE_ENV === "production";
+app.use(
+  helmet({
+    contentSecurityPolicy: isProduction
+      ? {
+          directives: {
+            defaultSrc: ["'self'", "blob:"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            fontSrc: ["'self'", "data:"],
+            connectSrc: ["'self'"],
+            frameAncestors: ["'self'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+          },
+        }
+      : true,
+    ...(isProduction && {
+      hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    }),
+  })
+);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -68,7 +89,6 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 app.use("/api/dashboard", dashboardRouter);
-app.use("/api/daily-entries", dailyEntryRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/placements", placementRouter);
 app.use("/api/audit-logs", auditLogRouter);
@@ -85,7 +105,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  const status = err.status || 500;
+  const status = err.statusCode || err.status || 500;
   const message = err.message || "Internal server error";
   res.status(status).json({ error: message });
 });

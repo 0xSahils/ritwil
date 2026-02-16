@@ -748,7 +748,7 @@ export default function L4DashboardView({
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">Current slab</p>
-                    <p className="mt-0.5 text-xl font-bold text-violet-900">{employeeData?.slabQualified ?? '–'}</p>
+                    <p className="mt-0.5 text-xl font-bold text-violet-900">{employeeData?.slabQualified != null ? CalculationService.formatSlabAsPercentage(employeeData.slabQualified) : '–'}</p>
                     <p className="mt-1 text-xs text-violet-600/80">Incentive tier</p>
                   </div>
                 </motion.div>
@@ -1259,7 +1259,7 @@ export default function L4DashboardView({
                               slabInfo?.color ?? 'bg-violet-100 text-violet-800'
                             }`}
                           >
-                            {employeeData.slabQualified}
+                            {CalculationService.formatSlabAsPercentage(employeeData.slabQualified)}
                           </span>
                         ) : (
                           '–'

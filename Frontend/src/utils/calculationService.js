@@ -335,6 +335,20 @@ export const getSlabFromIncentivePercentage = (incentivePercentageStr, teamName,
   return { label, color };
 };
 
+/**
+ * Format slab/incentive value as percentage for display (e.g. 0.0375 → "3.75%", 3.75 → "3.75%")
+ * @param {string|number} value - Raw value from sheet/profile (decimal 0.0375 or number 3.75)
+ * @returns {string} e.g. "3.75%" or "-"
+ */
+export const formatSlabAsPercentage = (value) => {
+  if (value === undefined || value === null || value === '') return '–';
+  if (typeof value === 'string' && String(value).trim() === '') return '–';
+  let num = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^0-9.]/g, ''));
+  if (isNaN(num)) return '–';
+  if (num <= 1 && num > 0) num *= 100;
+  return `${Number(num.toFixed(2))}%`;
+};
+
 /** Format placement count: 10 → "10", 10.5 → "10.5" (no trailing .00) */
 export const formatPlacementCount = (value) => {
   if (value === undefined || value === null || value === '') return null;
@@ -346,6 +360,7 @@ export const formatPlacementCount = (value) => {
 export const CalculationService = {
   formatCurrency,
   formatPercentage,
+  formatSlabAsPercentage,
   getDisplayPercentage,
   formatPlacementCount,
   calculateDaysDifference,
@@ -356,7 +371,7 @@ export const CalculationService = {
   parseExcelDate,
   calculateTotalRevenue,
   calculateSlab: calculateSlabFromAchievement,
-  getSlabFromIncentivePercentage // New helper
+  getSlabFromIncentivePercentage
 };
 
 export default CalculationService;

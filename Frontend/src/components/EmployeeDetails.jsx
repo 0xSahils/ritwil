@@ -970,7 +970,7 @@ const EmployeeDetails = () => {
                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
                                   CalculationService.getSlabFromIncentivePercentage(employeeData.teamSummary.slabQualified, employeeData.teamName, employeeData.level).color
                                 }`}>
-                                  {employeeData.teamSummary.slabQualified}
+                                  {CalculationService.formatSlabAsPercentage(employeeData.teamSummary.slabQualified)}
                                 </span>
                               ) : '-'}
                             </td>
@@ -1057,7 +1057,7 @@ const EmployeeDetails = () => {
                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
                                   CalculationService.getSlabFromIncentivePercentage(employeeData.personalSummary.slabQualified, employeeData.teamName, employeeData.level).color
                                 }`}>
-                                  {employeeData.personalSummary.slabQualified}
+                                  {CalculationService.formatSlabAsPercentage(employeeData.personalSummary.slabQualified)}
                                 </span>
                               ) : '-'}
                             </td>
@@ -1139,7 +1139,7 @@ const EmployeeDetails = () => {
                                   const slabInfo = CalculationService.getSlabFromIncentivePercentage(dbSlab, employeeData.teamName, employeeData.level);
                                   return (
                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${slabInfo.color}`}>
-                                      {fromSnapshot ? dbSlab : slabInfo.label}
+                                      {fromSnapshot ? CalculationService.formatSlabAsPercentage(dbSlab) : slabInfo.label}
                                     </span>
                                   );
                                 }

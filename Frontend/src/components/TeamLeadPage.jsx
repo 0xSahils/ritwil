@@ -515,7 +515,7 @@ const TeamLeadPage = () => {
               </div>
               <div>
                 <span className="text-slate-500 block">Slab Qualified</span>
-                <span className="font-semibold text-slate-800">{sheetSummary.slabQualified ?? '-'}</span>
+                <span className="font-semibold text-slate-800">{sheetSummary.slabQualified != null ? CalculationService.formatSlabAsPercentage(sheetSummary.slabQualified) : '-'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block">Total Incentive (INR)</span>

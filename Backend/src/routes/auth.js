@@ -97,10 +97,50 @@ router.post("/login", async (req, res, next) => {
         return res.status(403).json({ mfaRequired: true, userId: user.id });
       }
 
+      // Validate MFA secret exists
+      if (!user.mfaSecret) {
+        await createAuditLog({
+          actorId: user.id,
+          action: "LOGIN_ATTEMPT",
+          module: "AUTH",
+          entityType: "User",
+          entityId: user.id,
+          status: "FAILURE",
+          ipAddress,
+          userAgent,
+          changes: { reason: "MFA enabled but secret not found" }
+        });
+        return res.status(500).json({ error: "MFA configuration error. Please contact support." });
+      }
+
+      // Normalize the code: remove spaces, ensure it's exactly 6 digits
+      const normalizedCode = String(mfaCode).replace(/\s/g, '').trim();
+      
+      if (!/^\d{6}$/.test(normalizedCode)) {
+        await createAuditLog({
+          actorId: user.id,
+          action: "LOGIN_ATTEMPT",
+          module: "AUTH",
+          entityType: "User",
+          entityId: user.id,
+          status: "FAILURE",
+          ipAddress,
+          userAgent,
+          changes: { reason: "Invalid MFA code format" }
+        });
+        return res.status(401).json({ error: "MFA code must be exactly 6 digits" });
+      }
+
+      // Normalize and validate secret
+      const normalizedSecret = user.mfaSecret.trim().toUpperCase();
+      
+      // Verify TOTP with increased window and explicit time
       const verified = speakeasy.totp.verify({
-        secret: user.mfaSecret,
+        secret: normalizedSecret,
         encoding: "base32",
-        token: mfaCode,
+        token: normalizedCode,
+        window: 4, // Increased window: allow codes from 4 time steps before and after (2 minutes total window)
+        time: Math.floor(Date.now() / 1000), // Explicitly set current time in seconds
       });
 
       if (!verified) {
@@ -115,7 +155,9 @@ router.post("/login", async (req, res, next) => {
           userAgent,
           changes: { reason: "Invalid MFA code" }
         });
-        return res.status(401).json({ error: "Invalid MFA code" });
+        return res.status(401).json({ 
+          error: "Invalid MFA code. Please ensure you're using the code from your authenticator app and that your device's clock is synchronized. If you recently disabled and re-enabled MFA, you may need to scan the QR code again." 
+        });
       }
     }
 
@@ -157,6 +199,7 @@ router.post("/login", async (req, res, next) => {
           name: user.name,
           role: user.role,
           isActive: user.isActive,
+          mfaEnabled: user.mfaEnabled,
           team: profile?.team
             ? {
                 id: profile.team.id,
@@ -265,10 +308,22 @@ router.post("/mfa/verify", authenticate, async (req, res, next) => {
       return res.status(400).json({ error: "MFA setup not initiated" });
     }
 
+    // Normalize the token: remove spaces, ensure it's exactly 6 digits
+    const normalizedToken = String(token).replace(/\s/g, '').trim();
+    
+    if (!/^\d{6}$/.test(normalizedToken)) {
+      return res.status(400).json({ error: "MFA code must be exactly 6 digits" });
+    }
+
+    // Normalize and validate secret
+    const normalizedSecret = user.mfaSecret.trim().toUpperCase();
+
     const verified = speakeasy.totp.verify({
-      secret: user.mfaSecret,
+      secret: normalizedSecret,
       encoding: "base32",
-      token,
+      token: normalizedToken,
+      window: 4, // Increased window: allow codes from 4 time steps before and after (2 minutes total window)
+      time: Math.floor(Date.now() / 1000), // Explicitly set current time in seconds
     });
 
     if (verified) {

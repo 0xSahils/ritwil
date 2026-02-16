@@ -21,7 +21,10 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
       }
   }
   
-  const where = { role: { in: targetRoles } };
+  const where = { 
+    role: { in: targetRoles },
+    isActive: true // Only return active users
+  };
 
   if (actor && actor.role === Role.SUPER_ADMIN) {
     // 1. Fetch full actor details to get teamId
@@ -34,7 +37,7 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
 
     if (teamId) {
        // Scope to users in the same team
-       where.employeeProfile = { teamId };
+       where.employeeProfile = { teamId, isActive: true };
     } else {
        // Fallback: Restrict to hierarchy if no team found
        where.OR = [
@@ -261,6 +264,20 @@ export async function updateUserWithProfile(id, body, actor) {
   )
     data.isActive = isActive;
   if (password) {
+    // If updating own password, require old password verification
+    if (actor.id === id && body.oldPassword) {
+      const isOldPasswordValid = await bcrypt.compare(body.oldPassword, user.passwordHash);
+      if (!isOldPasswordValid) {
+        const error = new Error("Current password is incorrect");
+        error.statusCode = 400;
+        throw error;
+      }
+    } else if (actor.id === id && !body.oldPassword) {
+      // User updating their own password must provide old password
+      const error = new Error("Current password is required");
+      error.statusCode = 400;
+      throw error;
+    }
     data.passwordHash = await bcrypt.hash(password, 10);
   }
 

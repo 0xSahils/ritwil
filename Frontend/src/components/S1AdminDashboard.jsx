@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../api/client';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,26 @@ import RecursiveMemberNode from './RecursiveMemberNode';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Skeleton, CardSkeleton, TableRowSkeleton } from './common/Skeleton';
 import UserCreationModal from './UserCreationModal';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getRoleDisplayName, matchesRoleFilter, getDisplayNameFromFilterValue } from '../utils/roleHelpers';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: (i = 1) => ({
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.04 * i },
+  }),
+  exit: { opacity: 0 },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 30 },
+  },
+}
 // Pie Chart Component
 const PieChart = ({ percentage, size = 50, colorClass }) => {
   const radius = size / 2 - 4
@@ -149,60 +169,175 @@ const S1AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/40 p-4 md:p-8 relative overflow-hidden font-sans text-slate-900">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 via-transparent to-purple-50/30"></div>
-        <div className="absolute -top-32 -right-32 w-96 h-96 bg-gradient-to-br from-blue-100/30 to-indigo-100/20 rounded-full blur-3xl animate-float-gentle"></div>
-        <div className="absolute -bottom-32 -left-32 w-[30rem] h-[30rem] bg-gradient-to-br from-indigo-100/25 to-purple-100/20 rounded-full blur-3xl animate-float-gentle-delayed"></div>
-        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-gradient-to-br from-cyan-100/20 to-blue-100/15 rounded-full blur-3xl animate-float-gentle-slow"></div>
-        <div className="absolute inset-0 opacity-[0.02]" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, #3b82f6 1px, transparent 0)', backgroundSize: '80px 80px'}}></div>
-      </div>
+    <div className="flex min-h-screen bg-slate-100/80">
+      {/* Left sidebar - Premium dark sidebar */}
+      <motion.aside
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+        className="fixed left-0 top-0 z-30 flex w-20 flex-col border-r border-slate-200/80 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-800"
+      >
+        <div className="flex h-16 items-center justify-center border-b border-slate-700/80">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 0.6, type: "spring", stiffness: 200 }}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg"
+          >
+            <span className="text-sm font-bold">V</span>
+          </motion.div>
+        </div>
+        <nav className="flex flex-1 flex-col gap-1 p-2">
+          {[
+            { id: 'hierarchy', label: 'Hierarchy', icon: 'hierarchy' },
+            { id: 'members', label: 'Members', icon: 'users' },
+            { id: 'l1-admins', label: 'Heads', icon: 'crown' },
+            { id: 'audit-logs', label: 'Audit', icon: 'log' },
+            { id: 'settings', label: 'Settings', icon: 'settings' },
+          ].map((item) => (
+            <motion.button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveTab(item.id)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`flex flex-col items-center gap-1 rounded-xl py-3 text-center transition-colors ${
+                activeTab === item.id
+                  ? 'bg-gradient-to-br from-violet-500/90 to-indigo-600/90 text-white shadow-lg shadow-violet-500/30'
+                  : 'text-slate-400 hover:bg-slate-700/80 hover:text-white'
+              }`}
+              title={item.label}
+            >
+              {item.icon === 'hierarchy' && (
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              )}
+              {item.icon === 'users' && (
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              )}
+              {item.icon === 'crown' && (
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              )}
+              {item.icon === 'log' && (
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              )}
+              {item.icon === 'settings' && (
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              )}
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </motion.button>
+          ))}
+        </nav>
+        <div className="border-t border-slate-700/80 p-2">
+          <motion.button
+            type="button"
+            onClick={logout}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex w-full flex-col items-center gap-1 rounded-xl py-3 text-slate-400 transition-colors hover:bg-slate-700/80 hover:text-white"
+            title="Logout"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="text-[10px] font-medium">Logout</span>
+          </motion.button>
+        </div>
+      </motion.aside>
 
-      <div className="max-w-7xl mx-auto relative z-10">
-       {/* Header */}
-       <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-lg shadow-slate-200/50 p-6 md:p-8 mb-8 border border-white/60 animate-slideDown">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-             <div className="flex items-center gap-4">
-                <div className="relative">
-                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl blur opacity-30 animate-pulse-slow"></div>
-                   <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-2xl shadow-lg">
-                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                   </div>
-                </div>
-                <div>
-                   <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">VBeyond Corp</h1>
-                   <p className="text-slate-500 mt-1 text-sm flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      Supreme Admin Console
-                   </p>
-                </div>
-             </div>
-             <div className="flex items-center gap-3">
-                <div className="inline-flex bg-slate-100 rounded-full p-1 text-xs md:text-sm">
-                   <button onClick={() => setActiveTab('hierarchy')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'hierarchy' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Hierarchy</button>
-                   <button onClick={() => setActiveTab('members')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'members' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Manage Members</button>
-                   <button onClick={() => setActiveTab('l1-admins')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'l1-admins' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Manage L1 Admins</button>
-                   <button onClick={() => setActiveTab('audit-logs')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'audit-logs' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Audit Logs</button>
-                   <button onClick={() => setActiveTab('settings')} className={`px-3 py-1.5 rounded-full font-medium transition-colors ${activeTab === 'settings' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Settings</button>
-                </div>
-                <button 
-                   onClick={logout} 
-                   className="group bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-2xl transition-all duration-300 font-medium flex items-center gap-2 text-sm shadow-lg shadow-slate-300/50 hover:shadow-xl hover:shadow-slate-400/50 hover:scale-105"
-                >
-                   <svg className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                   Logout
-                </button>
-             </div>
+      {/* Main content area */}
+      <div className="flex min-w-0 flex-1 flex-col pl-20">
+        {/* Top bar - Premium header with dark gradient navigation */}
+        <motion.header
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur-sm shadow-sm"
+        >
+          <div className="flex items-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <h1 className="text-xl font-bold text-slate-900">
+                {activeTab === 'hierarchy' && 'Organization Hierarchy'}
+                {activeTab === 'members' && 'Member Management'}
+                {activeTab === 'l1-admins' && 'Head Management'}
+                {activeTab === 'audit-logs' && 'Audit Logs'}
+                {activeTab === 'settings' && 'Settings'}
+              </h1>
+            </motion.div>
           </div>
-       </div>
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="inline-flex bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 rounded-full p-1.5 shadow-lg"
+            >
+              {[
+                { id: 'hierarchy', label: 'Hierarchy' },
+                { id: 'members', label: 'Members' },
+                { id: 'l1-admins', label: 'Heads' },
+                { id: 'audit-logs', label: 'Audit' },
+                { id: 'settings', label: 'Settings' },
+              ].map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`px-4 py-2 rounded-full font-medium text-xs md:text-sm transition-all duration-300 ${
+                    activeTab === tab.id
+                      ? 'bg-white text-slate-900 shadow-md'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                  }`}
+                >
+                  {tab.label}
+                </motion.button>
+              ))}
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 pl-2 pr-4 py-2"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-sm">
+                {(user?.name || 'A').charAt(0).toUpperCase()}
+              </div>
+              <div className="hidden text-left sm:block">
+                <p className="text-sm font-semibold text-slate-800">{user?.name ?? 'Admin'}</p>
+                <p className="text-xs text-slate-500">{user?.role ?? 'S1_ADMIN'}</p>
+              </div>
+            </motion.div>
+          </div>
+        </motion.header>
 
-       {/* Main Content */}
-       <div className="animate-fadeInUp">
-          {renderContent()}
-       </div>
+        <main className="flex-1 p-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </main>
       </div>
     </div>
   );
@@ -223,7 +358,7 @@ const HierarchyTab = ({ user }) => {
         queryKey: ['hierarchyData'],
         queryFn: async () => {
             try {
-                // 1. Fetch Super Admins (L1)
+                // 1. Fetch Super Admins (Head)
                 const adminsRes = await getUsers({ role: 'SUPER_ADMIN', pageSize: 100 });
                 const superAdmins = adminsRes.data || [];
 
@@ -447,7 +582,7 @@ const HierarchyTab = ({ user }) => {
 
             {/* Super Admins List (Accordion) */}
             <div className="space-y-4">
-                <h3 className="text-center text-slate-500 font-medium mb-6 uppercase tracking-wider text-xs">Direct Reports (L1 Admins)</h3>
+                <h3 className="text-center text-slate-500 font-medium mb-6 uppercase tracking-wider text-xs">Direct Reports (Heads)</h3>
                 
                 {hierarchyData.superAdmins.map(admin => (
                     <div key={admin.id} className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden">
@@ -700,7 +835,10 @@ const L1AdminsTab = () => {
       const url = editingAdmin ? `/users/${editingAdmin.id}` : "/users";
       const method = editingAdmin ? "PUT" : "POST";
       
-      const payload = { ...formData };
+      const payload = { 
+        ...formData,
+        yearlyTarget: formData.yearlyTarget ? Number(formData.yearlyTarget) : 0
+      };
       if (editingAdmin && !payload.password) delete payload.password;
 
       const response = await apiRequest(url, {
@@ -718,28 +856,46 @@ const L1AdminsTab = () => {
       resetForm();
       queryClient.invalidateQueries(['l1Admins']);
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'Failed to save admin');
     }
   };
 
   const handleDelete = async (id) => {
-      if(!window.confirm("Are you sure you want to delete this admin?")) return;
+      if(!window.confirm("Are you sure you want to permanently delete this admin? This action cannot be undone.")) return;
       try {
           const response = await apiRequest(`/users/${id}`, { method: 'DELETE' });
-          if(!response.ok) throw new Error("Failed to delete");
+          if(!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || "Failed to delete");
+          }
+          // Immediately remove from list and refetch
+          queryClient.setQueryData(['l1Admins', { page, pageSize }], (old) => {
+            if (!old || !old.data) return old;
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                data: (old.data.data || []).filter(a => a.id !== id),
+                pagination: {
+                  ...old.data.pagination,
+                  total: Math.max(0, (old.data.pagination?.total || 0) - 1)
+                }
+              }
+            };
+          });
           queryClient.invalidateQueries(['l1Admins']);
       } catch (err) {
-          alert(err.message);
+          alert(err.message || 'Failed to delete admin');
       }
   };
 
   const openEditModal = (admin) => {
       setEditingAdmin(admin);
       setFormData({
-          name: admin.name,
-          email: admin.email,
+          name: admin.name || "",
+          email: admin.email || "",
           password: "",
-          role: "SUPER_ADMIN",
+          role: admin.role || "SUPER_ADMIN",
           level: admin.level || "L1",
           yearlyTarget: admin.yearlyTarget || ""
       });
@@ -767,7 +923,7 @@ const L1AdminsTab = () => {
       <div className="space-y-6 animate-fadeInUp">
           <div className="flex justify-between items-center">
              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Super Admins (L1)</h2>
+                <h2 className="text-2xl font-bold text-slate-800">Super Admins (Head)</h2>
                 <Skeleton className="h-4 w-64 mt-1" />
              </div>
              <Skeleton className="h-10 w-40 rounded-lg" />
@@ -799,7 +955,7 @@ const L1AdminsTab = () => {
     <div className="space-y-6 animate-fadeInUp">
        <div className="flex justify-between items-center">
           <div>
-             <h2 className="text-2xl font-bold text-slate-800">Super Admins (L1)</h2>
+             <h2 className="text-2xl font-bold text-slate-800">Super Admins (Head)</h2>
              <p className="text-slate-500 mt-1">Manage campaign managers and their datasets.</p>
           </div>
           <button 
@@ -838,7 +994,7 @@ const L1AdminsTab = () => {
                       </td>
                       <td className="py-4 text-slate-600">
                           <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium border border-purple-200">
-                            {admin.role}
+                            {getRoleDisplayName(admin.role, admin.level)}
                           </span>
                       </td>
                       <td className="py-4 text-slate-600 font-mono text-sm">
@@ -890,9 +1046,16 @@ const L1AdminsTab = () => {
        )}
 
        {/* Create/Edit Modal */}
-       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn">
+       <AnimatePresence>
+         {showModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+            <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 pointer-events-auto"
+          >
             <h2 className="text-xl font-bold text-slate-800 mb-4">{editingAdmin ? 'Edit Admin' : 'Create Super Admin'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -943,7 +1106,11 @@ const L1AdminsTab = () => {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingAdmin(null);
+                    resetForm();
+                  }}
                   className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
                 >
                   Cancel
@@ -956,9 +1123,10 @@ const L1AdminsTab = () => {
                 </button>
               </div>
             </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+         )}
+       </AnimatePresence>
     </div>
   );
 };
@@ -968,12 +1136,22 @@ const MembersTab = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
+  const [managerFilter, setManagerFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [teams, setTeams] = useState([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [managers, setManagers] = useState([]);
 
   useEffect(() => {
     fetchTeams();
+    fetchManagers();
   }, []);
 
   const fetchTeams = async () => {
@@ -988,6 +1166,24 @@ const MembersTab = () => {
     }
   };
 
+  const fetchManagers = async () => {
+    try {
+      const response = await getUsers({ role: 'SUPER_ADMIN', pageSize: 100 });
+      if (response.data) {
+        setManagers(response.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch managers:", err);
+    }
+  };
+
+  const handleMemberClick = (member) => {
+    const isLead = member.role === 'TEAM_LEAD' || (member.level && ['L2', 'L3'].includes(member.level.toUpperCase()));
+    const viewParam = isLead ? '?view=team' : '?view=personal';
+    const slug = (member.name ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || member.id;
+    navigate(`/employee/${slug}${viewParam}`);
+  };
+
   const openEditModal = (user) => {
     setEditingUser(user);
     setShowModal(true);
@@ -995,33 +1191,150 @@ const MembersTab = () => {
 
   const handleSuccess = () => {
     queryClient.invalidateQueries(['members']);
+    setShowModal(false);
+    setEditingUser(null);
   };
 
-  const { data: { data: members = [], pagination } = {}, isLoading: loading } = useQuery({
-    queryKey: ['members', { page, roleFilter }],
+  const { data: { data: allMembers = [], pagination } = {}, isLoading: loading } = useQuery({
+    queryKey: ['members', { page }],
     queryFn: async () => {
-        const params = { page, pageSize: 20 };
-        if (roleFilter) params.role = roleFilter;
+        const params = { page, pageSize: 1000 }; // Fetch all for client-side filtering/sorting
         const res = await getUsers(params);
-        // Filter out S1_ADMIN and SUPER_ADMIN if returned
-        res.data = (res.data || []).filter(u => u.role !== 'S1_ADMIN' && u.role !== 'SUPER_ADMIN');
+        // Filter out S1_ADMIN, SUPER_ADMIN, LIMITED_ACCESS (but keep inactive users for filtering)
+        res.data = (res.data || []).filter(u => 
+          u.role !== 'S1_ADMIN' && 
+          u.role !== 'SUPER_ADMIN' &&
+          u.role !== 'LIMITED_ACCESS'
+        );
         return res;
     },
     placeholderData: keepPreviousData
   });
 
+  // Client-side filtering and sorting
+  const filteredAndSortedMembers = useMemo(() => {
+    let filtered = [...allMembers];
+
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(m => 
+        (m.name || '').toLowerCase().includes(q) ||
+        (m.email || '').toLowerCase().includes(q) ||
+        (m.team?.name || '').toLowerCase().includes(q) ||
+        (m.manager?.name || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Team filter
+    if (teamFilter) {
+      filtered = filtered.filter(m => m.team?.id === teamFilter);
+    }
+
+    // Role filter (using role + level combination)
+    if (roleFilter) {
+      filtered = filtered.filter(m => matchesRoleFilter(m, roleFilter));
+    }
+
+    // Status filter
+    if (statusFilter) {
+      if (statusFilter === 'active') {
+        filtered = filtered.filter(m => m.isActive !== false);
+      } else if (statusFilter === 'inactive') {
+        filtered = filtered.filter(m => m.isActive === false);
+      }
+    }
+
+    // Level filter
+    if (levelFilter) {
+      filtered = filtered.filter(m => {
+        const memberLevel = (m.level || '').toUpperCase();
+        return memberLevel === levelFilter.toUpperCase();
+      });
+    }
+
+    // Manager filter
+    if (managerFilter) {
+      filtered = filtered.filter(m => m.manager?.id === managerFilter);
+    }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case 'name':
+          aVal = (a.name || '').toLowerCase();
+          bVal = (b.name || '').toLowerCase();
+          break;
+        case 'email':
+          aVal = (a.email || '').toLowerCase();
+          bVal = (b.email || '').toLowerCase();
+          break;
+        case 'role':
+          aVal = getRoleDisplayName(a.role, a.level).toLowerCase();
+          bVal = getRoleDisplayName(b.role, b.level).toLowerCase();
+          break;
+        case 'team':
+          aVal = (a.team?.name || '').toLowerCase();
+          bVal = (b.team?.name || '').toLowerCase();
+          break;
+        case 'status':
+          aVal = a.isActive ? 1 : 0;
+          bVal = b.isActive ? 1 : 0;
+          break;
+        default:
+          return 0;
+      }
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [allMembers, searchQuery, teamFilter, roleFilter, statusFilter, levelFilter, managerFilter, sortBy, sortDir]);
+
+  // Pagination
+  const pageSize = 20;
+  const totalPages = Math.ceil(filteredAndSortedMembers.length / pageSize);
+  const paginatedMembers = filteredAndSortedMembers.slice((page - 1) * pageSize, page * pageSize);
+
+  const toggleSort = (column) => {
+    if (sortBy === column) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+    setPage(1);
+  };
+
   const handleDelete = async (id) => {
-      if(!window.confirm("Are you sure you want to delete this member?")) return;
+      if(!window.confirm("Are you sure you want to permanently delete this member? This action cannot be undone.")) return;
       try {
           const response = await apiRequest(`/users/${id}`, { method: 'DELETE' });
-          if(!response.ok) throw new Error("Failed to delete");
+          if(!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || "Failed to delete");
+          }
+          // Immediately remove from list and refetch
+          queryClient.setQueryData(['members', { page }], (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                data: (old.data?.data || []).filter(m => m.id !== id)
+              }
+            };
+          });
+          // Refetch to ensure consistency
           queryClient.invalidateQueries(['members']);
       } catch (err) {
-          alert(err.message);
+          alert(err.message || 'Failed to delete member');
       }
   };
 
-  if (loading && !members.length) return (
+  if (loading && !allMembers.length) return (
       <div className="space-y-6 animate-fadeInUp">
          <div className="flex justify-between items-center">
             <div>
@@ -1056,121 +1369,439 @@ const MembersTab = () => {
   );
 
   return (
-    <div className="space-y-6 animate-fadeInUp">
-       <div className="flex justify-between items-center">
+    <motion.div 
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
              <h2 className="text-2xl font-bold text-slate-800">Team Members</h2>
              <p className="text-slate-500 mt-1">Manage all employees and team leads.</p>
           </div>
-          <select 
-            value={roleFilter} 
-            onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setEditingUser(null);
+              setShowModal(true);
             }}
-            className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
           >
-            <option value="">All Roles</option>
-            <option value="TEAM_LEAD">Team Leads</option>
-            <option value="EMPLOYEE">Employees</option>
-            <option value="LIMITED_ACCESS">Limited Access</option>
-          </select>
-       </div>
-  
-       <div className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 overflow-hidden">
-          <table className="w-full text-left">
-             <thead className="bg-white/50 border-b border-white/60">
-                <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
-                   <th className="py-4 pl-6">Member</th>
-                   <th className="py-4">Role</th>
-                   <th className="py-4">Team</th>
-                   <th className="py-4">Manager</th>
-                   <th className="py-4">Status</th>
-                   <th className="py-4 text-right pr-6">Actions</th>
-                </tr>
-             </thead>
-             <tbody className="divide-y divide-white/60">
-                {members.map(member => (
-                   <tr key={member.id} className="hover:bg-blue-50/30 transition-colors">
-                      <td className="py-4 pl-6">
-                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
-                              {member.name.charAt(0)}
-                            </div>
-                            <div>
-                               <span className="font-medium text-slate-800 block">{member.name}</span>
-                               <span className="text-xs text-slate-400">{member.email}</span>
-                            </div>
-                         </div>
-                      </td>
-                      <td className="py-4 text-slate-600">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                            member.role === 'TEAM_LEAD' ? 'bg-amber-100 text-amber-700 border-amber-200' : 
-                            'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                            {member.role}
-                          </span>
-                      </td>
-                      <td className="py-4 text-slate-600 text-sm">
-                          {member.team?.name || '-'}
-                      </td>
-                      <td className="py-4 text-slate-600 text-sm">
-                          {member.manager?.name || '-'}
-                      </td>
-                      <td className="py-4">
-                        {member.isActive ? (
-                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium border border-green-200">Active</span>
-                        ) : (
-                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium border border-red-200">Inactive</span>
-                        )}
-                      </td>
-                      <td className="py-4 text-right pr-6">
-                         <button onClick={() => handleMemberClick(member)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">View</button>
-                         <button onClick={() => openEditModal(member)} className="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">Edit</button>
-                         <button onClick={() => handleDelete(member.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
-                      </td>
-                   </tr>
-                ))}
-                {members.length === 0 && (
-                    <tr><td colSpan="6" className="text-center py-8 text-slate-500">No members found</td></tr>
-                )}
-             </tbody>
-          </table>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add Member
+          </motion.button>
        </div>
 
+       {/* Advanced Filters */}
+       <motion.div
+         initial={{ opacity: 0, y: 8 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ delay: 0.1 }}
+         className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 overflow-hidden"
+       >
+         {/* Basic Filters */}
+         <div className="p-5">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+             <div className="lg:col-span-2">
+               <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Search</label>
+               <div className="relative">
+                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                 </svg>
+                 <input
+                   type="text"
+                   value={searchQuery}
+                   onChange={(e) => {
+                     setSearchQuery(e.target.value);
+                     setPage(1);
+                   }}
+                   placeholder="Search by name, email, team, or manager..."
+                   className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50"
+                 />
+               </div>
+             </div>
+             <div>
+               <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Role</label>
+               <select 
+                 value={roleFilter} 
+                 onChange={(e) => {
+                   setRoleFilter(e.target.value);
+                   setPage(1);
+                 }}
+                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 text-sm"
+               >
+                 <option value="">All Roles</option>
+                 <option value="TEAM_LEAD">Team Lead</option>
+                 <option value="EMPLOYEE_L3">Senior Recruiter</option>
+                 <option value="EMPLOYEE_L4">Recruiter</option>
+               </select>
+             </div>
+             <div>
+               <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Team</label>
+               <select 
+                 value={teamFilter} 
+                 onChange={(e) => {
+                   setTeamFilter(e.target.value);
+                   setPage(1);
+                 }}
+                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 text-sm"
+               >
+                 <option value="">All Teams</option>
+                 {teams.map(team => (
+                   <option key={team.id} value={team.id}>{team.name}</option>
+                 ))}
+               </select>
+             </div>
+           </div>
+
+           {/* Advanced Filters Toggle */}
+           <div className="mt-4 flex items-center justify-between">
+             <button
+               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+               className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+             >
+               <svg className={`w-4 h-4 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+               </svg>
+               {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
+             </button>
+             {(searchQuery || teamFilter || roleFilter || statusFilter || levelFilter || managerFilter) && (
+               <button
+                 onClick={() => {
+                   setSearchQuery('');
+                   setRoleFilter('');
+                   setTeamFilter('');
+                   setStatusFilter('');
+                   setLevelFilter('');
+                   setManagerFilter('');
+                   setPage(1);
+                 }}
+                 className="text-xs text-slate-500 hover:text-slate-700 font-medium underline"
+               >
+                 Clear all filters
+               </button>
+             )}
+           </div>
+         </div>
+
+         {/* Advanced Filters Panel */}
+         <AnimatePresence>
+           {showAdvancedFilters && (
+             <motion.div
+               initial={{ height: 0, opacity: 0 }}
+               animate={{ height: 'auto', opacity: 1 }}
+               exit={{ height: 0, opacity: 0 }}
+               transition={{ duration: 0.2 }}
+               className="overflow-hidden border-t border-slate-200"
+             >
+               <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50">
+                 <div>
+                   <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Status</label>
+                   <select 
+                     value={statusFilter} 
+                     onChange={(e) => {
+                       setStatusFilter(e.target.value);
+                       setPage(1);
+                     }}
+                     className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white text-sm"
+                   >
+                     <option value="">All Status</option>
+                     <option value="active">Active</option>
+                     <option value="inactive">Inactive</option>
+                   </select>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Level</label>
+                   <select 
+                     value={levelFilter} 
+                     onChange={(e) => {
+                       setLevelFilter(e.target.value);
+                       setPage(1);
+                     }}
+                     className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white text-sm"
+                   >
+                     <option value="">All Levels</option>
+                     <option value="L2">L2 - Team Lead</option>
+                     <option value="L3">L3 - Senior Recruiter</option>
+                     <option value="L4">L4 - Recruiter</option>
+                   </select>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Manager</label>
+                   <select 
+                     value={managerFilter} 
+                     onChange={(e) => {
+                       setManagerFilter(e.target.value);
+                       setPage(1);
+                     }}
+                     className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white text-sm"
+                   >
+                     <option value="">All Managers</option>
+                     {managers.map(manager => (
+                       <option key={manager.id} value={manager.id}>{manager.name}</option>
+                     ))}
+                   </select>
+                 </div>
+               </div>
+             </motion.div>
+           )}
+         </AnimatePresence>
+
+         {/* Active Filters Display */}
+         {(searchQuery || teamFilter || roleFilter || statusFilter || levelFilter || managerFilter) && (
+           <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
+             <span className="text-xs font-medium text-slate-500">Active filters:</span>
+             {searchQuery && (
+               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
+                 Search: {searchQuery}
+                 <button onClick={() => setSearchQuery('')} className="hover:text-blue-900">×</button>
+               </span>
+             )}
+             {roleFilter && (
+               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-100 text-violet-700 rounded-lg text-xs font-medium">
+                 Role: {getDisplayNameFromFilterValue(roleFilter)}
+                 <button onClick={() => setRoleFilter('')} className="hover:text-violet-900">×</button>
+               </span>
+             )}
+             {teamFilter && (
+               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-medium">
+                 Team: {teams.find(t => t.id === teamFilter)?.name}
+                 <button onClick={() => setTeamFilter('')} className="hover:text-emerald-900">×</button>
+               </span>
+             )}
+             {statusFilter && (
+               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">
+                 Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                 <button onClick={() => setStatusFilter('')} className="hover:text-green-900">×</button>
+               </span>
+             )}
+             {levelFilter && (
+               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
+                 Level: {levelFilter}
+                 <button onClick={() => setLevelFilter('')} className="hover:text-amber-900">×</button>
+               </span>
+             )}
+             {managerFilter && (
+               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium">
+                 Manager: {managers.find(m => m.id === managerFilter)?.name}
+                 <button onClick={() => setManagerFilter('')} className="hover:text-purple-900">×</button>
+               </span>
+             )}
+           </div>
+         )}
+       </motion.div>
+  
+       <motion.div
+         initial={{ opacity: 0, y: 8 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ delay: 0.15 }}
+         className="bg-white/70 backdrop-blur-xl rounded-xl shadow-sm border border-white/60 overflow-hidden"
+       >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+               <thead className="bg-slate-50/80 border-b border-slate-200">
+                  <tr className="text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                     <th className="py-4 pl-6">
+                       <button
+                         onClick={() => toggleSort('name')}
+                         className="flex items-center gap-1.5 hover:text-slate-700 transition-colors"
+                       >
+                         Member
+                         {sortBy === 'name' && (
+                           <span className="text-blue-600">
+                             {sortDir === 'asc' ? '↑' : '↓'}
+                           </span>
+                         )}
+                       </button>
+                     </th>
+                     <th className="py-4">
+                       <button
+                         onClick={() => toggleSort('role')}
+                         className="flex items-center gap-1.5 hover:text-slate-700 transition-colors"
+                       >
+                         Role
+                         {sortBy === 'role' && (
+                           <span className="text-blue-600">
+                             {sortDir === 'asc' ? '↑' : '↓'}
+                           </span>
+                         )}
+                       </button>
+                     </th>
+                     <th className="py-4">
+                       <button
+                         onClick={() => toggleSort('team')}
+                         className="flex items-center gap-1.5 hover:text-slate-700 transition-colors"
+                       >
+                         Team
+                         {sortBy === 'team' && (
+                           <span className="text-blue-600">
+                             {sortDir === 'asc' ? '↑' : '↓'}
+                           </span>
+                         )}
+                       </button>
+                     </th>
+                     <th className="py-4">Manager</th>
+                     <th className="py-4">
+                       <button
+                         onClick={() => toggleSort('status')}
+                         className="flex items-center gap-1.5 hover:text-slate-700 transition-colors"
+                       >
+                         Status
+                         {sortBy === 'status' && (
+                           <span className="text-blue-600">
+                             {sortDir === 'asc' ? '↑' : '↓'}
+                           </span>
+                         )}
+                       </button>
+                     </th>
+                     <th className="py-4 text-right pr-6">Actions</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-slate-100">
+                  <AnimatePresence>
+                    {paginatedMembers.map((member, idx) => (
+                      <motion.tr
+                        key={member.id}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ delay: idx * 0.02, duration: 0.2 }}
+                        className="hover:bg-blue-50/30 transition-colors group"
+                      >
+                         <td className="py-4 pl-6">
+                            <div className="flex items-center gap-3">
+                               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-slate-700 font-bold text-sm shadow-sm group-hover:scale-110 transition-transform">
+                                 {member.name.charAt(0)}
+                               </div>
+                               <div>
+                                  <span className="font-medium text-slate-800 block">{member.name}</span>
+                                  <span className="text-xs text-slate-400">{member.email}</span>
+                               </div>
+                            </div>
+                         </td>
+                         <td className="py-4 text-slate-600">
+                             <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
+                               member.role === 'TEAM_LEAD' || member.level === 'L2' ? 'bg-amber-100 text-amber-700 border-amber-200' : 
+                               member.level === 'L3' ? 'bg-violet-100 text-violet-700 border-violet-200' :
+                               'bg-blue-100 text-blue-700 border-blue-200'
+                             }`}>
+                               {getRoleDisplayName(member.role, member.level)}
+                             </span>
+                         </td>
+                         <td className="py-4 text-slate-600 text-sm">
+                             {member.team?.name || '-'}
+                         </td>
+                         <td className="py-4 text-slate-600 text-sm">
+                             {member.manager?.name || '-'}
+                         </td>
+                         <td className="py-4">
+                           {member.isActive ? (
+                               <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-medium border border-green-200">Active</span>
+                           ) : (
+                               <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-medium border border-red-200">Inactive</span>
+                           )}
+                         </td>
+                         <td className="py-4 text-right pr-6">
+                            <div className="flex items-center justify-end gap-2">
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleMemberClick(member)}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                              >
+                                View
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => openEditModal(member)}
+                                className="text-violet-600 hover:text-violet-800 text-sm font-medium px-2 py-1 rounded-lg hover:bg-violet-50 transition-colors"
+                              >
+                                Edit
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleDelete(member.id)}
+                                className="text-red-600 hover:text-red-800 text-sm font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                              >
+                                Delete
+                              </motion.button>
+                            </div>
+                         </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                  {paginatedMembers.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="text-center py-12 text-slate-500">
+                          <div className="flex flex-col items-center gap-2">
+                            <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <p className="font-medium">No members found</p>
+                            <p className="text-xs text-slate-400">Try adjusting your filters</p>
+                          </div>
+                        </td>
+                      </tr>
+                  )}
+               </tbody>
+            </table>
+          </div>
+       </motion.div>
+
        {/* Pagination Controls */}
-       {pagination && (
-          <div className="flex items-center justify-between text-sm text-slate-600 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-white/60">
+       {totalPages > 1 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="flex items-center justify-between text-sm text-slate-600 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-white/60"
+          >
             <div>
-              Page {pagination.page} of {pagination.totalPages}
+              Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, filteredAndSortedMembers.length)} of {filteredAndSortedMembers.length} members
             </div>
             <div className="flex gap-2">
-              <button
-                disabled={pagination.page <= 1}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={page <= 1}
                 onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                className="px-3 py-1 rounded border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+                className="px-4 py-2 rounded-xl border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors font-medium"
               >
                 Previous
-              </button>
-              <button
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
-                className="px-3 py-1 rounded border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors"
+              </motion.button>
+              <span className="px-4 py-2 text-slate-700 font-medium">
+                Page {page} of {totalPages}
+              </span>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={page >= totalPages}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                className="px-4 py-2 rounded-xl border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white transition-colors font-medium"
               >
                 Next
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
        )}
        
        <UserCreationModal 
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            setEditingUser(null);
+          }}
           editingUser={editingUser}
           onSuccess={handleSuccess}
           teams={teams}
        />
-    </div>
+    </motion.div>
   );
 };
 
@@ -1408,11 +2039,35 @@ const SettingsTab = () => (
 );
 
 const MfaSetup = () => {
+    const { user } = useAuth();
     const [qrCode, setQrCode] = useState(null);
     const [secret, setSecret] = useState(null);
     const [token, setToken] = useState('');
+    const [disablePassword, setDisablePassword] = useState('');
+    const [showDisableForm, setShowDisableForm] = useState(false);
     const [enabled, setEnabled] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
+
+    // Check MFA status on mount and when user changes
+    useEffect(() => {
+        if (user) {
+            setEnabled(user.mfaEnabled || false);
+            setLoading(false);
+        } else {
+            // Fallback to localStorage if user context not available
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                try {
+                    const userData = JSON.parse(storedUser);
+                    setEnabled(userData.mfaEnabled || false);
+                } catch (e) {
+                    setEnabled(false);
+                }
+            }
+            setLoading(false);
+        }
+    }, [user]);
 
     const startSetup = async () => {
         try {
@@ -1440,6 +2095,14 @@ const MfaSetup = () => {
                     setEnabled(true);
                     setMessage('MFA Enabled Successfully!');
                     setQrCode(null);
+                    setToken('');
+                    // Update user in localStorage
+                    const storedUser = localStorage.getItem('user');
+                    if (storedUser) {
+                        const userData = JSON.parse(storedUser);
+                        userData.mfaEnabled = true;
+                        localStorage.setItem('user', JSON.stringify(userData));
+                    }
                 } else {
                     setMessage('Invalid Token');
                 }
@@ -1451,14 +2114,103 @@ const MfaSetup = () => {
         }
     };
 
+    const handleDisableMfa = async () => {
+        if (!disablePassword) {
+            setMessage('Please enter your password to disable MFA');
+            return;
+        }
+
+        try {
+            const res = await apiRequest('/auth/mfa/disable', {
+                method: 'POST',
+                body: JSON.stringify({ password: disablePassword })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    setEnabled(false);
+                    setMessage('MFA Disabled Successfully!');
+                    setDisablePassword('');
+                    setShowDisableForm(false);
+                    // Update user in localStorage and context
+                    const storedUser = localStorage.getItem('user');
+                    if (storedUser) {
+                        const userData = JSON.parse(storedUser);
+                        userData.mfaEnabled = false;
+                        localStorage.setItem('user', JSON.stringify(userData));
+                        // Trigger a refresh by updating the component state
+                        window.dispatchEvent(new Event('storage'));
+                    }
+                }
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setMessage(data.error || 'Failed to disable MFA');
+            }
+        } catch(e) {
+            setMessage('Error: ' + e.message);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-white/70 backdrop-blur-xl p-6 rounded-xl shadow-sm border border-white/60">
+                <h3 className="font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">Multi-Factor Authentication</h3>
+                <p className="text-slate-600">Loading...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="bg-white/70 backdrop-blur-xl p-6 rounded-xl shadow-sm border border-white/60">
             <h3 className="font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">Multi-Factor Authentication</h3>
             
             {enabled ? (
-                <div className="text-green-600 font-medium flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                    MFA is currently enabled for your account.
+                <div className="space-y-4">
+                    <div className="text-green-600 font-medium flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                        MFA is currently enabled for your account.
+                    </div>
+                    
+                    {!showDisableForm ? (
+                        <button 
+                            onClick={() => setShowDisableForm(true)}
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm shadow-red-500/30"
+                        >
+                            Disable MFA
+                        </button>
+                    ) : (
+                        <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                            <p className="text-sm text-red-800 font-medium">Enter your password to disable MFA</p>
+                            <div className="flex gap-2 max-w-xs">
+                                <input 
+                                    type="password" 
+                                    value={disablePassword} 
+                                    onChange={e => setDisablePassword(e.target.value)}
+                                    placeholder="Enter your password"
+                                    className="flex-1 px-4 py-2 bg-white border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                                    autoFocus
+                                />
+                                <button 
+                                    onClick={handleDisableMfa}
+                                    className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition shadow-sm shadow-red-500/30"
+                                >
+                                    Disable
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setShowDisableForm(false);
+                                        setDisablePassword('');
+                                        setMessage('');
+                                    }}
+                                    className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-300 transition"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {message && <p className={`text-sm mt-2 ${message.includes('Success') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
                 </div>
             ) : (
                 <div className="space-y-4">

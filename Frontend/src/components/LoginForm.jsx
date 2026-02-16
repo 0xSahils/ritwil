@@ -5,42 +5,69 @@ import { useAuth } from '../context/AuthContext'
 const LoginForm = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaRequired, setMfaRequired] = useState(false)
   const [keepSignedIn, setKeepSignedIn] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
 
-    login(email, password)
-      .then((user) => {
-        if (user.role === 'S1_ADMIN') {
-          navigate('/admin/dashboard')
-        } else if (user.role === 'SUPER_ADMIN') {
-          navigate('/team')
-        } else if (user.role === 'TEAM_LEAD') {
-          navigate('/teamlead')
-        } else if (user.role === 'EMPLOYEE') {
-          const slug = (user.name ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || user.id
-          navigate(`/employee/${slug}`, {
-            state: {
-              employeeId: user.id,
-            },
-          })
-        } else {
-          navigate('/')
-        }
-      })
-      .catch((err) => {
-        setError(err.message || 'Invalid email or password')
-      })
-      .finally(() => {
+    try {
+      const result = await login(email, password, mfaCode || null)
+      
+      // Check if MFA is required
+      if (result && result.mfaRequired) {
+        setMfaRequired(true)
         setSubmitting(false)
-      })
+        return
+      }
+
+      // Normal login success
+      const user = result
+      if (user.role === 'S1_ADMIN') {
+        navigate('/admin/dashboard')
+      } else if (user.role === 'SUPER_ADMIN') {
+        navigate('/team')
+      } else if (user.role === 'TEAM_LEAD') {
+        navigate('/teamlead')
+      } else if (user.role === 'EMPLOYEE') {
+        const slug = (user.name ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || user.id
+        navigate(`/employee/${slug}`, {
+          state: {
+            employeeId: user.id,
+          },
+        })
+      } else {
+        navigate('/')
+      }
+    } catch (err) {
+      const errorMessage = err.message || 'Invalid email or password'
+      setError(errorMessage)
+      
+      // If error is about MFA code, keep MFA form visible
+      if (err.mfaError || errorMessage.toLowerCase().includes('mfa')) {
+        // Keep MFA form visible if it's an MFA-related error
+        setMfaRequired(true)
+        // Clear the MFA code input so user can try again
+        setMfaCode('')
+      } else if (mfaRequired && errorMessage.toLowerCase().includes('invalid')) {
+        // If we already have mfaRequired and error is about invalid credentials, 
+        // it might be invalid MFA code, so keep form visible
+        setMfaRequired(true)
+        setMfaCode('')
+      } else if (!mfaRequired) {
+        // Only reset mfaRequired if it's not an MFA-related error
+        setMfaRequired(false)
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -128,6 +155,28 @@ const LoginForm = () => {
                 className="w-full px-4 py-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors duration-300 bg-transparent text-gray-700 placeholder-gray-400"
               />
             </div>
+
+            {/* MFA Code Input */}
+            {mfaRequired && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter MFA Code
+                </label>
+                <input
+                  type="text"
+                  placeholder="000000"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required={mfaRequired}
+                  maxLength={6}
+                  className="w-full px-4 py-3 border-b-2 border-gray-300 focus:border-blue-500 outline-none transition-colors duration-300 bg-transparent text-gray-700 placeholder-gray-400 text-center text-2xl tracking-widest"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Enter the 6-digit code from your authenticator app
+                </p>
+              </div>
+            )}
 
             {/* Keep me signed in & Already a member */}
             <div className="flex items-center justify-between text-sm">

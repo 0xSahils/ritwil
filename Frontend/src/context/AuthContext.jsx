@@ -32,18 +32,28 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("auth:session-expired", handleSessionExpired);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, mfaCode = null) => {
     const response = await apiRequest(
       "/auth/login",
       {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ...(mfaCode && { mfaCode }) }),
       },
       { skipAuth: true }
     );
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
+      // If MFA is required, return the mfaRequired flag instead of throwing error
+      if (response.status === 403 && data.mfaRequired) {
+        return { mfaRequired: true, userId: data.userId };
+      }
+      // If invalid MFA code, throw error but include a flag to keep MFA form visible
+      if (response.status === 401 && data.error && data.error.toLowerCase().includes('mfa')) {
+        const error = new Error(data.error || "Invalid MFA code");
+        error.mfaError = true;
+        throw error;
+      }
       throw new Error(data.error || "Login failed");
     }
 

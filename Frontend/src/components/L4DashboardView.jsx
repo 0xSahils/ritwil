@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CalculationService from '../utils/calculationService'
 import { apiRequest } from '../api/client'
 
-const TAB_IDS = ['overview', 'placements', 'incentives', 'profile']
-const TAB_LABELS = { overview: 'Overview', placements: 'Placements', incentives: 'Incentives', profile: 'Profile' }
+const TAB_IDS = ['overview', 'placements', 'profile']
+const TAB_LABELS = { overview: 'Overview', placements: 'Placements', profile: 'Profile' }
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -119,7 +119,7 @@ export default function L4DashboardView({
 }) {
   const [activeTab, setActiveTab] = useState('overview')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' })
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState('')
   const [passwordLoading, setPasswordLoading] = useState(false)
@@ -144,27 +144,47 @@ export default function L4DashboardView({
     e.preventDefault()
     setPasswordError('')
     setPasswordSuccess('')
-    const { newPassword, confirmPassword } = passwordForm
+    const { oldPassword, newPassword, confirmPassword } = passwordForm
+    
+    // Validate old password
+    if (!oldPassword || oldPassword.trim() === '') {
+      setPasswordError('Please enter your current password')
+      return
+    }
+    
+    // Validate new password
     if (!newPassword || newPassword.length < 6) {
-      setPasswordError('Password must be at least 6 characters')
+      setPasswordError('New password must be at least 6 characters')
       return
     }
+    
+    // Check if old and new passwords are different
+    if (oldPassword === newPassword) {
+      setPasswordError('New password must be different from current password')
+      return
+    }
+    
+    // Validate password confirmation
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match')
+      setPasswordError('New passwords do not match')
       return
     }
+    
     setPasswordLoading(true)
     try {
       const res = await apiRequest(`/users/${employeeData?.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ password: newPassword }),
+        body: JSON.stringify({ 
+          oldPassword: oldPassword,
+          password: newPassword 
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to update password')
       }
       setPasswordSuccess('Password updated successfully.')
-      setPasswordForm({ newPassword: '', confirmPassword: '' })
+      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
       setTimeout(() => {
         setSettingsOpen(false)
         setPasswordSuccess('')
@@ -203,6 +223,11 @@ export default function L4DashboardView({
     ? Number(activeSummary.placementDone)
     : null
 
+  // Check if this is Vantedge team L4 - only these should show dollar signs for placements
+  const isVantedgeL4 = employeeData?.teamName && 
+    employeeData.teamName.toLowerCase().includes('vantedge') && 
+    employeeData?.level === 'L4'
+
   const isRevenueTarget = employeeData?.targetType === 'REVENUE'
   const targetValue =
     hasPlacementSheetData && (sheetPlacementTarget > 0 || sheetPlacementDone != null)
@@ -216,18 +241,21 @@ export default function L4DashboardView({
       : isRevenueTarget
         ? employeeData?.rawRevenueGenerated
         : employeeData?.rawPlacementsCount
+  
+  // Format as currency ($) only for:
+  // 1. Revenue targets (always show $)
+  // 2. Vantedge L4s with placement sheet data (show $)
+  // Otherwise, show plain numbers for placements
+  const shouldFormatAsCurrency = isRevenueTarget || (isVantedgeL4 && hasPlacementSheetData)
+  
   const targetDisplay =
-    hasPlacementSheetData
+    shouldFormatAsCurrency
       ? CalculationService.formatCurrency(targetValue || 0)
-      : isRevenueTarget
-        ? CalculationService.formatCurrency(targetValue || 0)
-        : String(targetValue || 0)
+      : String(targetValue || 0)
   const achievedDisplay =
-    hasPlacementSheetData
+    shouldFormatAsCurrency
       ? CalculationService.formatCurrency(achievedValue ?? 0)
-      : isRevenueTarget
-        ? CalculationService.formatCurrency(achievedValue || 0)
-        : String(achievedValue ?? 0)
+      : String(achievedValue ?? 0)
   const percent =
     hasPlacementSheetData && (activeSummary.placementAchPercent != null || activeSummary.targetAchievedPercent != null)
       ? Number(activeSummary.placementAchPercent ?? activeSummary.targetAchievedPercent) || 0
@@ -341,7 +369,6 @@ export default function L4DashboardView({
   const navItems = [
     { id: 'overview', label: 'Overview', icon: 'chart' },
     { id: 'placements', label: 'Placements', icon: 'list' },
-    { id: 'incentives', label: 'Incentives', icon: 'currency' },
     { id: 'profile', label: 'Profile', icon: 'user' },
   ]
   const recentPlacements = (currentPlacements || []).slice(0, 5)
@@ -431,7 +458,6 @@ export default function L4DashboardView({
           <h1 className="text-xl font-bold text-slate-900">
             {activeTab === 'overview' && 'Recruitment Analytics'}
             {activeTab === 'placements' && 'Placements'}
-            {activeTab === 'incentives' && 'Incentives'}
             {activeTab === 'profile' && 'Profile'}
           </h1>
           <div className="flex items-center gap-3">
@@ -475,66 +501,189 @@ export default function L4DashboardView({
               exit="exit"
               className="space-y-8"
             >
-              {/* Slab & milestone */}
-              <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-4">
-                <div className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 to-indigo-50/80 px-6 py-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">
-                    Current slab
-                  </p>
-                  <p className="mt-1 text-xl font-bold text-violet-900">
-                    {employeeData?.slabQualified ?? '–'}
-                  </p>
+              {/* Welcome Message - Premium Redesign */}
+              <motion.div
+                variants={itemVariants}
+                className="group relative mb-8 overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/50 to-white p-6 shadow-sm transition-all duration-500 hover:border-violet-200/60 hover:shadow-lg sm:p-8"
+              >
+                {/* Decorative gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-indigo-500/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                
+                {/* Subtle pattern */}
+                <div className="absolute inset-0 opacity-[0.02]">
+                  <div className="h-full w-full bg-[radial-gradient(circle_at_1px_1px,rgb(99,102,241)_1px,transparent_0)] bg-[length:24px_24px]" />
                 </div>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                  <span className="text-sm font-medium">{nextSlabText}</span>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white px-6 py-3 shadow-sm">
-                  <p className="text-xs font-medium text-slate-500">To next slab</p>
-                  <p className="mt-0.5 text-sm font-semibold text-slate-800">
-                    {targetDisplay} target · {achievedDisplay} achieved
-                  </p>
+
+                <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-4">
+                    {/* Avatar/Icon Circle */}
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ 
+                        duration: 0.6, 
+                        delay: 0.2, 
+                        type: "spring", 
+                        stiffness: 200,
+                        damping: 15 
+                      }}
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg ring-4 ring-violet-100 sm:h-16 sm:w-16"
+                    >
+                      <svg className="h-7 w-7 text-white sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </motion.div>
+
+                    <div className="flex-1">
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="flex items-center gap-3"
+                      >
+                        <span className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+                          Welcome back,
+                        </span>
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.4, delay: 0.4, type: "spring" }}
+                          className="inline-block bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl"
+                        >
+                          {employeeData?.recruiterName || 'User'}
+                        </motion.span>
+                      </motion.div>
+                      
+                      {employeeData?.teamName && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                          className="mt-2 flex items-center gap-2"
+                        >
+                          <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <span className="text-lg font-semibold text-slate-700">
+                            {employeeData.teamName}
+                          </span>
+                          <motion.span
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.7, type: "spring" }}
+                            className="ml-2 inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700"
+                          >
+                            Team
+                          </motion.span>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Decorative element */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.6, type: "spring" }}
+                    className="hidden shrink-0 sm:block"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100">
+                      <svg className="h-6 w-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </motion.div>
                 </div>
               </motion.div>
 
-              {/* Hero performance block */}
+              {/* Hero performance block - Premium Redesign */}
               <motion.div
                 variants={itemVariants}
-                className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 p-8 shadow-xl shadow-violet-500/25"
+                className="group relative overflow-hidden rounded-3xl p-5 shadow-2xl transition-all duration-500 sm:p-6"
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)',
+                  backgroundSize: '200% 200%',
+                }}
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
               >
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,255,255,0.15),transparent)]" />
-                <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-                <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-wider text-white/80">
+                {/* Animated gradient overlay */}
+                <motion.div
+                  className="absolute inset-0 opacity-90"
+                  animate={{
+                    backgroundPosition: ['0% 0%', '100% 100%'],
+                  }}
+                  transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    repeatType: 'reverse',
+                    ease: 'linear',
+                  }}
+                  style={{
+                    background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(255,255,255,0.25), transparent)',
+                  }}
+                />
+                
+                {/* Floating orbs for depth */}
+                <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
+                <div className="absolute -left-12 -bottom-12 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
+                <div className="absolute right-1/4 top-1/4 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+                
+                {/* Content */}
+                <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-2">
+                    <motion.p
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                      className="text-xs font-semibold uppercase tracking-[0.15em] text-white/90 sm:text-sm"
+                    >
                       {isRevenueTarget ? 'Revenue' : 'Placements'} this period
-                    </p>
-                    <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                    </motion.p>
+                    <motion.p
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.3, type: "spring", stiffness: 200 }}
+                      className="text-4xl font-bold tracking-tight text-white drop-shadow-lg sm:text-5xl"
+                    >
                       {achievedDisplay}
-                    </p>
-                    <p className="mt-2 text-lg font-medium text-white/90">
+                    </motion.p>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                      className="text-lg font-medium text-white/95 sm:text-xl"
+                    >
                       of {targetDisplay} target
-                    </p>
+                    </motion.p>
                     {(percent >= 100 && percent < Infinity) && (
-                      <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-bold text-white backdrop-blur-sm">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.5 }}
+                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/25 px-4 py-2 text-xs font-bold text-white backdrop-blur-md shadow-lg ring-2 ring-white/30 sm:text-sm sm:px-5 sm:py-2.5"
+                      >
+                        <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
                         {percent.toFixed(0)}% of target
-                      </p>
+                      </motion.p>
                     )}
                   </div>
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm sm:h-28 sm:w-28">
-                    <svg className="h-12 w-12 text-white sm:h-14 sm:w-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4, type: "spring", stiffness: 200 }}
+                    className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-xl ring-2 ring-white/30 sm:h-24 sm:w-24"
+                  >
+                    <svg className="h-12 w-12 text-white drop-shadow-lg sm:h-14 sm:w-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       {isRevenueTarget ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       ) : (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       )}
                     </svg>
-                  </div>
+                  </motion.div>
                 </div>
               </motion.div>
 
@@ -578,7 +727,7 @@ export default function L4DashboardView({
                 />
               </div>
 
-              {/* Progress */}
+              {/* Progress & Slab */}
               <div className="grid gap-6 sm:grid-cols-2">
                 <ProgressCard
                   title={isRevenueTarget ? 'Revenue progress' : 'Placements progress'}
@@ -587,6 +736,29 @@ export default function L4DashboardView({
                   total={targetDisplay}
                   percent={percent}
                 />
+                {/* Slab & milestone */}
+                <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-4">
+                  <div className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 to-indigo-50/80 px-6 py-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">
+                      CURRENT SLAB
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-violet-900">
+                      {employeeData?.slabQualified ?? '–'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                    <span className="text-sm font-medium">{nextSlabText}</span>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-6 py-3 shadow-sm">
+                    <p className="text-xs font-medium text-slate-500">To next slab</p>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {targetDisplay} target · {achievedDisplay} achieved
+                    </p>
+                  </div>
+                </motion.div>
               </div>
 
               {/* Second row: Health overview + Incentive breakdown */}
@@ -597,7 +769,7 @@ export default function L4DashboardView({
                 >
                   <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600">Performance overview</h3>
                   <p className="mt-4 text-5xl font-bold text-emerald-600">
-                    {percent < Infinity ? `${Math.min(100, Math.round(percent))}%` : '–'}
+                    {percent < Infinity ? `${Math.round(percent)}%` : '–'}
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">
                     {isRevenueTarget ? 'Revenue' : 'Placements'} performance. {percent >= 100
@@ -1030,62 +1202,6 @@ export default function L4DashboardView({
             </motion.section>
           )}
 
-          {activeTab === 'incentives' && (
-            <motion.section
-              key="incentives"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6"
-            >
-              <h2 className="text-xl font-bold text-slate-800">Incentives</h2>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Incentive earned
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">
-                    {employeeData?.incentiveINR ??
-                      (incentiveEarnedNum > 0 ? CalculationService.formatCurrency(incentiveEarnedNum, 'INR') : '–')}
-                  </p>
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Incentive paid
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-emerald-700">
-                    {incentivePaidInr != null
-                      ? CalculationService.formatCurrency(incentivePaidInr, 'INR')
-                      : '–'}
-                  </p>
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="rounded-2xl border border-violet-200/80 bg-violet-50/50 p-6"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">
-                    Incentive pending
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-violet-900">
-                    {CalculationService.formatCurrency(incentivePendingNum, 'INR')}
-                  </p>
-                </motion.div>
-              </div>
-            </motion.section>
-          )}
 
           {activeTab === 'profile' && (
             <motion.section
@@ -1164,9 +1280,9 @@ export default function L4DashboardView({
                           <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                           </svg>
-                          L4 Recruiter
+                          Recruiter
                         </span>
-                        <p className="mt-1 text-xs text-slate-500">View-only access</p>
+                        {/* <p className="mt-1 text-xs text-slate-500">View-only access</p> */}
                       </dd>
                     </div>
                   </dl>
@@ -1219,6 +1335,21 @@ export default function L4DashboardView({
                   <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">{passwordSuccess}</p>
                 )}
                 <div>
+                  <label htmlFor="l4-old-password" className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Current password
+                  </label>
+                  <input
+                    id="l4-old-password"
+                    type="password"
+                    value={passwordForm.oldPassword}
+                    onChange={(e) => setPasswordForm((p) => ({ ...p, oldPassword: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                    placeholder="Enter your current password"
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+                <div>
                   <label htmlFor="l4-new-password" className="mb-1.5 block text-sm font-medium text-slate-700">
                     New password
                   </label>
@@ -1231,6 +1362,7 @@ export default function L4DashboardView({
                     placeholder="At least 6 characters"
                     autoComplete="new-password"
                     minLength={6}
+                    required
                   />
                 </div>
                 <div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { apiRequest } from "../api/client";
 import CalculationService from '../utils/calculationService';
 import UserCreationModal from "./UserCreationModal";
+import { getRoleDisplayName } from '../utils/roleHelpers';
 
 const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModalOpened }) => {
   const [users, setUsers] = useState([]);
@@ -162,10 +163,11 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
-                      user.role === 'TEAM_LEAD' ? 'bg-blue-100 text-blue-700' :
-                      'bg-green-100 text-green-700'
+                      user.role === 'TEAM_LEAD' || user.level === 'L2' ? 'bg-amber-100 text-amber-700' :
+                      user.level === 'L3' ? 'bg-violet-100 text-violet-700' :
+                      'bg-blue-100 text-blue-700'
                     }`}>
-                      {user.role === 'SUPER_ADMIN' ? 'L1' : user.role.replace('_', ' ')}
+                      {getRoleDisplayName(user.role, user.level)}
                     </span>
                   </td>
                   <td className="p-4 text-slate-600">{user.team?.name || "-"}</td>

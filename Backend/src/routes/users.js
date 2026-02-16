@@ -114,39 +114,39 @@ router.patch(
 
 router.delete(
   "/:id",
-  requireRole(Role.SUPER_ADMIN),
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
       const { id } = req.params;
 
-      const profile = await prisma.employeeProfile.findUnique({
-        where: { id },
-      });
-
-      if (profile) {
-        await prisma.employeeProfile.update({
-          where: { id },
-          data: {
-            isActive: false,
-            deletedAt: new Date(),
-          },
-        });
-      }
-
-      await prisma.user.update({
-        where: { id },
-        data: {
-          isActive: false,
-        },
-      });
-
+      // Revoke refresh tokens first
       await prisma.refreshToken.updateMany({
         where: { userId: id },
         data: { isRevoked: true },
       });
 
+      // Delete EmployeeProfile if it exists (must delete before User due to foreign key)
+      await prisma.employeeProfile.deleteMany({
+        where: { id },
+      });
+
+      // Hard delete the User (this will cascade to related records that allow it)
+      await prisma.user.delete({
+        where: { id },
+      });
+
       res.status(204).send();
     } catch (err) {
+      // Handle case where user doesn't exist or has related records
+      if (err.code === 'P2025') {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      // Handle foreign key constraint violations
+      if (err.code === 'P2003') {
+        return res.status(400).json({ 
+          error: 'Cannot delete user: user has related records that must be removed first' 
+        });
+      }
       next(err);
     }
   }

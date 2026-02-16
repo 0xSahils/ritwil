@@ -18,19 +18,27 @@ const EmployeeDetails = () => {
   const employeeIdToFetch = stateEmployeeId || params.id
   
   // Initialize viewMode from URL query param, default to 'personal'
-  const initialViewMode = searchParams.get('view') || 'personal'
+  // For L4 users, always use 'personal' regardless of URL
+  const initialViewMode = 'personal'
   const [viewMode, setViewMode] = useState(initialViewMode)
 
-  // Sync viewMode state with URL
+  // Sync viewMode state with URL (but ignore team view for L4 users)
   useEffect(() => {
     const view = searchParams.get('view')
     if (view && (view === 'personal' || view === 'team')) {
+      // Only set viewMode if not L4 user, or if it's personal view
+      // L4 users will be forced to personal in another useEffect
       setViewMode(view)
     }
   }, [searchParams])
 
   // Update URL when viewMode state changes internally (via toggle)
+  // Prevent L4 users from switching to team view
   const handleToggleView = (mode) => {
+    // Don't allow L4 users to switch to team view
+    if (employeeData?.level?.toUpperCase() === 'L4' && mode === 'team') {
+      return;
+    }
     setViewMode(mode)
     setSearchParams(prev => {
       prev.set('view', mode)
@@ -274,21 +282,38 @@ const EmployeeDetails = () => {
   const isVantageL4 = employeeData?.teamName && employeeData.teamName.toLowerCase().includes('vant') && 
                       ['L2', 'L3', 'L4'].includes(employeeData?.level?.toUpperCase());
   
+  // Check if employee is L4 level - L4 users only have personal placements
+  const isL4User = employeeData?.level?.toUpperCase() === 'L4';
+  
   // Show toggle if user has personal and/or team data (so profile can switch views; one may be empty)
+  // BUT hide toggle for L4 users since they only have personal placements
   const hasPersonalData = !!(personalSheetData?.placements?.length || personalSheetData?.summary);
   const hasTeamData = !!(teamSheetData?.placements?.length || teamSheetData?.summary);
-  const canToggleView = hasPersonalData || hasTeamData;
+  const canToggleView = !isL4User && (hasPersonalData || hasTeamData);
+
+  // Force L4 users to always use personal view
+  useEffect(() => {
+    if (employeeData && isL4User && viewMode !== 'personal') {
+      setViewMode('personal');
+      setSearchParams(prev => {
+        prev.set('view', 'personal');
+        return prev;
+      }, { replace: true });
+    }
+  }, [employeeData, isL4User, viewMode, setSearchParams]);
 
   // Auto-switch viewMode if only one type of data is available and no explicit view is set in URL
   useEffect(() => {
     if (!searchParams.get('view')) {
-      if (hasTeamData && !hasPersonalData) {
+      if (hasTeamData && !hasPersonalData && !isL4User) {
         setViewMode('team');
       } else if (hasPersonalData && !hasTeamData) {
         setViewMode('personal');
+      } else if (isL4User) {
+        setViewMode('personal');
       }
     }
-  }, [hasPersonalData, hasTeamData, searchParams]);
+  }, [hasPersonalData, hasTeamData, searchParams, isL4User]);
 
   // Explicit data separation: personal view shows only personal sheet data; team view only team sheet data.
   // When there is no personal (or team) sheet, show empty list — do not fall back to merged dashboard placements.

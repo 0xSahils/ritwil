@@ -18,9 +18,9 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
 
   // Helper to determine the UI role representation
   const getUiRole = (role, level) => {
-    if (role === "TEAM_LEAD") return "TEAM_LEAD";
-    if (role === "EMPLOYEE" && level === "L3") return "SENIOR_EMPLOYEE";
-    return "EMPLOYEE"; // Default to L4 Employee
+    if (role === "TEAM_LEAD" || level === "L2") return "TEAM_LEAD";
+    if (role === "EMPLOYEE" && level === "L3") return "SENIOR_RECRUITER";
+    return "RECRUITER"; // Default to L4 Recruiter
   };
 
   useEffect(() => {
@@ -64,11 +64,11 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
         newRole = "TEAM_LEAD";
         newLevel = "L2";
         break;
-      case "SENIOR_EMPLOYEE":
+      case "SENIOR_RECRUITER":
         newRole = "EMPLOYEE";
         newLevel = "L3";
         break;
-      case "EMPLOYEE":
+      case "RECRUITER":
       default:
         newRole = "EMPLOYEE";
         newLevel = "L4";
@@ -186,8 +186,8 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
                 onChange={(e) => handleUiRoleChange(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
               >
-                <option value="EMPLOYEE">Employee</option>
-                <option value="SENIOR_EMPLOYEE">Senior Employee</option>
+                <option value="RECRUITER">Recruiter</option>
+                <option value="SENIOR_RECRUITER">Senior Recruiter</option>
                 <option value="TEAM_LEAD">Team Lead</option>
               </select>
             </div>

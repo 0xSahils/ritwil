@@ -4,7 +4,8 @@ import CalculationService from '../utils/calculationService';
 import UserCreationModal from "./UserCreationModal";
 import { getRoleDisplayName, matchesRoleFilter, getDisplayNameFromFilterValue } from '../utils/roleHelpers';
 import { getUsers } from '../api/users';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { Skeleton, TableRowSkeleton } from './common/Skeleton';
 
 const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModalOpened }) => {
   const [allUsers, setAllUsers] = useState([]);
@@ -16,18 +17,13 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
   const [pageSize] = useState(25);
   const [polling, setPolling] = useState(true);
   const [teams, setTeams] = useState([]);
-  const [managers, setManagers] = useState([]);
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [teamFilter, setTeamFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [levelFilter, setLevelFilter] = useState('');
-  const [managerFilter, setManagerFilter] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     if (autoOpenCreate && !showModal) {
@@ -39,7 +35,6 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
 
   useEffect(() => {
     fetchTeams();
-    fetchManagers();
     let intervalId;
     fetchUsers();
 
@@ -66,16 +61,6 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
     }
   };
 
-  const fetchManagers = async () => {
-    try {
-      const response = await getUsers({ role: 'SUPER_ADMIN', pageSize: 100 });
-      if (response.data) {
-        setManagers(response.data || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch managers:", err);
-    }
-  };
 
   const fetchUsers = async (showLoader = true) => {
     try {
@@ -109,8 +94,7 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
       filtered = filtered.filter(u => 
         (u.name || '').toLowerCase().includes(q) ||
         (u.email || '').toLowerCase().includes(q) ||
-        (u.team?.name || '').toLowerCase().includes(q) ||
-        (u.manager?.name || '').toLowerCase().includes(q)
+        (u.team?.name || '').toLowerCase().includes(q)
       );
     }
 
@@ -122,28 +106,6 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
     // Role filter
     if (roleFilter) {
       filtered = filtered.filter(u => matchesRoleFilter(u, roleFilter));
-    }
-
-    // Status filter
-    if (statusFilter) {
-      if (statusFilter === 'active') {
-        filtered = filtered.filter(u => u.isActive !== false);
-      } else if (statusFilter === 'inactive') {
-        filtered = filtered.filter(u => u.isActive === false);
-      }
-    }
-
-    // Level filter
-    if (levelFilter) {
-      filtered = filtered.filter(u => {
-        const userLevel = (u.level || '').toUpperCase();
-        return userLevel === levelFilter.toUpperCase();
-      });
-    }
-
-    // Manager filter
-    if (managerFilter) {
-      filtered = filtered.filter(u => u.manager?.id === managerFilter);
     }
 
     // Sorting
@@ -179,7 +141,7 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
     });
 
     return filtered;
-  }, [allUsers, searchQuery, teamFilter, roleFilter, statusFilter, levelFilter, managerFilter, sortBy, sortDir]);
+  }, [allUsers, searchQuery, teamFilter, roleFilter, sortBy, sortDir]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedUsers.length / pageSize);
@@ -231,8 +193,52 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
 
   if (loading && allUsers.length === 0) {
     return (
-      <div className={embedded ? "p-4 text-center" : "p-8 text-center"}>
-        Loading users...
+      <div className={embedded ? "" : "p-6 bg-slate-50 min-h-screen"}>
+        <div className={embedded ? "" : "max-w-7xl mx-auto"}>
+          <div className="flex justify-between items-center mb-4">
+            <Skeleton className="h-7 w-24 rounded-lg" />
+            <Skeleton className="h-10 w-32 rounded-lg" />
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-4 p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="lg:col-span-2">
+                <Skeleton className="h-3 w-16 mb-2 rounded" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+              </div>
+              <div>
+                <Skeleton className="h-3 w-12 mb-2 rounded" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+              </div>
+              <div>
+                <Skeleton className="h-3 w-12 mb-2 rounded" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                    <th key={i} className="p-4">
+                      <Skeleton className="h-4 w-16 rounded" />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <TableRowSkeleton cols={7} />
+                <TableRowSkeleton cols={7} />
+                <TableRowSkeleton cols={7} />
+                <TableRowSkeleton cols={7} />
+                <TableRowSkeleton cols={7} />
+                <TableRowSkeleton cols={7} />
+                <TableRowSkeleton cols={7} />
+                <TableRowSkeleton cols={7} />
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   }
@@ -283,7 +289,7 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
                       setSearchQuery(e.target.value);
                       setPage(1);
                     }}
-                    placeholder="Search by name, email, team, or manager..."
+                    placeholder="Search by name, email, or team..."
                     className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
                   />
                 </div>
@@ -322,141 +328,48 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
               </div>
             </div>
 
-            {/* Advanced Filters Toggle */}
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                <svg className={`w-4 h-4 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-                {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
-              </button>
-              {(searchQuery || teamFilter || roleFilter || statusFilter || levelFilter || managerFilter) && (
+            {/* Clear Filters Button */}
+            {(searchQuery || teamFilter || roleFilter) && (
+              <div className="mt-4 flex items-center justify-end">
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     setRoleFilter('');
                     setTeamFilter('');
-                    setStatusFilter('');
-                    setLevelFilter('');
-                    setManagerFilter('');
                     setPage(1);
                   }}
                   className="text-xs text-slate-500 hover:text-slate-700 font-medium underline"
                 >
                   Clear all filters
                 </button>
-              )}
-            </div>
-          </div>
-
-          {/* Advanced Filters Panel */}
-          <AnimatePresence>
-            {showAdvancedFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden border-t border-slate-200"
-              >
-                <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Status</label>
-                    <select 
-                      value={statusFilter} 
-                      onChange={(e) => {
-                        setStatusFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white text-sm"
-                    >
-                      <option value="">All Status</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Level</label>
-                    <select 
-                      value={levelFilter} 
-                      onChange={(e) => {
-                        setLevelFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white text-sm"
-                    >
-                      <option value="">All Levels</option>
-                      <option value="L2">L2 - Team Lead</option>
-                      <option value="L3">L3 - Senior Recruiter</option>
-                      <option value="L4">L4 - Recruiter</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Manager</label>
-                    <select 
-                      value={managerFilter} 
-                      onChange={(e) => {
-                        setManagerFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white text-sm"
-                    >
-                      <option value="">All Managers</option>
-                      {managers.map(manager => (
-                        <option key={manager.id} value={manager.id}>{manager.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
-          {/* Active Filters Display */}
-          {(searchQuery || teamFilter || roleFilter || statusFilter || levelFilter || managerFilter) && (
-            <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-slate-500">Active filters:</span>
-              {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
-                  Search: {searchQuery}
-                  <button onClick={() => setSearchQuery('')} className="hover:text-blue-900">×</button>
-                </span>
-              )}
-              {roleFilter && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-100 text-violet-700 rounded-lg text-xs font-medium">
-                  Role: {getDisplayNameFromFilterValue(roleFilter)}
-                  <button onClick={() => setRoleFilter('')} className="hover:text-violet-900">×</button>
-                </span>
-              )}
-              {teamFilter && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-medium">
-                  Team: {teams.find(t => t.id === teamFilter)?.name}
-                  <button onClick={() => setTeamFilter('')} className="hover:text-emerald-900">×</button>
-                </span>
-              )}
-              {statusFilter && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">
-                  Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-                  <button onClick={() => setStatusFilter('')} className="hover:text-green-900">×</button>
-                </span>
-              )}
-              {levelFilter && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
-                  Level: {levelFilter}
-                  <button onClick={() => setLevelFilter('')} className="hover:text-amber-900">×</button>
-                </span>
-              )}
-              {managerFilter && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium">
-                  Manager: {managers.find(m => m.id === managerFilter)?.name}
-                  <button onClick={() => setManagerFilter('')} className="hover:text-purple-900">×</button>
-                </span>
-              )}
-            </div>
-          )}
+            {/* Active Filters Display */}
+            {(searchQuery || teamFilter || roleFilter) && (
+              <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-slate-500">Active filters:</span>
+                {searchQuery && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
+                    Search: {searchQuery}
+                    <button onClick={() => setSearchQuery('')} className="hover:text-blue-900">×</button>
+                  </span>
+                )}
+                {roleFilter && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-100 text-violet-700 rounded-lg text-xs font-medium">
+                    Role: {getDisplayNameFromFilterValue(roleFilter)}
+                    <button onClick={() => setRoleFilter('')} className="hover:text-violet-900">×</button>
+                  </span>
+                )}
+                {teamFilter && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-medium">
+                    Team: {teams.find(t => t.id === teamFilter)?.name}
+                    <button onClick={() => setTeamFilter('')} className="hover:text-emerald-900">×</button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </motion.div>
 
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">

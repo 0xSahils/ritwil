@@ -383,7 +383,7 @@ const TeamLeadPage = () => {
               <div>
                 <motion.div variants={itemVariants} className="flex items-center gap-2 text-slate-400 text-sm font-medium mb-1">
                   <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  {teamLeadData.level || 'L2'} · Team Lead
+                  Team Lead
                 </motion.div>
                 <motion.h1 variants={itemVariants} className="text-2xl md:text-3xl font-bold tracking-tight text-white mb-0.5">
                   {teamLeadData.name}

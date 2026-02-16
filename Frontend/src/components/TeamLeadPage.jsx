@@ -678,7 +678,6 @@ const TeamLeadPage = () => {
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-800 group-hover:text-violet-700 transition-colors">{member.name}</h3>
-                        <p className="text-slate-500 text-sm font-medium">{member.level || 'L4'}</p>
                       </div>
                     </div>
                     <CircularProgress percentage={memberPercentage} color={progressColor} />

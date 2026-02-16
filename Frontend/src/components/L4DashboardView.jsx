@@ -271,8 +271,6 @@ export default function L4DashboardView({
       )
     : null
 
-  const nextSlabText = slabInfo?.label ? `Next: ${slabInfo.label}` : 'Next slab'
-
   // Filter options: Billing & Type from DB enums; Collection & Year from data
   const PLACEMENT_BILLING_OPTIONS = [
     { value: '', label: 'All' },
@@ -736,27 +734,22 @@ export default function L4DashboardView({
                   total={targetDisplay}
                   percent={percent}
                 />
-                {/* Slab & milestone */}
-                <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-4">
-                  <div className="rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 to-indigo-50/80 px-6 py-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">
-                      CURRENT SLAB
-                    </p>
-                    <p className="mt-1 text-xl font-bold text-violet-900">
-                      {employeeData?.slabQualified ?? '–'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                {/* Current slab — compact card with icon */}
+                <motion.div
+                  variants={itemVariants}
+                  className="flex self-start gap-4 rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 to-indigo-50/80 p-4 shadow-sm"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-600">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                     </svg>
-                    <span className="text-sm font-medium">{nextSlabText}</span>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-6 py-3 shadow-sm">
-                    <p className="text-xs font-medium text-slate-500">To next slab</p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
-                      {targetDisplay} target · {achievedDisplay} achieved
-                    </p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">Current slab</p>
+                    <p className="mt-0.5 text-xl font-bold text-violet-900">{employeeData?.slabQualified ?? '–'}</p>
+                    <p className="mt-1 text-xs text-violet-600/80">Incentive tier</p>
                   </div>
                 </motion.div>
               </div>

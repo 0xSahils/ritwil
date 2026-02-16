@@ -428,7 +428,6 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
                     )}
                   </button>
                 </th>
-                <th className="p-4 font-semibold text-slate-600">Target</th>
                 <th className="p-4 font-semibold text-slate-600">
                   <button
                     onClick={() => toggleSort('status')}
@@ -448,7 +447,7 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
             <tbody className="divide-y divide-slate-100">
               {paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-slate-500">
+                  <td colSpan="6" className="p-8 text-center text-slate-500">
                     {loading ? 'Loading...' : 'No users found matching your filters'}
                   </td>
                 </tr>
@@ -473,9 +472,6 @@ const AdminUserManagement = ({ embedded = false, autoOpenCreate = false, onModal
                     </span>
                   </td>
                   <td className="p-4 text-slate-600">{user.team?.name || "-"}</td>
-                  <td className="p-4 text-slate-600">
-                    {user.yearlyTarget ? CalculationService.formatCurrency(user.yearlyTarget) : "-"}
-                  </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'

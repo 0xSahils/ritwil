@@ -841,10 +841,31 @@ export async function getPersonalPlacementOverview(currentUser, userId) {
       return fromAny?.[field] ?? null;
     };
     const placementDoneFallback = pick("placementDone");
+    const toNum = (v) => {
+      if (v == null || v === "") return null;
+      if (typeof v === "number" && Number.isFinite(v)) return v;
+      if (typeof v === "object" && v != null && typeof v.toNumber === "function") return v.toNumber();
+      const n = parseFloat(String(v).trim());
+      return Number.isFinite(n) ? n : null;
+    };
+    // Prefer personal placement sheet only: summary row's revenue target, then placement target (e.g. 50000). Use profile only as last resort so we never show team/aggregate (e.g. 605000) here.
+    let yearlyRevenueTarget = toNum(pick("yearlyRevenueTarget"));
+    if (yearlyRevenueTarget == null) {
+      yearlyRevenueTarget = toNum(pick("yearlyPlacementTarget"));
+    }
+    if (yearlyRevenueTarget == null) {
+      const profile = await prisma.employeeProfile.findUnique({
+        where: { id: targetId },
+        select: { yearlyRevenueTarget: true },
+      });
+      yearlyRevenueTarget = profile?.yearlyRevenueTarget != null ? toNum(profile.yearlyRevenueTarget) : null;
+    }
     const summary = (summaryRow || allRows[0]) ? {
       yearlyPlacementTarget: pick("yearlyPlacementTarget"),
+      yearlyRevenueTarget,
       placementDone: placementDoneFallback != null ? placementDoneFallback : (placementList.length > 0 ? placementList.length : null),
       targetAchievedPercent: pick("targetAchievedPercent"),
+      revenueTargetAchievedPercent: pick("revenueTargetAchievedPercent"),
       totalRevenueGenerated: pick("totalRevenueGenerated"),
       slabQualified: pick("slabQualified"),
       totalIncentiveInr: pick("totalIncentiveInr"),

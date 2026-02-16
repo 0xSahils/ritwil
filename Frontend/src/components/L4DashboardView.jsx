@@ -461,14 +461,14 @@ export default function L4DashboardView({
             {activeTab === 'profile' && 'Profile'}
           </h1>
           <div className="flex items-center gap-3">
-            {activeTab === 'placements' && (
+            {/* {activeTab === 'placements' && (
               <button
                 type="button"
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
               >
                 Export
               </button>
-            )}
+            )} */}
             <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 pl-2 pr-4 py-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500 text-sm font-bold text-white">
                 {(employeeData?.recruiterName || 'U').charAt(0)}

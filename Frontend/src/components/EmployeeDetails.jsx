@@ -1,5 +1,6 @@
 import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
@@ -723,68 +724,141 @@ const EmployeeDetails = () => {
               )}
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+              <div className={`grid gap-4 ${
+                isDualTarget 
+                  ? 'grid-cols-1 sm:grid-cols-3' 
+                  : 'grid-cols-1 sm:grid-cols-3'
+              }`}>
               {isDualTarget ? (
                 <>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Yearly Revenue Target</div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Yearly Revenue Target</div>
                     <div className="text-xl font-bold text-white leading-tight group-hover/item:text-yellow-200 transition-colors">{CalculationService.formatCurrency(dualRevenueTarget)}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Revenue Generated</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.05 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Revenue Generated</div>
                     <div className="text-xl font-bold text-emerald-200 leading-tight group-hover/item:text-emerald-100 transition-colors">{employeeData.revenueGenerated}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Percentage</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Percentage</div>
                     <div className="text-xl font-bold text-blue-200 leading-tight group-hover/item:text-blue-100 transition-colors">{CalculationService.formatPercentage(dualRevenuePercent)}</div>
-                  </div>
-
-                  <div className="hidden sm:block w-px bg-white/20 mx-2"></div>
-
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Yearly Placement Target</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.15 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Yearly Placement Target</div>
                     <div className="text-xl font-bold text-white leading-tight group-hover/item:text-yellow-200 transition-colors">{dualPlacementTarget}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Achieved</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Achieved</div>
                     <div className="text-xl font-bold text-emerald-200 leading-tight group-hover/item:text-emerald-100 transition-colors">{employeeData.placementsAchieved}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Percentage</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.25 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Percentage</div>
                     <div className="text-xl font-bold text-blue-200 leading-tight group-hover/item:text-blue-100 transition-colors">{CalculationService.formatPercentage(dualPlacementPercent)}</div>
-                  </div>
+                  </motion.div>
                 </>
               ) : isRevenueTarget ? (
                 <>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Target Revenue</div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Target Revenue</div>
                     <div className="text-xl font-bold text-white leading-tight group-hover/item:text-yellow-200 transition-colors">{employeeData.totalRevenue}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Revenue Generated</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.05 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Revenue Generated</div>
                     <div className="text-xl font-bold text-emerald-200 leading-tight group-hover/item:text-emerald-100 transition-colors">{employeeData.revenueGenerated}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Percentage</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Percentage</div>
                     <div className="text-xl font-bold text-blue-200 leading-tight group-hover/item:text-blue-100 transition-colors">{employeeData.revenueGeneratedPercentage}</div>
-                  </div>
+                  </motion.div>
                 </>
               ) : (
                 <>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Target no of placements</div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Target no of placements</div>
                     <div className="text-xl font-bold text-white leading-tight group-hover/item:text-yellow-200 transition-colors">{employeeData.targetPlacements}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Placements achieved</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.05 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Placements achieved</div>
                     <div className="text-xl font-bold text-emerald-200 leading-tight group-hover/item:text-emerald-100 transition-colors">{employeeData.placementsAchieved}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/30 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group/item hover:bg-white/30">
-                    <div className="text-[10px] text-white/80 mb-1 leading-tight font-medium uppercase tracking-wide">Percentage</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Percentage</div>
                     <div className="text-xl font-bold text-blue-200 leading-tight group-hover/item:text-blue-100 transition-colors">
                       {employeeData.targetAchieved}
                     </div>
-                  </div>
+                  </motion.div>
                 </>
               )}
             </div>

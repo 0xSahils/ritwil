@@ -262,6 +262,10 @@ const EmployeeDetails = () => {
 
   const isRevenueTarget = employeeData?.targetType === 'REVENUE'
   
+  // Vantage detection: For Vantage team, "Placement Target" and "Placements Done" are actually revenue values
+  const isVantageTeam = employeeData?.teamName && employeeData.teamName.toLowerCase().includes('vant')
+  const isVantagePersonalView = isVantageTeam && viewMode === 'personal' && employeeData?.personalSummary
+  
   // Dual-target detection: Check if we have both revenue and placement targets in team summary
   const isDualTarget = viewMode === 'team' && 
                        employeeData?.teamSummary?.yearlyRevenueTarget != null && 
@@ -790,6 +794,39 @@ const EmployeeDetails = () => {
                   >
                     <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Percentage</div>
                     <div className="text-xl font-bold text-blue-200 leading-tight group-hover/item:text-blue-100 transition-colors">{CalculationService.formatPercentage(dualPlacementPercent)}</div>
+                  </motion.div>
+                </>
+              ) : isVantagePersonalView ? (
+                <>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Placement Target</div>
+                    <div className="text-xl font-bold text-white leading-tight group-hover/item:text-yellow-200 transition-colors">{employeeData.totalRevenue}</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.05 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Placements Done</div>
+                    <div className="text-xl font-bold text-emerald-200 leading-tight group-hover/item:text-emerald-100 transition-colors">{CalculationService.formatCurrency(Number(employeeData.placementsAchieved) || 0)}</div>
+                  </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    className="bg-white/20 backdrop-blur-sm px-5 py-4 rounded-xl border border-white/30 shadow-md hover:shadow-xl transition-all duration-300 group/item hover:bg-white/30"
+                  >
+                    <div className="text-[10px] text-white/80 mb-1.5 leading-tight font-medium uppercase tracking-wide">Target Achieved</div>
+                    <div className="text-xl font-bold text-blue-200 leading-tight group-hover/item:text-blue-100 transition-colors">{employeeData.targetAchieved}</div>
                   </motion.div>
                 </>
               ) : isRevenueTarget ? (

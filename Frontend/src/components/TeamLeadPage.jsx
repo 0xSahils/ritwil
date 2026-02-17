@@ -642,12 +642,19 @@ const TeamLeadPage = () => {
                 // Display by team target type: placement team -> placement target/done/%; revenue team -> revenue target/achieved/%
                 const memberIsPlacement = isPlacementTeam || member.targetType === 'PLACEMENTS';
                 const memberTarget = Number(member.target || 0);
+                // For L4 members, use placements (own) not totalPlacements (includes children)
+                // For L2/L3, use totalPlacements (includes their team's placements)
+                const isL4 = member.level?.toUpperCase() === 'L4';
                 const memberAchieved = memberIsPlacement
-                  ? (member.totalPlacements ?? member.placements ?? 0)
-                  : (member.totalRevenue ?? member.revenue ?? 0);
-                const memberPercentage = memberTarget > 0
-                  ? Math.round((Number(memberAchieved) / memberTarget) * 100)
-                  : (member.targetAchieved ?? 0);
+                  ? (isL4 ? (member.placements ?? 0) : (member.totalPlacements ?? member.placements ?? 0))
+                  : (isL4 ? (member.revenue ?? 0) : (member.totalRevenue ?? member.revenue ?? 0));
+                // Use backend-calculated targetAchieved when available (especially for L2/L3 with team sheet summary)
+                // Otherwise recalculate from achieved/target
+                const memberPercentage = (member.targetAchieved != null && member.targetAchieved !== undefined)
+                  ? Math.round(Number(member.targetAchieved))
+                  : (memberTarget > 0
+                      ? Math.round((Number(memberAchieved) / memberTarget) * 100)
+                      : 0);
                 
                 // Dynamic color based on percentage
                let progressColor = "text-red-500";

@@ -297,8 +297,10 @@ router.get(
   requireRole(Role.EMPLOYEE, Role.TEAM_LEAD, Role.S1_ADMIN, Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
+      // S1_ADMIN/SUPER_ADMIN can view anyone; TEAM_LEAD can pass userId to view a subordinate (controller validates)
       const canViewOthers = req.user.role === Role.S1_ADMIN || req.user.role === Role.SUPER_ADMIN;
-      const userId = canViewOthers ? req.query.userId : undefined;
+      const canViewSubordinate = req.user.role === Role.TEAM_LEAD;
+      const userId = (canViewOthers || canViewSubordinate) ? req.query.userId : undefined;
       const data = await getPersonalPlacementOverview(req.user, userId);
       res.json(data);
     } catch (error) {
@@ -312,8 +314,10 @@ router.get(
   requireRole(Role.TEAM_LEAD, Role.S1_ADMIN, Role.SUPER_ADMIN),
   async (req, res, next) => {
     try {
+      // S1_ADMIN/SUPER_ADMIN can view any lead; TEAM_LEAD can pass leadId to view a subordinate lead (controller validates)
       const canViewOthers = req.user.role === Role.S1_ADMIN || req.user.role === Role.SUPER_ADMIN;
-      const leadId = canViewOthers ? req.query.leadId : undefined;
+      const canViewSubordinate = req.user.role === Role.TEAM_LEAD;
+      const leadId = (canViewOthers || canViewSubordinate) ? req.query.leadId : undefined;
       const data = await getTeamPlacementOverview(req.user, leadId);
       res.json(data);
     } catch (error) {

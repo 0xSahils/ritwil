@@ -9,11 +9,20 @@ import { useTeamDetails } from "../hooks/useTeams";
 import { Skeleton } from "./common/Skeleton";
 import { useAuth } from "../context/AuthContext";
 
+function truncateSlabComment(text, maxWords = 2) {
+  if (!text || !String(text).trim()) return "—";
+  const s = String(text).trim();
+  const words = s.split(/\s+/);
+  if (words.length <= maxWords) return s;
+  return words.slice(0, maxWords).join(" ") + "…";
+}
+
 const AdminTeamDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const canEditTarget = currentUser?.role === "S1_ADMIN";
+  const canBulkComment = currentUser?.role === "S1_ADMIN";
   
   const { 
     team, 
@@ -46,9 +55,15 @@ const AdminTeamDetails = () => {
   const [importError, setImportError] = useState("");
   const [importResult, setImportResult] = useState(null); // { summary, report } after successful team import
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [slabCommentModal, setSlabCommentModal] = useState({ open: false, userId: null, name: "", slabComment: "" });
-  const [slabCommentDraft, setSlabCommentDraft] = useState("");
-  const [slabCommentSaving, setSlabCommentSaving] = useState(false);
+  const [commentModal, setCommentModal] = useState({ open: false, userId: null, name: "", comment: "" });
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentSaving, setCommentSaving] = useState(false);
+
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [bulkCommentModalOpen, setBulkCommentModalOpen] = useState(false);
+  const [bulkCommentDraft, setBulkCommentDraft] = useState("");
+  const [bulkCommentSaving, setBulkCommentSaving] = useState(false);
+  const [showBulkCheckboxes, setShowBulkCheckboxes] = useState(false);
 
   const handleUpdateTeam = (data) => {
     updateTeam(data, {
@@ -79,36 +94,90 @@ const AdminTeamDetails = () => {
     });
   };
 
-  const openSlabCommentModal = (user) => {
-    setSlabCommentModal({ open: true, userId: user.userId, name: user.name, slabComment: user.slabComment || "" });
-    setSlabCommentDraft(user.slabComment || "");
+  const openCommentModal = (user) => {
+    setCommentModal({ open: true, userId: user.userId, name: user.name, comment: user.comment || "" });
+    setCommentDraft(user.comment || "");
   };
 
-  const closeSlabCommentModal = () => {
-    setSlabCommentModal({ open: false, userId: null, name: "", slabComment: "" });
-    setSlabCommentDraft("");
+  const closeCommentModal = () => {
+    setCommentModal({ open: false, userId: null, name: "", comment: "" });
+    setCommentDraft("");
   };
 
-  const handleSaveSlabComment = async () => {
-    if (!slabCommentModal.userId) return;
-    setSlabCommentSaving(true);
+  const handleSaveComment = async () => {
+    if (!commentModal.userId) return;
+    setCommentSaving(true);
     try {
-      const res = await apiRequest(`/users/${slabCommentModal.userId}`, {
+      const res = await apiRequest(`/users/${commentModal.userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slabComment: slabCommentDraft.trim() || "" }),
+        body: JSON.stringify({ comment: commentDraft.trim() || "" }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to update slab comment");
+        throw new Error(data.error || "Failed to update comment");
       }
-      refetch();
-      closeSlabCommentModal();
-      showNotification("success", "Slab comment updated");
+      await refetch();
+      closeCommentModal();
+      showNotification("success", "Comment updated");
     } catch (err) {
       alert(err.message);
     } finally {
-      setSlabCommentSaving(false);
+      setCommentSaving(false);
+    }
+  };
+
+  const currentList = (activeTab === "leads" ? team?.leads : team?.members) ?? [];
+  const currentUserIds = currentList.map((u) => u.userId);
+
+  const toggleSelectedUser = (userId) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const selectAllInCurrentTab = () => {
+    if (selectedUserIds.size === currentUserIds.length) {
+      setSelectedUserIds((prev) => {
+        const next = new Set(prev);
+        currentUserIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedUserIds((prev) => new Set([...prev, ...currentUserIds]));
+    }
+  };
+
+  const handleBulkCommentSave = async () => {
+    const ids = Array.from(selectedUserIds).filter((id) => currentUserIds.includes(id));
+    if (ids.length === 0) {
+      alert("Select at least one person to update.");
+      return;
+    }
+    setBulkCommentSaving(true);
+    try {
+      const res = await apiRequest("/users/bulk-comment", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: ids, comment: bulkCommentDraft.trim() || "" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update comments");
+      }
+      await refetch();
+      setBulkCommentModalOpen(false);
+      setShowBulkCheckboxes(false);
+      setBulkCommentDraft("");
+      setSelectedUserIds(new Set());
+      showNotification("success", `Comment updated for ${ids.length} member(s)`);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setBulkCommentSaving(false);
     }
   };
 
@@ -369,6 +438,50 @@ const AdminTeamDetails = () => {
                 </h3>
               </div>
               <div className="flex gap-3">
+                {canBulkComment && !showBulkCheckboxes && (
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowBulkCheckboxes(true)}
+                    disabled={currentList.length === 0}
+                    className="bg-slate-600 hover:bg-slate-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Bulk set comment
+                  </motion.button>
+                )}
+                {canBulkComment && showBulkCheckboxes && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBulkCheckboxes(false);
+                        setSelectedUserIds(new Set());
+                      }}
+                      className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors border border-slate-200"
+                    >
+                      Done
+                    </button>
+                    <motion.button
+                      type="button"
+                      onClick={() => setBulkCommentModalOpen(true)}
+                      disabled={Array.from(selectedUserIds).filter((id) => currentUserIds.includes(id)).length === 0}
+                      className="bg-slate-600 hover:bg-slate-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Set comment for selected ({Array.from(selectedUserIds).filter((id) => currentUserIds.includes(id)).length})
+                    </motion.button>
+                  </>
+                )}
                 {activeTab === "leads" ? (
                   <button
                     onClick={() => setShowTeamImportModal(true)}
@@ -410,6 +523,16 @@ const AdminTeamDetails = () => {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 text-sm">
+                    {showBulkCheckboxes && (
+                      <th className="pb-3 font-medium pl-4 w-10">
+                        <input
+                          type="checkbox"
+                          checked={currentUserIds.length > 0 && currentUserIds.every((id) => selectedUserIds.has(id))}
+                          onChange={selectAllInCurrentTab}
+                          className="rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                        />
+                      </th>
+                    )}
                     <th className="pb-3 font-medium pl-4">Name</th>
                     <th className="pb-3 font-medium">Email</th>
                     <th className="pb-3 font-medium">Achievement</th>
@@ -419,8 +542,24 @@ const AdminTeamDetails = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {(activeTab === "leads" ? team.leads : team.members).map((user) => (
-                    <tr key={user.id} className="group hover:bg-slate-50 transition-colors">
+                  {(activeTab === "leads" ? team.leads : team.members).map((user, index) => (
+                    <motion.tr
+                      key={user.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03, duration: 0.25 }}
+                      className="group hover:bg-slate-50/80 transition-colors"
+                    >
+                      {showBulkCheckboxes && (
+                        <td className="py-4 pl-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.has(user.userId)}
+                            onChange={() => toggleSelectedUser(user.userId)}
+                            className="rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                          />
+                        </td>
+                      )}
                       <td className="py-4 pl-4">
                         <div 
                           className="font-medium text-slate-800 cursor-pointer hover:text-blue-600 hover:underline"
@@ -437,12 +576,17 @@ const AdminTeamDetails = () => {
                         }
                       </td>
                       {canEditTarget && (
-                        <td className="py-4 text-slate-600 max-w-[200px]">
-                          <span className="line-clamp-2 block">{user.slabComment || "—"}</span>
+                        <td className="py-4 text-slate-600 max-w-[180px]">
+                          <span
+                            title={user.comment ? String(user.comment) : undefined}
+                            className="block truncate text-sm text-slate-700"
+                          >
+                            {truncateSlabComment(user.comment)}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => openSlabCommentModal(user)}
-                            className="text-violet-600 hover:text-violet-800 text-xs font-medium mt-1"
+                            onClick={() => openCommentModal(user)}
+                            className="text-violet-600 hover:text-violet-800 text-xs font-medium mt-1.5 transition-colors"
                           >
                             Edit
                           </button>
@@ -459,11 +603,17 @@ const AdminTeamDetails = () => {
                           Remove
                         </button>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
                   {(activeTab === "leads" ? team.leads : team.members).length === 0 && (
                     <tr>
-                      <td colSpan={activeTab === "members" ? (canEditTarget ? 6 : 5) : (canEditTarget ? 5 : 4)} className="py-8 text-center text-slate-400">
+                      <td
+                        colSpan={
+                          (showBulkCheckboxes ? 1 : 0) +
+                          (activeTab === "members" ? (canEditTarget ? 6 : 5) : (canEditTarget ? 5 : 4))
+                        }
+                        className="py-8 text-center text-slate-400"
+                      >
                         No {activeTab === "leads" ? "leads" : "members"} found.
                       </td>
                     </tr>
@@ -565,39 +715,130 @@ const AdminTeamDetails = () => {
         </div>
       )}
 
-      {slabCommentModal.open && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn">
-            <h2 className="text-xl font-bold text-slate-800 mb-2">Slab comment (L4 dashboard)</h2>
-            <p className="text-sm text-slate-500 mb-4">{slabCommentModal.name}</p>
-            <textarea
-              value={slabCommentDraft}
-              onChange={(e) => setSlabCommentDraft(e.target.value)}
-              rows={4}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 outline-none resize-y"
-              placeholder="Comment shown in L4 dashboard slab box"
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                type="button"
-                onClick={closeSlabCommentModal}
-                disabled={slabCommentSaving}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSlabComment}
-                disabled={slabCommentSaving}
-                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium disabled:opacity-50"
-              >
-                {slabCommentSaving ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {commentModal.open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => e.target === e.currentTarget && !commentSaving && closeCommentModal()}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-bold text-slate-800 mb-2">Comment (L4 dashboard)</h2>
+              <p className="text-sm text-slate-500 mb-4">{commentModal.name}</p>
+              <textarea
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                maxLength={1000}
+                rows={4}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none resize-y transition-shadow"
+                placeholder="Comment shown in L4 dashboard (max 1000 characters)"
+              />
+              <p className="text-xs text-slate-500 mt-1.5 text-right">{commentDraft.length}/1000</p>
+              <div className="flex justify-end gap-3 mt-5">
+                <button
+                  type="button"
+                  onClick={closeCommentModal}
+                  disabled={commentSaving}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  type="button"
+                  onClick={handleSaveComment}
+                  disabled={commentSaving}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  {commentSaving ? "Saving…" : "Save"}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {bulkCommentModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              if (!bulkCommentSaving) {
+                setBulkCommentModalOpen(false);
+                setShowBulkCheckboxes(false);
+                setSelectedUserIds(new Set());
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-bold text-slate-800 mb-1">Bulk set comment</h2>
+              <p className="text-sm text-slate-500 mb-4">
+                Apply the same comment to all selected {activeTab === "leads" ? "leads" : "members"}.
+              </p>
+              <textarea
+                value={bulkCommentDraft}
+                onChange={(e) => setBulkCommentDraft(e.target.value)}
+                maxLength={1000}
+                rows={4}
+                placeholder="Comment shown on profile and L4 dashboard (max 1000 characters)"
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 outline-none resize-y transition-shadow"
+              />
+              <p className="text-xs text-slate-500 mt-1 text-right">{bulkCommentDraft.length}/1000</p>
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!bulkCommentSaving) {
+                      setBulkCommentModalOpen(false);
+                      setShowBulkCheckboxes(false);
+                      setSelectedUserIds(new Set());
+                    }
+                  }}
+                  disabled={bulkCommentSaving}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkCommentSave}
+                  disabled={
+                    bulkCommentSaving ||
+                    Array.from(selectedUserIds).filter((id) => currentUserIds.includes(id)).length === 0
+                  }
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                >
+                  {bulkCommentSaving
+                    ? "Updating…"
+                    : `Apply to selected (${Array.from(selectedUserIds).filter((id) => currentUserIds.includes(id)).length})`}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {showPersonalImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

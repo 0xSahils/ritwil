@@ -36,45 +36,55 @@ const processEmployeeData = async (employee) => {
       : Promise.resolve([]),
   ]);
 
-  const yearlyTarget = Number(employee.employeeProfile.yearlyTarget || 0);
-  const yearlyRevenueTarget = employee.employeeProfile.yearlyRevenueTarget ? Number(employee.employeeProfile.yearlyRevenueTarget) : null;
-  const yearlyPlacementTarget = employee.employeeProfile.yearlyPlacementTarget ? Number(employee.employeeProfile.yearlyPlacementTarget) : null;
+  // Targets and slab from sheet data only (no profile fallback)
+  const isSummaryRow = (p) =>
+    (p.plcId && String(p.plcId).startsWith("SUMMARY-")) ||
+    (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
+  const personalSummary = personalPlacements.find(isSummaryRow);
+  const teamSummary = teamPlacements.find(isSummaryRow);
+  const summary = personalSummary || teamSummary || null;
+
+  const yearlyRevenueTarget = summary?.yearlyRevenueTarget != null ? Number(summary.yearlyRevenueTarget) : null;
+  const yearlyPlacementTarget = summary?.yearlyPlacementTarget != null ? Number(summary.yearlyPlacementTarget) : null;
   const targetType = employee.employeeProfile.targetType || (employee.employeeProfile.level === "L4" ? "PLACEMENTS" : "REVENUE");
-  const slabQualified = employee.employeeProfile.slabQualified || false;
-  
-  const personalPlacementRevenue = personalPlacements.reduce(
+  const yearlyTarget = targetType === "PLACEMENTS" ? yearlyPlacementTarget : yearlyRevenueTarget;
+  const slabQualified = summary?.slabQualified != null ? String(summary.slabQualified) : null;
+
+  const personalPlacementRevenue = personalPlacements.filter((p) => !isSummaryRow(p)).reduce(
     (sum, p) => sum + Number(p.revenueUsd || 0),
     0
   );
-  const teamPlacementRevenue = teamPlacements.reduce(
+  const teamPlacementRevenue = teamPlacements.filter((p) => !isSummaryRow(p)).reduce(
     (sum, p) => sum + Number(p.revenueLeadUsd || 0),
     0
   );
   const revenueGenerated = personalPlacementRevenue + teamPlacementRevenue;
 
-  const placementsCount = personalPlacements.length + teamPlacements.length;
+  const placementsCount =
+    personalPlacements.filter((p) => !isSummaryRow(p)).length +
+    teamPlacements.filter((p) => !isSummaryRow(p)).length;
 
   let percentage = 0;
-  if (targetType === "PLACEMENTS") {
-    percentage = yearlyTarget > 0 ? Math.round((placementsCount / yearlyTarget) * 100) : 0;
-  } else {
-    percentage = yearlyTarget > 0 ? Math.round((revenueGenerated / yearlyTarget) * 100) : 0;
+  if (yearlyTarget != null && yearlyTarget > 0) {
+    percentage = targetType === "PLACEMENTS"
+      ? Math.round((placementsCount / yearlyTarget) * 100)
+      : Math.round((revenueGenerated / yearlyTarget) * 100);
   }
 
   const latestIncentive = null;
 
-  const personalPlacementIncentive = personalPlacements.reduce(
+  const personalPlacementIncentive = personalPlacements.filter((p) => !isSummaryRow(p)).reduce(
     (sum, p) => sum + Number(p.incentiveInr || 0),
     0
   );
-  const teamPlacementIncentive = teamPlacements.reduce(
+  const teamPlacementIncentive = teamPlacements.filter((p) => !isSummaryRow(p)).reduce(
     (sum, p) => sum + Number(p.incentiveInr || 0),
     0
   );
   const totalIncentiveInr = personalPlacementIncentive + teamPlacementIncentive;
 
-  // Convert personal placements to same format
-  const convertedPersonalPlacements = personalPlacements.map(p => ({
+  // Convert personal placements to same format (exclude summary row from list)
+  const convertedPersonalPlacements = personalPlacements.filter((p) => !isSummaryRow(p)).map(p => ({
     id: p.id,
     candidateName: p.candidateName,
     candidateId: null,
@@ -102,8 +112,8 @@ const processEmployeeData = async (employee) => {
     monthlyBilling: [],
   }));
 
-  // Convert team placements to same format
-  const convertedTeamPlacements = teamPlacements.map(p => ({
+  // Convert team placements to same format (exclude summary row from list)
+  const convertedTeamPlacements = teamPlacements.filter((p) => !isSummaryRow(p)).map(p => ({
     id: p.id,
     candidateName: p.candidateName,
     candidateId: null,
@@ -154,7 +164,7 @@ const processEmployeeData = async (employee) => {
     yearlyPlacementTarget,
     targetType,
     slabQualified,
-    slabComment: employee.employeeProfile.slabComment || null,
+    comment: employee.employeeProfile.comment || null,
     revenueGenerated,
     placementsCount,
     percentage,

@@ -26,9 +26,6 @@ const toInputDate = (d) => {
   return date.toISOString().slice(0, 10)
 }
 
-const BILLING_OPTIONS = ['PENDING', 'BILLED', 'CANCELLED', 'HOLD']
-const TYPE_OPTIONS = ['PERMANENT', 'CONTRACT']
-
 export default function HeadPlacementsView({ allowEdit = false }) {
   const [placementView, setPlacementView] = useState('team') // 'team' | 'personal'
   const [teamId, setTeamId] = useState('')
@@ -63,9 +60,6 @@ export default function HeadPlacementsView({ allowEdit = false }) {
     availablePlacementTypes.forEach((t) => {
       options.push({ value: t, label: t })
     })
-    if (availablePlacementTypes.length === 0) {
-      options.push({ value: 'PERMANENT', label: 'Permanent' }, { value: 'CONTRACT', label: 'Contract' })
-    }
     return options
   }, [availablePlacementTypes])
 
@@ -95,8 +89,8 @@ export default function HeadPlacementsView({ allowEdit = false }) {
       doq: toInputDate(row.doq),
       client: row.client ?? '',
       plcId: row.plcId ?? '',
-      placementType: row.placementType ?? 'PERMANENT',
-      billingStatus: row.billingStatus ?? 'PENDING',
+      placementType: row.placementType ?? '',
+      billingStatus: row.billingStatus ?? '',
       collectionStatus: row.collectionStatus ?? '',
       totalBilledHours: row.totalBilledHours != null ? String(row.totalBilledHours) : '',
       revenueUsd: row.revenueUsd != null ? String(row.revenueUsd) : '',
@@ -430,15 +424,11 @@ export default function HeadPlacementsView({ allowEdit = false }) {
                   </label>
                   <label className="block">
                     <span className="text-xs font-medium text-slate-500">Placement type</span>
-                    <select value={editForm.placementType} onChange={(e) => updateEditForm('placementType', e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20">
-                      {TYPE_OPTIONS.map((t) => (<option key={t} value={t}>{t}</option>))}
-                    </select>
+                    <input type="text" value={editForm.placementType} onChange={(e) => updateEditForm('placementType', e.target.value)} placeholder="e.g. C2C, PERMANENT, CONTRACT" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20" />
                   </label>
                   <label className="block">
                     <span className="text-xs font-medium text-slate-500">Billing status</span>
-                    <select value={editForm.billingStatus} onChange={(e) => updateEditForm('billingStatus', e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20">
-                      {BILLING_OPTIONS.map((b) => (<option key={b} value={b}>{b}</option>))}
-                    </select>
+                    <input type="text" value={editForm.billingStatus} onChange={(e) => updateEditForm('billingStatus', e.target.value)} placeholder="e.g. done, pending, BILLED" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20" />
                   </label>
                   <label className="block">
                     <span className="text-xs font-medium text-slate-500">Collection status</span>

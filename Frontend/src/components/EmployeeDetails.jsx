@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
 import { useEmployeeDetails, useUpdateVbid } from '../hooks/useEmployee'
 import { Skeleton, CardSkeleton, TableRowSkeleton } from './common/Skeleton'
+import SlabInfoButton from './common/SlabInfoButton'
 import L4DashboardView from './L4DashboardView'
 
 const EmployeeDetails = () => {
@@ -60,7 +61,7 @@ const EmployeeDetails = () => {
   const [vbidValue, setVbidValue] = useState('')
   const [openTooltip, setOpenTooltip] = useState(null)
   const tooltipRef = useRef(null)
- 
+
   // Sheet-backed personal/team placements for this employee/lead
   const [personalSheetData, setPersonalSheetData] = useState(null);
   const [teamSheetData, setTeamSheetData] = useState(null);
@@ -140,20 +141,22 @@ const EmployeeDetails = () => {
 
     // Revenue and placement targets: when in personal/team view with no sheet, show 0
     const profileRevenueTarget = Number(rawData.yearlyRevenueTarget ?? rawData.yearlyTarget ?? 0) || null;
+    // For personal view use only personal sheet data for "outside" KPIs so they match the list ("inside")
     const revenueTarget = personalViewNoData || teamViewNoData
       ? 0
       : (isTeamView
           ? (profileRevenueTarget ?? activeSummary?.yearlyRevenueTarget ?? 0)
           : (isPersonalView
-              ? (activeSummary?.yearlyRevenueTarget ?? rawData.yearlyRevenueTarget ?? 0)
+              ? (activeSummary?.yearlyRevenueTarget ?? 0)
               : (rawData.targetType === 'REVENUE' ? yearlyTarget : 0)));
 
+    // For personal view use only personal sheet data for "outside" KPIs so they match the placement list ("inside")
     const placementTarget = personalViewNoData || teamViewNoData
       ? 0
       : (isTeamView
           ? (activeSummary?.yearlyPlacementTarget || 0)
           : (isPersonalView
-              ? (activeSummary?.yearlyPlacementTarget || (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0))
+              ? (activeSummary?.yearlyPlacementTarget ?? 0)
               : (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0)));
 
     // Achieved values: when in personal/team view with no sheet data, show 0 (do not use merged dashboard totals)
@@ -165,12 +168,13 @@ const EmployeeDetails = () => {
               ? (activeSummary?.totalRevenueGenerated ?? 0)
               : revenueGenerated));
 
+    // For personal view use only personal sheet summary + list length so "outside" matches "inside" (no rawData fallback)
     const achievedPlacements = personalViewNoData || teamViewNoData
       ? 0
       : (isTeamView
           ? (activeSummary?.placementDone ?? 0)
           : (isPersonalView
-              ? (activeSummary?.placementDone ?? rawData.placementsCount ?? placements.length)
+              ? (activeSummary?.placementDone ?? personalSheetData?.placements?.length ?? 0)
               : (rawData.placementsCount ?? placements.length)));
 
     // Achievement percentages: 0 when no sheet data for this view; otherwise from summary or calculated
@@ -216,7 +220,6 @@ const EmployeeDetails = () => {
       teamName: rawData.team || 'Team Name',
       level: rawData.level,
       targetType: rawData.targetType || 'REVENUE',
-      individualSynopsis: 'Active Recruiter',
       // Targets
       yearlyTarget: rawData.targetType === 'PLACEMENTS' ? String(placementTarget) : CalculationService.formatCurrency(revenueTarget),
       yearlyRevenueTarget: revenueTarget,
@@ -241,7 +244,7 @@ const EmployeeDetails = () => {
       totalRevenue: rawData.targetType === 'PLACEMENTS' ? String(placementTarget) : CalculationService.formatCurrency(revenueTarget),
       targetPlacements: String(placementTarget),
       slabQualified: slab,
-      slabComment: rawData.slabComment ?? null,
+      comment: rawData.comment ?? null,
       incentiveUSD: incentiveInr != null ? CalculationService.formatCurrency(incentiveInrNum / 80) : null,
       incentiveINR: incentiveInr != null ? CalculationService.formatCurrency(incentiveInrNum, 'INR') : null,
       placements,
@@ -958,15 +961,31 @@ const EmployeeDetails = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600">{employeeData.teamLead}</td>
                       </tr>
-                      <tr className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50/50">
-                          Synopsis
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 italic">{employeeData.individualSynopsis}</td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
+
+                {/* Admin comment – separate card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white shadow-sm overflow-hidden"
+                >
+                  <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Comment
+                    </span>
+                  </div>
+                  <div
+                    className="px-5 py-4 min-h-[72px]"
+                    title={employeeData.comment ? String(employeeData.comment) : undefined}
+                  >
+                    <p className={`text-sm leading-relaxed ${employeeData.comment ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                      {employeeData.comment || 'No comment added'}
+                    </p>
+                  </div>
+                </motion.div>
 
               </div>
 
@@ -1076,7 +1095,10 @@ const EmployeeDetails = () => {
                           </tr>
                           <tr className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50/50">
-                              Slab Qualified
+                              <span className="inline-flex items-center gap-2">
+                                Slab Qualified
+                                <SlabInfoButton />
+                              </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-600">
                               {employeeData.teamSummary.slabQualified ? (
@@ -1163,7 +1185,10 @@ const EmployeeDetails = () => {
                           </tr>
                           <tr className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50/50">
-                              Slab Qualified
+                              <span className="inline-flex items-center gap-2">
+                                Slab Qualified
+                                <SlabInfoButton />
+                              </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-600">
                               {employeeData.personalSummary.slabQualified ? (
@@ -1242,7 +1267,10 @@ const EmployeeDetails = () => {
                           )}
                           <tr className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50/50">
-                              Slab Qualified
+                              <span className="inline-flex items-center gap-2">
+                                Slab Qualified
+                                <SlabInfoButton />
+                              </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-600">
                               {(() => {

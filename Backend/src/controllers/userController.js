@@ -2,6 +2,8 @@ import { Role } from "../generated/client/index.js";
 import bcrypt from "bcryptjs";
 import prisma from "../prisma.js";
 
+const COMMENT_MAX_LENGTH = 1000;
+
 // const prisma = new PrismaClient();
 
 export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, role }) {
@@ -83,7 +85,7 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
           name: u.employeeProfile.manager.name,
         }
       : null,
-    yearlyTarget: u.employeeProfile?.yearlyTarget || null,
+    yearlyTarget: null,
     targetType: u.employeeProfile?.targetType || "REVENUE",
   }));
 
@@ -133,7 +135,6 @@ export async function createUserWithProfile(payload, actorId) {
     teamId,
     managerId,
     level,
-    yearlyTarget,
     targetType,
   } = payload;
 
@@ -167,7 +168,6 @@ export async function createUserWithProfile(payload, actorId) {
                   teamId: teamId || null,
                   managerId: managerId || null,
                   level: level || null,
-                  yearlyTarget: yearlyTarget || 0,
                   targetType: targetType || "REVENUE",
                 },
               },
@@ -192,9 +192,8 @@ export async function createUserWithProfile(payload, actorId) {
           teamId: user.employeeProfile?.teamId || null,
           managerId: user.employeeProfile?.managerId || null,
           level: user.employeeProfile?.level || null,
-          yearlyTarget: user.employeeProfile?.yearlyTarget || null,
-    targetType: user.employeeProfile?.targetType || null,
-  },
+          targetType: user.employeeProfile?.targetType || null,
+        },
       },
     });
 
@@ -219,27 +218,28 @@ export async function updateUserWithProfile(id, body, actor) {
     managerId: rawManagerId,
     level: rawLevel,
     vbid,
-    yearlyTarget: rawYearlyTarget,
     targetType,
     isActive,
-    slabComment,
+    comment,
   } = body;
 
   const teamId = rawTeamId === "" ? null : rawTeamId;
   const managerId = rawManagerId === "" ? null : rawManagerId;
   const level = rawLevel === "" ? null : rawLevel;
-  const yearlyTarget = (rawYearlyTarget === "" || rawYearlyTarget === null) ? 0 : rawYearlyTarget;
-
+  if (comment !== undefined && comment !== null && String(comment).length > COMMENT_MAX_LENGTH) {
+    const err = new Error(`Comment must be at most ${COMMENT_MAX_LENGTH} characters`);
+    err.statusCode = 400;
+    throw err;
+  }
   if (actor.role !== Role.SUPER_ADMIN && actor.role !== Role.S1_ADMIN) {
     if (
       role ||
       rawTeamId !== undefined ||
       rawManagerId !== undefined ||
       rawLevel !== undefined ||
-      rawYearlyTarget !== undefined ||
       targetType !== undefined ||
       typeof isActive === "boolean" ||
-      slabComment !== undefined
+      comment !== undefined
     ) {
       const error = new Error("Unauthorized to change sensitive fields");
       error.statusCode = 403;
@@ -286,6 +286,12 @@ export async function updateUserWithProfile(id, body, actor) {
 
   let employeeProfileUpdate = undefined;
 
+  if (actor.role === Role.SUPER_ADMIN && comment !== undefined) {
+    const error = new Error("Only S1_ADMIN can update or create comments");
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (actor.role === Role.SUPER_ADMIN) {
     employeeProfileUpdate =
       role === Role.SUPER_ADMIN
@@ -310,9 +316,8 @@ export async function updateUserWithProfile(id, body, actor) {
                 managerId: managerId || null,
                 level: level || null,
                 vbid: vbid || null,
-                yearlyTarget: yearlyTarget || 0,
                 targetType: targetType || "REVENUE",
-                slabComment: slabComment !== undefined ? (slabComment === "" ? null : slabComment) : null,
+                comment: user.employeeProfile?.comment ?? null,
                 isActive:
                   typeof isActive === "boolean"
                     ? isActive
@@ -327,9 +332,8 @@ export async function updateUserWithProfile(id, body, actor) {
                 managerId: managerId !== undefined ? managerId : (user.employeeProfile?.managerId ?? null),
                 level: level !== undefined ? level : (user.employeeProfile?.level ?? null),
                 vbid: vbid !== undefined ? vbid : (user.employeeProfile?.vbid ?? null),
-                yearlyTarget: yearlyTarget !== undefined ? yearlyTarget : (user.employeeProfile?.yearlyTarget ?? 0),
                 targetType: targetType !== undefined ? targetType : (user.employeeProfile?.targetType ?? "REVENUE"),
-                slabComment: slabComment !== undefined ? (slabComment === "" ? null : slabComment) : (user.employeeProfile?.slabComment ?? null),
+                comment: user.employeeProfile?.comment ?? null,
                 isActive:
                   typeof isActive === "boolean"
                     ? isActive
@@ -343,10 +347,10 @@ export async function updateUserWithProfile(id, body, actor) {
           };
   }
 
-  if (actor.role === Role.S1_ADMIN && employeeProfileUpdate === undefined && user.employeeProfile && slabComment !== undefined) {
+  if (actor.role === Role.S1_ADMIN && user.employeeProfile && comment !== undefined) {
     employeeProfileUpdate = {
       update: {
-        slabComment: slabComment === "" ? null : slabComment,
+        comment: comment === "" ? null : comment,
       },
     };
   }
@@ -392,6 +396,52 @@ export async function updateUserWithProfile(id, body, actor) {
   });
 
   return updated;
+}
+
+/**
+ * Bulk update comment on employee profiles. Only S1_ADMIN; no restriction on which users.
+ */
+export async function updateBulkComment(actorId, { userIds, comment }) {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    const error = new Error("userIds must be a non-empty array");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const rawComment = comment == null ? "" : String(comment);
+  const commentValue = rawComment.trim() === "" ? null : rawComment.trim();
+  if (commentValue !== null && commentValue.length > COMMENT_MAX_LENGTH) {
+    const error = new Error(`Comment must be at most ${COMMENT_MAX_LENGTH} characters`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const actor = await prisma.user.findUnique({
+    where: { id: actorId },
+    include: { employeeProfile: true },
+  });
+  if (!actor || actor.role !== Role.S1_ADMIN) {
+    const error = new Error("Forbidden: only S1_ADMIN can bulk-update comments");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const allowedUserIds = userIds;
+
+  if (allowedUserIds.length === 0) {
+    const error = new Error(
+      "None of the selected members could be updated. You may not have permission to update their comments."
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
+  await prisma.employeeProfile.updateMany({
+    where: { id: { in: allowedUserIds } },
+    data: { comment: commentValue },
+  });
+
+  return { updated: allowedUserIds.length, userIds: allowedUserIds };
 }
 
 export async function softDeleteUser(id, actorId) {

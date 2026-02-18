@@ -5,6 +5,7 @@ import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import CalculationService from '../utils/calculationService'
 import { Skeleton } from './common/Skeleton'
+import SlabInfoButton from './common/SlabInfoButton'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -514,7 +515,10 @@ const TeamLeadPage = () => {
                 <span className="font-semibold text-slate-800">{sheetSummary.totalRevenueGenerated != null ? CalculationService.formatCurrency(Number(sheetSummary.totalRevenueGenerated)) : '-'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block">Slab Qualified</span>
+                <span className="text-slate-500 flex items-center gap-2">
+                  Slab Qualified
+                  <SlabInfoButton />
+                </span>
                 <span className="font-semibold text-slate-800">{sheetSummary.slabQualified != null ? CalculationService.formatSlabAsPercentage(sheetSummary.slabQualified) : '-'}</span>
               </div>
               <div>

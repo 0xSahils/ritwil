@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CalculationService from '../utils/calculationService'
 import { apiRequest } from '../api/client'
+import SlabInfoButton from './common/SlabInfoButton'
 
 const TAB_IDS = ['overview', 'placements', 'profile']
 const TAB_LABELS = { overview: 'Overview', placements: 'Placements', profile: 'Profile' }
@@ -298,18 +299,19 @@ export default function L4DashboardView({
     { value: 'CANCELLED', label: 'Cancelled' },
     { value: 'HOLD', label: 'Hold' },
   ]
-  const PLACEMENT_TYPE_OPTIONS = [
-    { value: '', label: 'All' },
-    { value: 'PERMANENT', label: 'Permanent' },
-    { value: 'CONTRACT', label: 'Contract' },
-  ]
-
   const placementUniqueValues = useMemo(() => {
     const list = currentPlacements || []
     const collection = [...new Set(list.map((p) => String(p.collectionStatus || '').trim()).filter(Boolean))].sort()
     const years = [...new Set(list.map((p) => (p.placementYear != null ? String(p.placementYear) : p.doj ? String(new Date(p.doj).getFullYear()) : '')).filter(Boolean))].sort((a, b) => Number(b) - Number(a))
-    return { collection, years }
+    const placementTypes = [...new Set(list.map((p) => String(p.placementType || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+    return { collection, years, placementTypes }
   }, [currentPlacements])
+
+  const PLACEMENT_TYPE_OPTIONS = useMemo(() => {
+    const options = [{ value: '', label: 'All' }]
+    placementUniqueValues.placementTypes.forEach((t) => options.push({ value: t, label: t }))
+    return options
+  }, [placementUniqueValues])
 
   const filteredPlacements = useMemo(() => {
     let list = currentPlacements || []
@@ -336,12 +338,7 @@ export default function L4DashboardView({
       )
     }
     if (placementFilterType) {
-      list = list.filter((p) => {
-        const t = String(p.placementType || '').toUpperCase()
-        if (placementFilterType === 'PERMANENT') return t === 'PERMANENT' || (t && t.includes('PERMANENT')) || (t && t.includes('FTE'))
-        if (placementFilterType === 'CONTRACT') return t === 'CONTRACT' || (t && t.includes('CONTRACT'))
-        return t === placementFilterType
-      })
+      list = list.filter((p) => String(p.placementType || '').trim() === placementFilterType)
     }
     if (placementFilterYear) {
       list = list.filter(
@@ -753,12 +750,15 @@ export default function L4DashboardView({
                       </svg>
                     </motion.div>
                     <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-widest text-[#8B8B9B]">Current slab</p>
+                      <p className="text-[11px] font-medium uppercase tracking-widest text-[#8B8B9B] flex items-center gap-2">
+                        Current slab
+                        <SlabInfoButton />
+                      </p>
                       <p className="text-xl font-bold tracking-tight text-[#222222]">{employeeData?.slabQualified != null ? CalculationService.formatSlabAsPercentage(employeeData.slabQualified) : '–'}</p>
                       <p className="text-xs text-[#8B8B9B]">Incentive tier</p>
                     </div>
                   </div>
-                  {(employeeData?.slabComment != null && employeeData.slabComment !== '') && (
+                  {(employeeData?.comment != null && employeeData.comment !== '') && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -766,7 +766,7 @@ export default function L4DashboardView({
                       className="border-t border-[#EAE6F3] pt-4"
                     >
                       <p className="text-[11px] font-medium uppercase tracking-widest text-[#8B8B9B] mb-1.5">Admin comment</p>
-                      <p className="text-sm text-[#222222] whitespace-pre-wrap leading-relaxed">{employeeData.slabComment}</p>
+                      <p className="text-sm text-[#222222] whitespace-pre-wrap leading-relaxed">{employeeData.comment}</p>
                     </motion.div>
                   )}
                 </motion.div>
@@ -1275,7 +1275,10 @@ export default function L4DashboardView({
                   </h3>
                   <dl className="space-y-3">
                     <div className="flex justify-between border-b border-slate-100 pb-2">
-                      <dt className="text-sm font-medium text-slate-500">Slab qualified</dt>
+                      <dt className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                        Slab qualified
+                        <SlabInfoButton />
+                      </dt>
                       <dd>
                         {employeeData?.slabQualified ? (
                           <span

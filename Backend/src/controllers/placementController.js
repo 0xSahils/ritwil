@@ -553,8 +553,10 @@ export async function updatePlacement(id, data, actorId) {
     if (data.doq !== undefined) updates.doq = parseDateForUpdate(data.doq) ?? null;
     if (data.client !== undefined) updates.client = String(data.client).trim() || personal.client;
     if (data.plcId !== undefined) updates.plcId = String(data.plcId).trim() || personal.plcId;
-    if (data.placementType !== undefined) updates.placementType = mapPlacementType(data.placementType);
-    if (data.billingStatus !== undefined) updates.billingStatus = mapBillingStatus(data.billingStatus);
+    // PersonalPlacement.placementType is a string; store exact value (e.g. C2C) from sheet/edit, do not normalize
+    if (data.placementType !== undefined) updates.placementType = String(data.placementType).trim() || personal.placementType;
+    // PersonalPlacement.billingStatus is a string; store exact value (e.g. done, pending) from sheet/edit, do not normalize
+    if (data.billingStatus !== undefined) updates.billingStatus = String(data.billingStatus).trim() || personal.billingStatus;
     if (data.collectionStatus !== undefined) updates.collectionStatus = data.collectionStatus != null ? String(data.collectionStatus).trim() : null;
     if (data.totalBilledHours !== undefined) updates.totalBilledHours = data.totalBilledHours !== "" && data.totalBilledHours != null ? Number(data.totalBilledHours) : null;
     if (data.revenueUsd !== undefined) updates.revenueUsd = parseNum(data.revenueUsd, 0);
@@ -582,8 +584,10 @@ export async function updatePlacement(id, data, actorId) {
     if (data.doq !== undefined) updates.doq = parseDateForUpdate(data.doq) ?? null;
     if (data.client !== undefined) updates.client = String(data.client).trim() || team.client;
     if (data.plcId !== undefined) updates.plcId = String(data.plcId).trim() || team.plcId;
-    if (data.placementType !== undefined) updates.placementType = mapPlacementType(data.placementType);
-    if (data.billingStatus !== undefined) updates.billingStatus = mapBillingStatus(data.billingStatus);
+    // TeamPlacement.placementType is a string; store exact value (e.g. C2C) from sheet/edit, do not normalize
+    if (data.placementType !== undefined) updates.placementType = String(data.placementType).trim() || team.placementType;
+    // TeamPlacement.billingStatus is a string; store exact value (e.g. done, pending) from sheet/edit, do not normalize
+    if (data.billingStatus !== undefined) updates.billingStatus = String(data.billingStatus).trim() || team.billingStatus;
     if (data.collectionStatus !== undefined) updates.collectionStatus = data.collectionStatus != null ? String(data.collectionStatus).trim() : null;
     if (data.totalBilledHours !== undefined) updates.totalBilledHours = data.totalBilledHours !== "" && data.totalBilledHours != null ? Number(data.totalBilledHours) : null;
     if (data.revenueUsd !== undefined) updates.revenueLeadUsd = parseNum(data.revenueUsd, 0);
@@ -914,7 +918,6 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
                          employeeProfile: {
                              create: {
                                  vbid: vbid ? String(vbid).trim() : null,
-                                 yearlyTarget: 0 // Default value to satisfy schema
                              }
                          }
                      }
@@ -937,68 +940,28 @@ export async function bulkCreateGlobalPlacements(placementsData, actorId, campai
         continue;
       }
 
-      // Update Profile Information if provided (runs for both new and existing users)
+      // Update Profile Information if provided (runs for both new and existing users). Target/slab live in placement sheets only.
       {
           const updateData = {};
-          
-          if (vbid) {
-            updateData.vbid = String(vbid).trim();
-          }
-
-          if (yearlyTarget !== undefined && yearlyTarget !== null && yearlyTarget !== "") {
-            const targetVal = Number(yearlyTarget);
-            if (!isNaN(targetVal)) {
-              updateData.yearlyTarget = targetVal;
-            }
-          }
-
-          if (yearlyRevenueTarget !== undefined && yearlyRevenueTarget !== null && yearlyRevenueTarget !== "") {
-            const rt = Number(yearlyRevenueTarget);
-            if (!isNaN(rt)) updateData.yearlyRevenueTarget = rt;
-          }
-
-          if (yearlyPlacementTarget !== undefined && yearlyPlacementTarget !== null && yearlyPlacementTarget !== "") {
-            const pt = Number(yearlyPlacementTarget);
-            if (!isNaN(pt)) updateData.yearlyPlacementTarget = pt;
-          }
-
+          if (vbid) updateData.vbid = String(vbid).trim();
           if (targetType) {
-             const t = String(targetType).toUpperCase();
-             if (t === "REVENUE" || t === "PLACEMENTS") {
-                 updateData.targetType = t;
-             }
+            const t = String(targetType).toUpperCase();
+            if (t === "REVENUE" || t === "PLACEMENTS") updateData.targetType = t;
           }
-
-          if (slabQualified !== undefined && slabQualified !== null && slabQualified !== "") {
-            updateData.slabQualified = String(slabQualified);
-          }
-
-          // Apply updates if any
           if (Object.keys(updateData).length > 0) {
             const profile = await prisma.employeeProfile.findUnique({ where: { id: employeeId } });
-            
             if (!profile) {
-              // Create new profile
-              await prisma.employeeProfile.create({ 
-                data: { 
-                  id: employeeId, 
-                  ...updateData,
-                  yearlyTarget: updateData.yearlyTarget || 0 
-                } 
+              await prisma.employeeProfile.create({
+                data: { id: employeeId, ...updateData },
               });
             } else {
               const finalUpdates = {};
-              if (updateData.vbid && !profile.vbid) finalUpdates.vbid = updateData.vbid; // Only set if missing
-              if (updateData.yearlyTarget !== undefined) finalUpdates.yearlyTarget = updateData.yearlyTarget; // Always update target
-              if (updateData.yearlyRevenueTarget !== undefined) finalUpdates.yearlyRevenueTarget = updateData.yearlyRevenueTarget;
-              if (updateData.yearlyPlacementTarget !== undefined) finalUpdates.yearlyPlacementTarget = updateData.yearlyPlacementTarget;
-              if (updateData.targetType !== undefined) finalUpdates.targetType = updateData.targetType; // Always update target type
-              if (updateData.slabQualified !== undefined) finalUpdates.slabQualified = updateData.slabQualified; // Always update slab
-
+              if (updateData.vbid != null && !profile.vbid) finalUpdates.vbid = updateData.vbid;
+              if (updateData.targetType !== undefined) finalUpdates.targetType = updateData.targetType;
               if (Object.keys(finalUpdates).length > 0) {
-                await prisma.employeeProfile.update({ 
-                  where: { id: employeeId }, 
-                  data: finalUpdates 
+                await prisma.employeeProfile.update({
+                  where: { id: employeeId },
+                  data: finalUpdates,
                 });
               }
             }
@@ -1145,12 +1108,7 @@ export async function bulkUpdateMetrics(metricsData, actorId) {
       const {
         vbid,
         yearlyPlacementTarget,
-        placementsDone,
-        targetAchievementStatus,
-        totalRevenue,
         slabQualified,
-        totalIncentiveAmount,
-        totalIncentivePaid,
         yearlyTarget,
         teamName,
         managerName,
@@ -1180,36 +1138,12 @@ export async function bulkUpdateMetrics(metricsData, actorId) {
       const teamNameStr = teamName ? String(teamName).toLowerCase() : "";
       const isVantageTeam = teamNameStr.includes("vant");
 
+      // Target/slab live in placement sheets only; only update targetType and hierarchy on profile
       if (isVantageTeam) {
-        // Vantage: keep revenue target, targetType = REVENUE
-        const revenueTarget = parseNum(yearlyTarget, undefined);
-        if (revenueTarget !== undefined) {
-          updateData.yearlyTarget = revenueTarget;
-        }
         updateData.targetType = "REVENUE";
-        // Still store placement target separately if provided (for reference),
-        // but do NOT use it as the main yearlyTarget.
-        const placementTargetNum = parseNum(yearlyPlacementTarget, undefined);
-        if (placementTargetNum !== undefined) {
-          updateData.yearlyPlacementTarget = placementTargetNum;
-        }
       } else {
-        // All non-Vantage teams: yearly target is "number of placements"
-        const placementTargetNum = parseNum(yearlyPlacementTarget, undefined);
-        if (placementTargetNum !== undefined) {
-          updateData.yearlyPlacementTarget = placementTargetNum;
-          // Also mirror into yearlyTarget so dashboards can use a single field
-          updateData.yearlyTarget = placementTargetNum;
-        }
         updateData.targetType = "PLACEMENTS";
       }
-
-      if (placementsDone !== undefined) updateData.placementsDone = parseInt(parseNum(placementsDone, undefined) || 0);
-      if (targetAchievementStatus !== undefined) updateData.targetAchievementStatus = String(targetAchievementStatus);
-      if (totalRevenue !== undefined) updateData.totalRevenue = parseNum(totalRevenue, undefined);
-      if (slabQualified !== undefined) updateData.slabQualified = String(slabQualified);
-      if (totalIncentiveAmount !== undefined) updateData.totalIncentiveAmount = parseNum(totalIncentiveAmount, undefined);
-      if (totalIncentivePaid !== undefined) updateData.totalIncentivePaid = parseNum(totalIncentivePaid, undefined);
 
       // Handle Team
       if (teamName) {
@@ -2083,44 +2017,13 @@ export async function importPersonalPlacements(payload, actorId) {
 
         if (!profile) continue;
 
-        const updateData = {};
-
-        // Vantage team (name contains "vant") = REVENUE; all other teams = PLACEMENTS
+        // Vantage team (name contains "vant") = REVENUE; all other teams = PLACEMENTS. Target/slab live in placement sheets only.
         const isVantage = profile.team?.name?.toLowerCase().includes('vant');
-        updateData.targetType = isVantage ? 'REVENUE' : 'PLACEMENTS';
-
-        // Yearly target handling
-        if (data.yearlyPlacementTarget !== null) {
-          updateData.yearlyTarget = data.yearlyPlacementTarget;
-          updateData.yearlyPlacementTarget = data.yearlyPlacementTarget;
-        }
-
-        // Update all summary fields from summary data
-        if (data.placementDone !== null) {
-          updateData.placementsDone = data.placementDone;
-        }
-        if (data.targetAchievedPercent !== null) {
-          updateData.revenueTargetAchievedPercent = data.targetAchievedPercent;
-        }
-        if (data.totalRevenue !== null) {
-          updateData.totalRevenue = data.totalRevenue;
-        }
-        if (data.slabQualified !== null) {
-          updateData.slabQualified = data.slabQualified;
-        }
-        if (data.totalIncentiveAmount !== null) {
-          updateData.totalIncentiveAmount = data.totalIncentiveAmount;
-        }
-        if (data.totalIncentivePaid !== null) {
-          updateData.totalIncentivePaid = data.totalIncentivePaid;
-        }
-
-        if (Object.keys(updateData).length > 0) {
-          await tx.employeeProfile.update({
-            where: { id: employeeId },
-            data: updateData,
-          });
-        }
+        const updateData = { targetType: isVantage ? 'REVENUE' : 'PLACEMENTS' };
+        await tx.employeeProfile.update({
+          where: { id: employeeId },
+          data: updateData,
+        });
       }
 
     await tx.auditLog.create({

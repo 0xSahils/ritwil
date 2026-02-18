@@ -35,7 +35,7 @@ const AdminEmployeePlacements = () => {
     doi: "",
     doq: "",
     doj: "",
-    placementType: "PERMANENT",
+    placementType: "",
     billedHours: "",
     revenue: "",
     teamLead: "",
@@ -553,11 +553,8 @@ const AdminEmployeePlacements = () => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Placement Type</label>
-                <select className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={formData.placementType} onChange={e => setFormData({...formData, placementType: e.target.value})}>
-                  <option value="PERMANENT">FTE</option>
-                  <option value="CONTRACT">Contract</option>
-                </select>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="e.g. C2C, PERMANENT, CONTRACT"
+                  value={formData.placementType || ""} onChange={e => setFormData({...formData, placementType: e.target.value})} />
               </div>
 
               <div>

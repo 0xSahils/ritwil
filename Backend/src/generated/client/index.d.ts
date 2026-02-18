@@ -4944,34 +4944,8 @@ export namespace Prisma {
 
   export type AggregateEmployeeProfile = {
     _count: EmployeeProfileCountAggregateOutputType | null
-    _avg: EmployeeProfileAvgAggregateOutputType | null
-    _sum: EmployeeProfileSumAggregateOutputType | null
     _min: EmployeeProfileMinAggregateOutputType | null
     _max: EmployeeProfileMaxAggregateOutputType | null
-  }
-
-  export type EmployeeProfileAvgAggregateOutputType = {
-    yearlyTarget: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    yearlyPlacementTarget: Decimal | null
-    placementsDone: number | null
-    totalRevenue: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
-    totalIncentiveAmount: Decimal | null
-    totalIncentivePaid: Decimal | null
-  }
-
-  export type EmployeeProfileSumAggregateOutputType = {
-    yearlyTarget: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    yearlyPlacementTarget: Decimal | null
-    placementsDone: number | null
-    totalRevenue: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
-    totalIncentiveAmount: Decimal | null
-    totalIncentivePaid: Decimal | null
   }
 
   export type EmployeeProfileMinAggregateOutputType = {
@@ -4980,19 +4954,7 @@ export namespace Prisma {
     managerId: string | null
     level: string | null
     vbid: string | null
-    yearlyTarget: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    yearlyPlacementTarget: Decimal | null
-    slabQualified: string | null
-    slabComment: string | null
-    placementsDone: number | null
-    targetAchievementStatus: string | null
-    totalRevenue: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
-    totalIncentiveAmount: Decimal | null
-    totalIncentivePaid: Decimal | null
-    individualSynopsis: string | null
+    comment: string | null
     targetType: $Enums.TargetType | null
     isActive: boolean | null
     deletedAt: Date | null
@@ -5006,19 +4968,7 @@ export namespace Prisma {
     managerId: string | null
     level: string | null
     vbid: string | null
-    yearlyTarget: Decimal | null
-    yearlyRevenueTarget: Decimal | null
-    yearlyPlacementTarget: Decimal | null
-    slabQualified: string | null
-    slabComment: string | null
-    placementsDone: number | null
-    targetAchievementStatus: string | null
-    totalRevenue: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
-    totalIncentiveAmount: Decimal | null
-    totalIncentivePaid: Decimal | null
-    individualSynopsis: string | null
+    comment: string | null
     targetType: $Enums.TargetType | null
     isActive: boolean | null
     deletedAt: Date | null
@@ -5032,19 +4982,7 @@ export namespace Prisma {
     managerId: number
     level: number
     vbid: number
-    yearlyTarget: number
-    yearlyRevenueTarget: number
-    yearlyPlacementTarget: number
-    slabQualified: number
-    slabComment: number
-    placementsDone: number
-    targetAchievementStatus: number
-    totalRevenue: number
-    revenueAch: number
-    revenueTargetAchievedPercent: number
-    totalIncentiveAmount: number
-    totalIncentivePaid: number
-    individualSynopsis: number
+    comment: number
     targetType: number
     isActive: number
     deletedAt: number
@@ -5054,49 +4992,13 @@ export namespace Prisma {
   }
 
 
-  export type EmployeeProfileAvgAggregateInputType = {
-    yearlyTarget?: true
-    yearlyRevenueTarget?: true
-    yearlyPlacementTarget?: true
-    placementsDone?: true
-    totalRevenue?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
-    totalIncentiveAmount?: true
-    totalIncentivePaid?: true
-  }
-
-  export type EmployeeProfileSumAggregateInputType = {
-    yearlyTarget?: true
-    yearlyRevenueTarget?: true
-    yearlyPlacementTarget?: true
-    placementsDone?: true
-    totalRevenue?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
-    totalIncentiveAmount?: true
-    totalIncentivePaid?: true
-  }
-
   export type EmployeeProfileMinAggregateInputType = {
     id?: true
     teamId?: true
     managerId?: true
     level?: true
     vbid?: true
-    yearlyTarget?: true
-    yearlyRevenueTarget?: true
-    yearlyPlacementTarget?: true
-    slabQualified?: true
-    slabComment?: true
-    placementsDone?: true
-    targetAchievementStatus?: true
-    totalRevenue?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
-    totalIncentiveAmount?: true
-    totalIncentivePaid?: true
-    individualSynopsis?: true
+    comment?: true
     targetType?: true
     isActive?: true
     deletedAt?: true
@@ -5110,19 +5012,7 @@ export namespace Prisma {
     managerId?: true
     level?: true
     vbid?: true
-    yearlyTarget?: true
-    yearlyRevenueTarget?: true
-    yearlyPlacementTarget?: true
-    slabQualified?: true
-    slabComment?: true
-    placementsDone?: true
-    targetAchievementStatus?: true
-    totalRevenue?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
-    totalIncentiveAmount?: true
-    totalIncentivePaid?: true
-    individualSynopsis?: true
+    comment?: true
     targetType?: true
     isActive?: true
     deletedAt?: true
@@ -5136,19 +5026,7 @@ export namespace Prisma {
     managerId?: true
     level?: true
     vbid?: true
-    yearlyTarget?: true
-    yearlyRevenueTarget?: true
-    yearlyPlacementTarget?: true
-    slabQualified?: true
-    slabComment?: true
-    placementsDone?: true
-    targetAchievementStatus?: true
-    totalRevenue?: true
-    revenueAch?: true
-    revenueTargetAchievedPercent?: true
-    totalIncentiveAmount?: true
-    totalIncentivePaid?: true
-    individualSynopsis?: true
+    comment?: true
     targetType?: true
     isActive?: true
     deletedAt?: true
@@ -5195,18 +5073,6 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
-     * Select which fields to average
-    **/
-    _avg?: EmployeeProfileAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: EmployeeProfileSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
      * Select which fields to find the minimum value
     **/
     _min?: EmployeeProfileMinAggregateInputType
@@ -5237,8 +5103,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: EmployeeProfileCountAggregateInputType | true
-    _avg?: EmployeeProfileAvgAggregateInputType
-    _sum?: EmployeeProfileSumAggregateInputType
     _min?: EmployeeProfileMinAggregateInputType
     _max?: EmployeeProfileMaxAggregateInputType
   }
@@ -5249,27 +5113,13 @@ export namespace Prisma {
     managerId: string | null
     level: string | null
     vbid: string | null
-    yearlyTarget: Decimal
-    yearlyRevenueTarget: Decimal | null
-    yearlyPlacementTarget: Decimal | null
-    slabQualified: string | null
-    slabComment: string | null
-    placementsDone: number | null
-    targetAchievementStatus: string | null
-    totalRevenue: Decimal | null
-    revenueAch: Decimal | null
-    revenueTargetAchievedPercent: Decimal | null
-    totalIncentiveAmount: Decimal | null
-    totalIncentivePaid: Decimal | null
-    individualSynopsis: string | null
+    comment: string | null
     targetType: $Enums.TargetType
     isActive: boolean
     deletedAt: Date | null
     createdAt: Date
     updatedAt: Date
     _count: EmployeeProfileCountAggregateOutputType | null
-    _avg: EmployeeProfileAvgAggregateOutputType | null
-    _sum: EmployeeProfileSumAggregateOutputType | null
     _min: EmployeeProfileMinAggregateOutputType | null
     _max: EmployeeProfileMaxAggregateOutputType | null
   }
@@ -5294,19 +5144,7 @@ export namespace Prisma {
     managerId?: boolean
     level?: boolean
     vbid?: boolean
-    yearlyTarget?: boolean
-    yearlyRevenueTarget?: boolean
-    yearlyPlacementTarget?: boolean
-    slabQualified?: boolean
-    slabComment?: boolean
-    placementsDone?: boolean
-    targetAchievementStatus?: boolean
-    totalRevenue?: boolean
-    revenueAch?: boolean
-    revenueTargetAchievedPercent?: boolean
-    totalIncentiveAmount?: boolean
-    totalIncentivePaid?: boolean
-    individualSynopsis?: boolean
+    comment?: boolean
     targetType?: boolean
     isActive?: boolean
     deletedAt?: boolean
@@ -5323,19 +5161,7 @@ export namespace Prisma {
     managerId?: boolean
     level?: boolean
     vbid?: boolean
-    yearlyTarget?: boolean
-    yearlyRevenueTarget?: boolean
-    yearlyPlacementTarget?: boolean
-    slabQualified?: boolean
-    slabComment?: boolean
-    placementsDone?: boolean
-    targetAchievementStatus?: boolean
-    totalRevenue?: boolean
-    revenueAch?: boolean
-    revenueTargetAchievedPercent?: boolean
-    totalIncentiveAmount?: boolean
-    totalIncentivePaid?: boolean
-    individualSynopsis?: boolean
+    comment?: boolean
     targetType?: boolean
     isActive?: boolean
     deletedAt?: boolean
@@ -5352,19 +5178,7 @@ export namespace Prisma {
     managerId?: boolean
     level?: boolean
     vbid?: boolean
-    yearlyTarget?: boolean
-    yearlyRevenueTarget?: boolean
-    yearlyPlacementTarget?: boolean
-    slabQualified?: boolean
-    slabComment?: boolean
-    placementsDone?: boolean
-    targetAchievementStatus?: boolean
-    totalRevenue?: boolean
-    revenueAch?: boolean
-    revenueTargetAchievedPercent?: boolean
-    totalIncentiveAmount?: boolean
-    totalIncentivePaid?: boolean
-    individualSynopsis?: boolean
+    comment?: boolean
     targetType?: boolean
     isActive?: boolean
     deletedAt?: boolean
@@ -5399,22 +5213,10 @@ export namespace Prisma {
        * VBID is unique per profile (null allowed; non-null values must be unique across all users).
        */
       vbid: string | null
-      yearlyTarget: Prisma.Decimal
-      yearlyRevenueTarget: Prisma.Decimal | null
-      yearlyPlacementTarget: Prisma.Decimal | null
-      slabQualified: string | null
       /**
        * Admin-written comment shown in L4 dashboard slab box
        */
-      slabComment: string | null
-      placementsDone: number | null
-      targetAchievementStatus: string | null
-      totalRevenue: Prisma.Decimal | null
-      revenueAch: Prisma.Decimal | null
-      revenueTargetAchievedPercent: Prisma.Decimal | null
-      totalIncentiveAmount: Prisma.Decimal | null
-      totalIncentivePaid: Prisma.Decimal | null
-      individualSynopsis: string | null
+      comment: string | null
       targetType: $Enums.TargetType
       isActive: boolean
       deletedAt: Date | null
@@ -5821,19 +5623,7 @@ export namespace Prisma {
     readonly managerId: FieldRef<"EmployeeProfile", 'String'>
     readonly level: FieldRef<"EmployeeProfile", 'String'>
     readonly vbid: FieldRef<"EmployeeProfile", 'String'>
-    readonly yearlyTarget: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly yearlyRevenueTarget: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly yearlyPlacementTarget: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly slabQualified: FieldRef<"EmployeeProfile", 'String'>
-    readonly slabComment: FieldRef<"EmployeeProfile", 'String'>
-    readonly placementsDone: FieldRef<"EmployeeProfile", 'Int'>
-    readonly targetAchievementStatus: FieldRef<"EmployeeProfile", 'String'>
-    readonly totalRevenue: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly revenueAch: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly revenueTargetAchievedPercent: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly totalIncentiveAmount: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly totalIncentivePaid: FieldRef<"EmployeeProfile", 'Decimal'>
-    readonly individualSynopsis: FieldRef<"EmployeeProfile", 'String'>
+    readonly comment: FieldRef<"EmployeeProfile", 'String'>
     readonly targetType: FieldRef<"EmployeeProfile", 'TargetType'>
     readonly isActive: FieldRef<"EmployeeProfile", 'Boolean'>
     readonly deletedAt: FieldRef<"EmployeeProfile", 'DateTime'>
@@ -11911,19 +11701,7 @@ export namespace Prisma {
     managerId: 'managerId',
     level: 'level',
     vbid: 'vbid',
-    yearlyTarget: 'yearlyTarget',
-    yearlyRevenueTarget: 'yearlyRevenueTarget',
-    yearlyPlacementTarget: 'yearlyPlacementTarget',
-    slabQualified: 'slabQualified',
-    slabComment: 'slabComment',
-    placementsDone: 'placementsDone',
-    targetAchievementStatus: 'targetAchievementStatus',
-    totalRevenue: 'totalRevenue',
-    revenueAch: 'revenueAch',
-    revenueTargetAchievedPercent: 'revenueTargetAchievedPercent',
-    totalIncentiveAmount: 'totalIncentiveAmount',
-    totalIncentivePaid: 'totalIncentivePaid',
-    individualSynopsis: 'individualSynopsis',
+    comment: 'comment',
     targetType: 'targetType',
     isActive: 'isActive',
     deletedAt: 'deletedAt',
@@ -12159,20 +11937,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'Int'
-   */
-  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-  /**
-   * Reference to a field of type 'Int[]'
-   */
-  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-    
-
-
-  /**
    * Reference to a field of type 'TargetType'
    */
   export type EnumTargetTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TargetType'>
@@ -12204,6 +11968,20 @@ export namespace Prisma {
    * Reference to a field of type 'PlacementImportType[]'
    */
   export type ListEnumPlacementImportTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PlacementImportType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int'
+   */
+  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int[]'
+   */
+  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -12477,19 +12255,7 @@ export namespace Prisma {
     managerId?: StringNullableFilter<"EmployeeProfile"> | string | null
     level?: StringNullableFilter<"EmployeeProfile"> | string | null
     vbid?: StringNullableFilter<"EmployeeProfile"> | string | null
-    yearlyTarget?: DecimalFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: StringNullableFilter<"EmployeeProfile"> | string | null
-    slabComment?: StringNullableFilter<"EmployeeProfile"> | string | null
-    placementsDone?: IntNullableFilter<"EmployeeProfile"> | number | null
-    targetAchievementStatus?: StringNullableFilter<"EmployeeProfile"> | string | null
-    totalRevenue?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"EmployeeProfile"> | string | null
+    comment?: StringNullableFilter<"EmployeeProfile"> | string | null
     targetType?: EnumTargetTypeFilter<"EmployeeProfile"> | $Enums.TargetType
     isActive?: BoolFilter<"EmployeeProfile"> | boolean
     deletedAt?: DateTimeNullableFilter<"EmployeeProfile"> | Date | string | null
@@ -12506,19 +12272,7 @@ export namespace Prisma {
     managerId?: SortOrderInput | SortOrder
     level?: SortOrderInput | SortOrder
     vbid?: SortOrderInput | SortOrder
-    yearlyTarget?: SortOrder
-    yearlyRevenueTarget?: SortOrderInput | SortOrder
-    yearlyPlacementTarget?: SortOrderInput | SortOrder
-    slabQualified?: SortOrderInput | SortOrder
-    slabComment?: SortOrderInput | SortOrder
-    placementsDone?: SortOrderInput | SortOrder
-    targetAchievementStatus?: SortOrderInput | SortOrder
-    totalRevenue?: SortOrderInput | SortOrder
-    revenueAch?: SortOrderInput | SortOrder
-    revenueTargetAchievedPercent?: SortOrderInput | SortOrder
-    totalIncentiveAmount?: SortOrderInput | SortOrder
-    totalIncentivePaid?: SortOrderInput | SortOrder
-    individualSynopsis?: SortOrderInput | SortOrder
+    comment?: SortOrderInput | SortOrder
     targetType?: SortOrder
     isActive?: SortOrder
     deletedAt?: SortOrderInput | SortOrder
@@ -12538,19 +12292,7 @@ export namespace Prisma {
     teamId?: StringNullableFilter<"EmployeeProfile"> | string | null
     managerId?: StringNullableFilter<"EmployeeProfile"> | string | null
     level?: StringNullableFilter<"EmployeeProfile"> | string | null
-    yearlyTarget?: DecimalFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: StringNullableFilter<"EmployeeProfile"> | string | null
-    slabComment?: StringNullableFilter<"EmployeeProfile"> | string | null
-    placementsDone?: IntNullableFilter<"EmployeeProfile"> | number | null
-    targetAchievementStatus?: StringNullableFilter<"EmployeeProfile"> | string | null
-    totalRevenue?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"EmployeeProfile"> | string | null
+    comment?: StringNullableFilter<"EmployeeProfile"> | string | null
     targetType?: EnumTargetTypeFilter<"EmployeeProfile"> | $Enums.TargetType
     isActive?: BoolFilter<"EmployeeProfile"> | boolean
     deletedAt?: DateTimeNullableFilter<"EmployeeProfile"> | Date | string | null
@@ -12567,29 +12309,15 @@ export namespace Prisma {
     managerId?: SortOrderInput | SortOrder
     level?: SortOrderInput | SortOrder
     vbid?: SortOrderInput | SortOrder
-    yearlyTarget?: SortOrder
-    yearlyRevenueTarget?: SortOrderInput | SortOrder
-    yearlyPlacementTarget?: SortOrderInput | SortOrder
-    slabQualified?: SortOrderInput | SortOrder
-    slabComment?: SortOrderInput | SortOrder
-    placementsDone?: SortOrderInput | SortOrder
-    targetAchievementStatus?: SortOrderInput | SortOrder
-    totalRevenue?: SortOrderInput | SortOrder
-    revenueAch?: SortOrderInput | SortOrder
-    revenueTargetAchievedPercent?: SortOrderInput | SortOrder
-    totalIncentiveAmount?: SortOrderInput | SortOrder
-    totalIncentivePaid?: SortOrderInput | SortOrder
-    individualSynopsis?: SortOrderInput | SortOrder
+    comment?: SortOrderInput | SortOrder
     targetType?: SortOrder
     isActive?: SortOrder
     deletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: EmployeeProfileCountOrderByAggregateInput
-    _avg?: EmployeeProfileAvgOrderByAggregateInput
     _max?: EmployeeProfileMaxOrderByAggregateInput
     _min?: EmployeeProfileMinOrderByAggregateInput
-    _sum?: EmployeeProfileSumOrderByAggregateInput
   }
 
   export type EmployeeProfileScalarWhereWithAggregatesInput = {
@@ -12601,19 +12329,7 @@ export namespace Prisma {
     managerId?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
     level?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
     vbid?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
-    yearlyTarget?: DecimalWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: DecimalNullableWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: DecimalNullableWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
-    slabComment?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
-    placementsDone?: IntNullableWithAggregatesFilter<"EmployeeProfile"> | number | null
-    targetAchievementStatus?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
-    totalRevenue?: DecimalNullableWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: DecimalNullableWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: DecimalNullableWithAggregatesFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
+    comment?: StringNullableWithAggregatesFilter<"EmployeeProfile"> | string | null
     targetType?: EnumTargetTypeWithAggregatesFilter<"EmployeeProfile"> | $Enums.TargetType
     isActive?: BoolWithAggregatesFilter<"EmployeeProfile"> | boolean
     deletedAt?: DateTimeNullableWithAggregatesFilter<"EmployeeProfile"> | Date | string | null
@@ -13491,19 +13207,7 @@ export namespace Prisma {
   export type EmployeeProfileCreateInput = {
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -13520,19 +13224,7 @@ export namespace Prisma {
     managerId?: string | null
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -13543,19 +13235,7 @@ export namespace Prisma {
   export type EmployeeProfileUpdateInput = {
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13572,19 +13252,7 @@ export namespace Prisma {
     managerId?: NullableStringFieldUpdateOperationsInput | string | null
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13598,19 +13266,7 @@ export namespace Prisma {
     managerId?: string | null
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -13621,19 +13277,7 @@ export namespace Prisma {
   export type EmployeeProfileUpdateManyMutationInput = {
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -13647,19 +13291,7 @@ export namespace Prisma {
     managerId?: NullableStringFieldUpdateOperationsInput | string | null
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -14751,28 +14383,6 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
-  export type DecimalNullableFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
-  }
-
-  export type IntNullableFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntNullableFilter<$PrismaModel> | number | null
-  }
-
   export type EnumTargetTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.TargetType | EnumTargetTypeFieldRefInput<$PrismaModel>
     in?: $Enums.TargetType[] | ListEnumTargetTypeFieldRefInput<$PrismaModel>
@@ -14791,36 +14401,12 @@ export namespace Prisma {
     managerId?: SortOrder
     level?: SortOrder
     vbid?: SortOrder
-    yearlyTarget?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    yearlyPlacementTarget?: SortOrder
-    slabQualified?: SortOrder
-    slabComment?: SortOrder
-    placementsDone?: SortOrder
-    targetAchievementStatus?: SortOrder
-    totalRevenue?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
-    totalIncentiveAmount?: SortOrder
-    totalIncentivePaid?: SortOrder
-    individualSynopsis?: SortOrder
+    comment?: SortOrder
     targetType?: SortOrder
     isActive?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-  }
-
-  export type EmployeeProfileAvgOrderByAggregateInput = {
-    yearlyTarget?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    yearlyPlacementTarget?: SortOrder
-    placementsDone?: SortOrder
-    totalRevenue?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
-    totalIncentiveAmount?: SortOrder
-    totalIncentivePaid?: SortOrder
   }
 
   export type EmployeeProfileMaxOrderByAggregateInput = {
@@ -14829,19 +14415,7 @@ export namespace Prisma {
     managerId?: SortOrder
     level?: SortOrder
     vbid?: SortOrder
-    yearlyTarget?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    yearlyPlacementTarget?: SortOrder
-    slabQualified?: SortOrder
-    slabComment?: SortOrder
-    placementsDone?: SortOrder
-    targetAchievementStatus?: SortOrder
-    totalRevenue?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
-    totalIncentiveAmount?: SortOrder
-    totalIncentivePaid?: SortOrder
-    individualSynopsis?: SortOrder
+    comment?: SortOrder
     targetType?: SortOrder
     isActive?: SortOrder
     deletedAt?: SortOrder
@@ -14855,68 +14429,12 @@ export namespace Prisma {
     managerId?: SortOrder
     level?: SortOrder
     vbid?: SortOrder
-    yearlyTarget?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    yearlyPlacementTarget?: SortOrder
-    slabQualified?: SortOrder
-    slabComment?: SortOrder
-    placementsDone?: SortOrder
-    targetAchievementStatus?: SortOrder
-    totalRevenue?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
-    totalIncentiveAmount?: SortOrder
-    totalIncentivePaid?: SortOrder
-    individualSynopsis?: SortOrder
+    comment?: SortOrder
     targetType?: SortOrder
     isActive?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-  }
-
-  export type EmployeeProfileSumOrderByAggregateInput = {
-    yearlyTarget?: SortOrder
-    yearlyRevenueTarget?: SortOrder
-    yearlyPlacementTarget?: SortOrder
-    placementsDone?: SortOrder
-    totalRevenue?: SortOrder
-    revenueAch?: SortOrder
-    revenueTargetAchievedPercent?: SortOrder
-    totalIncentiveAmount?: SortOrder
-    totalIncentivePaid?: SortOrder
-  }
-
-  export type DecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedDecimalNullableFilter<$PrismaModel>
-    _sum?: NestedDecimalNullableFilter<$PrismaModel>
-    _min?: NestedDecimalNullableFilter<$PrismaModel>
-    _max?: NestedDecimalNullableFilter<$PrismaModel>
-  }
-
-  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedFloatNullableFilter<$PrismaModel>
-    _sum?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedIntNullableFilter<$PrismaModel>
-    _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
   export type EnumTargetTypeWithAggregatesFilter<$PrismaModel = never> = {
@@ -15091,6 +14609,28 @@ export namespace Prisma {
     _max?: NestedEnumPlacementImportTypeFilter<$PrismaModel>
   }
 
+  export type IntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type DecimalNullableFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  }
+
   export type PlacementImportBatchNullableRelationFilter = {
     is?: PlacementImportBatchWhereInput | null
     isNot?: PlacementImportBatchWhereInput | null
@@ -15215,6 +14755,38 @@ export namespace Prisma {
     totalRevenueGenerated?: SortOrder
     totalIncentiveInr?: SortOrder
     totalIncentivePaidInr?: SortOrder
+  }
+
+  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type DecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedDecimalNullableFilter<$PrismaModel>
+    _sum?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedDecimalNullableFilter<$PrismaModel>
+    _max?: NestedDecimalNullableFilter<$PrismaModel>
   }
 
   export type TeamPlacementCountOrderByAggregateInput = {
@@ -15846,22 +15418,6 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
-  export type NullableDecimalFieldUpdateOperationsInput = {
-    set?: Decimal | DecimalJsLike | number | string | null
-    increment?: Decimal | DecimalJsLike | number | string
-    decrement?: Decimal | DecimalJsLike | number | string
-    multiply?: Decimal | DecimalJsLike | number | string
-    divide?: Decimal | DecimalJsLike | number | string
-  }
-
-  export type NullableIntFieldUpdateOperationsInput = {
-    set?: number | null
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
-  }
-
   export type EnumTargetTypeFieldUpdateOperationsInput = {
     set?: $Enums.TargetType
   }
@@ -16036,6 +15592,22 @@ export namespace Prisma {
     create?: XOR<PlacementImportBatchCreateWithoutPersonalPlacementsInput, PlacementImportBatchUncheckedCreateWithoutPersonalPlacementsInput>
     connectOrCreate?: PlacementImportBatchCreateOrConnectWithoutPersonalPlacementsInput
     connect?: PlacementImportBatchWhereUniqueInput
+  }
+
+  export type NullableIntFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type NullableDecimalFieldUpdateOperationsInput = {
+    set?: Decimal | DecimalJsLike | number | string | null
+    increment?: Decimal | DecimalJsLike | number | string
+    decrement?: Decimal | DecimalJsLike | number | string
+    multiply?: Decimal | DecimalJsLike | number | string
+    divide?: Decimal | DecimalJsLike | number | string
   }
 
   export type UserUpdateOneRequiredWithoutPersonalPlacementsNestedInput = {
@@ -16277,65 +15849,11 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
-  export type NestedDecimalNullableFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
-  }
-
   export type NestedEnumTargetTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.TargetType | EnumTargetTypeFieldRefInput<$PrismaModel>
     in?: $Enums.TargetType[] | ListEnumTargetTypeFieldRefInput<$PrismaModel>
     notIn?: $Enums.TargetType[] | ListEnumTargetTypeFieldRefInput<$PrismaModel>
     not?: NestedEnumTargetTypeFilter<$PrismaModel> | $Enums.TargetType
-  }
-
-  export type NestedDecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedDecimalNullableFilter<$PrismaModel>
-    _sum?: NestedDecimalNullableFilter<$PrismaModel>
-    _min?: NestedDecimalNullableFilter<$PrismaModel>
-    _max?: NestedDecimalNullableFilter<$PrismaModel>
-  }
-
-  export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedFloatNullableFilter<$PrismaModel>
-    _sum?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedIntNullableFilter<$PrismaModel>
-    _max?: NestedIntNullableFilter<$PrismaModel>
-  }
-
-  export type NestedFloatNullableFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
   export type NestedEnumTargetTypeWithAggregatesFilter<$PrismaModel = never> = {
@@ -16387,22 +15905,64 @@ export namespace Prisma {
     _max?: NestedEnumPlacementImportTypeFilter<$PrismaModel>
   }
 
+  export type NestedDecimalNullableFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  }
+
+  export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedDecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel> | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedDecimalNullableFilter<$PrismaModel>
+    _sum?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedDecimalNullableFilter<$PrismaModel>
+    _max?: NestedDecimalNullableFilter<$PrismaModel>
+  }
+
   export type EmployeeProfileCreateWithoutTeamInput = {
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -16417,19 +15977,7 @@ export namespace Prisma {
     managerId?: string | null
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -16472,19 +16020,7 @@ export namespace Prisma {
     managerId?: StringNullableFilter<"EmployeeProfile"> | string | null
     level?: StringNullableFilter<"EmployeeProfile"> | string | null
     vbid?: StringNullableFilter<"EmployeeProfile"> | string | null
-    yearlyTarget?: DecimalFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: StringNullableFilter<"EmployeeProfile"> | string | null
-    slabComment?: StringNullableFilter<"EmployeeProfile"> | string | null
-    placementsDone?: IntNullableFilter<"EmployeeProfile"> | number | null
-    targetAchievementStatus?: StringNullableFilter<"EmployeeProfile"> | string | null
-    totalRevenue?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: DecimalNullableFilter<"EmployeeProfile"> | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: StringNullableFilter<"EmployeeProfile"> | string | null
+    comment?: StringNullableFilter<"EmployeeProfile"> | string | null
     targetType?: EnumTargetTypeFilter<"EmployeeProfile"> | $Enums.TargetType
     isActive?: BoolFilter<"EmployeeProfile"> | boolean
     deletedAt?: DateTimeNullableFilter<"EmployeeProfile"> | Date | string | null
@@ -16495,19 +16031,7 @@ export namespace Prisma {
   export type EmployeeProfileCreateWithoutUserInput = {
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -16522,19 +16046,7 @@ export namespace Prisma {
     managerId?: string | null
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -16576,19 +16088,7 @@ export namespace Prisma {
   export type EmployeeProfileCreateWithoutManagerInput = {
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -16603,19 +16103,7 @@ export namespace Prisma {
     teamId?: string | null
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -16998,19 +16486,7 @@ export namespace Prisma {
   export type EmployeeProfileUpdateWithoutUserInput = {
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -17025,19 +16501,7 @@ export namespace Prisma {
     managerId?: NullableStringFieldUpdateOperationsInput | string | null
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18584,19 +18048,7 @@ export namespace Prisma {
     managerId?: string | null
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -18607,19 +18059,7 @@ export namespace Prisma {
   export type EmployeeProfileUpdateWithoutTeamInput = {
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18634,19 +18074,7 @@ export namespace Prisma {
     managerId?: NullableStringFieldUpdateOperationsInput | string | null
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18659,19 +18087,7 @@ export namespace Prisma {
     managerId?: NullableStringFieldUpdateOperationsInput | string | null
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18692,19 +18108,7 @@ export namespace Prisma {
     teamId?: string | null
     level?: string | null
     vbid?: string | null
-    yearlyTarget: Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: Decimal | DecimalJsLike | number | string | null
-    slabQualified?: string | null
-    slabComment?: string | null
-    placementsDone?: number | null
-    targetAchievementStatus?: string | null
-    totalRevenue?: Decimal | DecimalJsLike | number | string | null
-    revenueAch?: Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: string | null
+    comment?: string | null
     targetType?: $Enums.TargetType
     isActive?: boolean
     deletedAt?: Date | string | null
@@ -18848,19 +18252,7 @@ export namespace Prisma {
   export type EmployeeProfileUpdateWithoutManagerInput = {
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18875,19 +18267,7 @@ export namespace Prisma {
     teamId?: NullableStringFieldUpdateOperationsInput | string | null
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -18900,19 +18280,7 @@ export namespace Prisma {
     teamId?: NullableStringFieldUpdateOperationsInput | string | null
     level?: NullableStringFieldUpdateOperationsInput | string | null
     vbid?: NullableStringFieldUpdateOperationsInput | string | null
-    yearlyTarget?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
-    yearlyRevenueTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    yearlyPlacementTarget?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    slabQualified?: NullableStringFieldUpdateOperationsInput | string | null
-    slabComment?: NullableStringFieldUpdateOperationsInput | string | null
-    placementsDone?: NullableIntFieldUpdateOperationsInput | number | null
-    targetAchievementStatus?: NullableStringFieldUpdateOperationsInput | string | null
-    totalRevenue?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueAch?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    revenueTargetAchievedPercent?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentiveAmount?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    totalIncentivePaid?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
-    individualSynopsis?: NullableStringFieldUpdateOperationsInput | string | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
     targetType?: EnumTargetTypeFieldUpdateOperationsInput | $Enums.TargetType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

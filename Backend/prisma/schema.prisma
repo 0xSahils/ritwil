@@ -108,20 +108,8 @@ model EmployeeProfile {
   level                 String?
   /// VBID is unique per profile (null allowed; non-null values must be unique across all users).
   vbid                  String?   @unique
-  yearlyTarget          Decimal    @db.Decimal(14, 2)
-  yearlyRevenueTarget   Decimal?   @db.Decimal(14, 2)
-  yearlyPlacementTarget Decimal?   @db.Decimal(14, 2)
-  slabQualified         String?
   /// Admin-written comment shown in L4 dashboard slab box
-  slabComment           String?
-  placementsDone          Int?
-  targetAchievementStatus String?
-  totalRevenue            Decimal? @db.Decimal(14, 2)
-  revenueAch              Decimal? @db.Decimal(14, 2)
-  revenueTargetAchievedPercent Decimal? @db.Decimal(5, 2)
-  totalIncentiveAmount    Decimal? @db.Decimal(14, 2)
-  totalIncentivePaid      Decimal? @db.Decimal(14, 2)
-  individualSynopsis    String?
+  comment               String?
   targetType            TargetType @default(REVENUE)
   isActive              Boolean    @default(true)
   deletedAt             DateTime?

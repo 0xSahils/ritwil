@@ -17,7 +17,8 @@ Checklist and env configuration for running Ritwil in production.
 | `JWT_REFRESH_SECRET` | Long random string | Different from access secret |
 | `JWT_ACCESS_TTL` | e.g. `15m` | Optional |
 | `JWT_REFRESH_TTL` / `JWT_REFRESH_TTL_DAYS` | e.g. `30d` / `30` | Optional |
-| SMTP_* | Your mail provider | Required if you want forgot-password emails |
+| `RESEND_API_KEY` | Your Resend API key | Required if you want forgot-password emails |
+| `RESEND_FROM_EMAIL` | Verified email in Resend (e.g. `noreply@yourdomain.com`) | Required if using email |
 
 **CORS:** Backend allows only origins listed in `CLIENT_ORIGIN`. Must match the exact scheme + host + port the browser uses (e.g. `https://app.ritwil.com`).
 
@@ -54,7 +55,24 @@ Checklist and env configuration for running Ritwil in production.
 
 ---
 
-## 4. Build and run
+## 4. Deploy on Render (Web Service)
+
+Use one **Web Service**; the build produces the frontend and runs DB setup, then the backend serves both API and static frontend.
+
+| Field | Value |
+|-------|--------|
+| **Build Command** | `npm run build` |
+| **Pre-Deploy Command** | *(leave empty)* |
+| **Start Command** | `npm start` |
+
+- **Root Directory:** leave empty (repo root).
+- **Environment:** Add all Backend env vars in Render dashboard (see §1): `NODE_ENV=production`, `DATABASE_URL`, `CLIENT_ORIGIN` (your Render URL, e.g. `https://ritwil.onrender.com`), `FRONTEND_URL` (same), `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and optional `RESEND_API_KEY` / `RESEND_FROM_EMAIL` for email.
+- **Build** runs from repo root: installs Backend + Frontend deps, builds Frontend, runs `prisma generate` and `prisma db push` (so `DATABASE_URL` must be set before the first deploy).
+- **Start** runs the Backend in production; it serves `/api` and the built React app from the same host. Do **not** set `VITE_API_BASE_URL` in Frontend env when using this setup.
+
+---
+
+## 5. Build and run (local)
 
 ```bash
 # From project root
@@ -74,7 +92,7 @@ cd Backend && npm start
 
 ---
 
-## 5. Security checklist
+## 6. Security checklist
 
 - [ ] `NODE_ENV=production` on backend
 - [ ] Strong `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` (not default placeholders)
@@ -85,7 +103,7 @@ cd Backend && npm start
 
 ---
 
-## 6. Quick reference
+## 7. Quick reference
 
 | Concern | Where | Env / config |
 |--------|--------|---------------|

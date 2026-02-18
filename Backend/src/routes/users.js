@@ -7,6 +7,7 @@ import {
   listUsersWithRelations,
   createUserWithProfile,
   updateUserWithProfile,
+  updateBulkComment,
   softDeleteUser,
   getUserById,
 } from "../controllers/userController.js";
@@ -44,6 +45,23 @@ router.post("/", requireRole(Role.SUPER_ADMIN), async (req, res, next) => {
     next(err);
   }
 });
+
+router.patch(
+  "/bulk-comment",
+  requireRole(Role.S1_ADMIN),
+  async (req, res, next) => {
+    try {
+      const { userIds, comment } = req.body || {};
+      const result = await updateBulkComment(req.user.id, { userIds: userIds || [], comment });
+      res.json(result);
+    } catch (err) {
+      if (err.statusCode) {
+        return res.status(err.statusCode).json({ error: err.message });
+      }
+      next(err);
+    }
+  }
+);
 
 router.get("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res, next) => {
   try {

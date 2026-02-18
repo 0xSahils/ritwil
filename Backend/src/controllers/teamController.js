@@ -56,7 +56,37 @@ export async function listTeamsWithMembers(currentUser) {
     orderBy: { name: "asc" },
   });
 
+  // Sheet data only: fetch personal placement summary targets for all employees
+  const allEmployeeIds = teams.flatMap((t) => t.employees.map((e) => e.id));
+  const summaryRows = allEmployeeIds.length > 0
+    ? await prisma.personalPlacement.findMany({
+        where: {
+          employeeId: { in: allEmployeeIds },
+          OR: [
+            { plcId: { startsWith: "SUMMARY-" } },
+            { candidateName: "(Summary only)" },
+          ],
+        },
+        select: { employeeId: true, yearlyPlacementTarget: true },
+      })
+    : [];
+  const targetByEmployeeId = new Map();
+  summaryRows.forEach((row) => {
+    const pt = row.yearlyPlacementTarget != null ? Number(row.yearlyPlacementTarget) : null;
+    targetByEmployeeId.set(row.employeeId, {
+      yearlyPlacementTarget: pt,
+      yearlyRevenueTarget: pt, // PersonalPlacement has no revenue column; Vantage shows same value as $
+    });
+  });
+  const getTarget = (emp, isVantage) => {
+    const s = targetByEmployeeId.get(emp.id);
+    if (!s) return null;
+    const t = isVantage ? s.yearlyRevenueTarget : (s.yearlyPlacementTarget ?? s.yearlyRevenueTarget);
+    return t != null ? t : null;
+  };
+
   const data = teams.map((team) => {
+  const isVantageTeam = team.name.toLowerCase().includes("vant");
   const leads = team.employees.filter(
     (p) => p.user.role === Role.TEAM_LEAD
   );
@@ -71,10 +101,9 @@ export async function listTeamsWithMembers(currentUser) {
     return false;
   });
 
-    // Calculate aggregated stats
-    // Update: Aggregated Target should be sum of ALL team members (L4 + L3 + L2) targets
+    // Aggregated target from sheet only (null treated as 0 for sum)
     const aggregatedTarget = team.employees.reduce(
-      (sum, member) => sum + Number(member.yearlyTarget || 0),
+      (sum, member) => sum + (getTarget(member, isVantageTeam) ?? 0),
       0
     );
 
@@ -108,7 +137,7 @@ export async function listTeamsWithMembers(currentUser) {
         userId: p.user.id,
         name: p.user.name,
         level: p.level,
-        target: Number(p.yearlyTarget || 0),
+        target: getTarget(p, team.name.toLowerCase().includes("vant")),
         targetType: p.targetType,
       })),
       members: members.map((p) => ({
@@ -116,7 +145,7 @@ export async function listTeamsWithMembers(currentUser) {
         userId: p.user.id,
         name: p.user.name,
         level: p.level,
-        target: Number(p.yearlyTarget || 0),
+        target: getTarget(p, team.name.toLowerCase().includes("vant")),
         targetType: p.targetType,
         revenue: (p.user.personalPlacements || []).reduce(
           (sum, e) => sum + Number(e.revenueUsd || 0),
@@ -177,33 +206,12 @@ export async function updateTeam(id, payload, actorId) {
     data,
   });
 
-  // Handle Target Type Propagation
+  // Propagate targetType only (targets come from sheet)
   if (targetType) {
-    // 1. Fetch all members
-    const members = await prisma.employeeProfile.findMany({
-      where: { teamId: id, deletedAt: null }
+    await prisma.employeeProfile.updateMany({
+      where: { teamId: id, deletedAt: null },
+      data: { targetType },
     });
-
-    // 2. Update each member
-    await Promise.all(members.map(async (member) => {
-      let newTarget = member.yearlyTarget;
-
-      // Logic: If switching to PLACEMENTS, ensure target is reasonable (default to 10 if 0 or high revenue number)
-      if (targetType === 'PLACEMENTS') {
-        const currentTarget = Number(member.yearlyTarget || 0);
-        if (currentTarget === 0 || currentTarget > 500) {
-           newTarget = 10;
-        }
-      }
-
-      await prisma.employeeProfile.update({
-        where: { id: member.id },
-        data: {
-          targetType: targetType,
-          yearlyTarget: newTarget
-        }
-      });
-    }));
   }
 
   await prisma.auditLog.create({
@@ -253,7 +261,7 @@ export async function deleteTeam(id, actorId) {
 }
 
 export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId, options = {}) {
-  const { managerId, yearlyTarget } = options;
+  const { managerId } = options;
 
   const employees = await prisma.user.findMany({
     where: {
@@ -272,13 +280,11 @@ export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId, option
           teamId,
           managerId: managerId || user.employeeProfile?.managerId || null,
           level: user.employeeProfile?.level || null,
-          yearlyTarget: yearlyTarget !== undefined ? yearlyTarget : (user.employeeProfile?.yearlyTarget || 0),
           isActive: true,
         },
         update: {
           teamId,
           ...(managerId !== undefined && { managerId }),
-          ...(yearlyTarget !== undefined && { yearlyTarget }),
         },
       })
     )
@@ -293,7 +299,6 @@ export async function bulkAssignEmployeesToTeam(teamId, userIds, actorId, option
       changes: {
         userIds,
         managerId,
-        yearlyTarget,
       },
     },
   });
@@ -401,8 +406,39 @@ export async function getTeamDetails(idOrSlug) {
     teamPlacementsByLead.get(tp.leadId).push(tp);
   });
 
+  // Sheet data only: personal placement summary for targets and slab
+  const employeeIds = team.employees.map((e) => e.id);
+  const personalSummaryRows = employeeIds.length > 0
+    ? await prisma.personalPlacement.findMany({
+        where: {
+          employeeId: { in: employeeIds },
+          OR: [
+            { plcId: { startsWith: "SUMMARY-" } },
+            { candidateName: "(Summary only)" },
+          ],
+        },
+        select: { employeeId: true, yearlyPlacementTarget: true, slabQualified: true },
+      })
+    : [];
+  const summaryByEmployeeId = new Map();
+  personalSummaryRows.forEach((row) => {
+    const pt = row.yearlyPlacementTarget != null ? Number(row.yearlyPlacementTarget) : null;
+    summaryByEmployeeId.set(row.employeeId, {
+      yearlyPlacementTarget: pt,
+      yearlyRevenueTarget: pt, // PersonalPlacement has no revenue column; Vantage shows same as $
+      slabQualified: row.slabQualified != null ? String(row.slabQualified) : null,
+    });
+  });
+  const isVantageTeam = team.name.toLowerCase().includes("vant");
+  const getTargetFromSheet = (emp) => {
+    const s = summaryByEmployeeId.get(emp.id);
+    if (!s) return null;
+    const t = isVantageTeam ? s.yearlyRevenueTarget : (s.yearlyPlacementTarget ?? s.yearlyRevenueTarget);
+    return t != null ? t : null;
+  };
+
   const aggregatedTarget = team.employees.reduce(
-    (sum, member) => sum + Number(member.yearlyTarget || 0),
+    (sum, member) => sum + (getTargetFromSheet(member) ?? 0),
     0
   );
 
@@ -467,10 +503,10 @@ export async function getTeamDetails(idOrSlug) {
         email: p.user.email,
         role: p.user.role,
         level: p.level,
-        target: Number(p.yearlyTarget || 0),
+        target: getTargetFromSheet(p),
         targetType: p.targetType,
-        slabQualified: p.slabQualified,
-        slabComment: p.slabComment || null,
+        slabQualified: summaryByEmployeeId.get(p.id)?.slabQualified ?? null,
+        comment: p.comment || null,
         revenue: teamRevenue,
         placementsCount: teamPlacementsCount,
         joinedAt: p.createdAt,
@@ -486,10 +522,10 @@ export async function getTeamDetails(idOrSlug) {
         email: p.user.email,
         role: p.user.role,
         level: p.level,
-        target: Number(p.yearlyTarget || 0),
+        target: getTargetFromSheet(p),
         targetType: p.targetType,
-        slabQualified: p.slabQualified,
-        slabComment: p.slabComment || null,
+        slabQualified: summaryByEmployeeId.get(p.id)?.slabQualified ?? null,
+        comment: p.comment || null,
         managerName: p.manager?.name || null,
         managerId: p.managerId,
         revenue: combinedPlacements.reduce(
@@ -551,12 +587,15 @@ export async function updateMemberTarget(userId, target, targetType, actorId) {
     throw error;
   }
 
-  const dataToUpdate = {
-    yearlyTarget: target,
-  };
-  
-  if (targetType) {
-    dataToUpdate.targetType = targetType;
+  // Target/slab live in placement sheets only; only targetType is stored on profile
+  const dataToUpdate = {};
+  if (targetType) dataToUpdate.targetType = targetType;
+  if (Object.keys(dataToUpdate).length === 0) {
+    const profile = await prisma.employeeProfile.findUnique({
+      where: { id: userId },
+      include: { user: true },
+    });
+    return profile;
   }
 
   const profile = await prisma.employeeProfile.update({
@@ -571,10 +610,7 @@ export async function updateMemberTarget(userId, target, targetType, actorId) {
       action: "TARGET_UPDATED",
       entityType: "User",
       entityId: userId,
-      changes: {
-        yearlyTarget: target,
-        targetType: targetType
-      },
+      changes: { targetType: targetType },
     },
   });
 
@@ -619,20 +655,11 @@ export async function importTeamTargets(teamId, targets, actorId) {
         continue;
       }
 
-      // Determine target and type
-      // Default type to PLACEMENTS if not specified, or respect row input
-      // Default target to 10 if missing/invalid
-      let targetVal = Number(row.target);
-      if (isNaN(targetVal)) targetVal = 10; // Default logic per requirements
-
+      // Target/slab live in placement sheets only; only targetType is stored on profile
       const targetType = row.type || "PLACEMENTS";
-
       await prisma.employeeProfile.update({
         where: { id: user.id },
-        data: {
-          yearlyTarget: targetVal,
-          targetType: targetType
-        }
+        data: { targetType },
       });
 
       results.updated++;
@@ -676,7 +703,6 @@ export async function assignTeamLead(teamId, userId, actorId) {
         id: user.id,
         teamId,
         level: "L2",
-        yearlyTarget: 0,
         isActive: true,
       },
     });

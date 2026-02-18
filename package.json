@@ -3,19 +3,13 @@
   "version": "1.0.0",
   "main": "Backend/src/server.js",
   "scripts": {
-    "install:all": "npm install --prefix Backend && npm install --prefix Frontend",
-    "db:setup": "npm run db:setup --prefix Backend",
-    "db:push": "npm run db:push --prefix Backend",
-    "db:generate": "npm run db:generate --prefix Backend",
-    "db:seed": "npm run db:seed --prefix Backend",
-    "setup": "npm run install:all && npm run db:setup",
-    "build": "npm run install:all && npm run build --prefix Frontend && npm run db:setup --prefix Backend",
-    "start": "npm run start --prefix Backend",
-    "dev:backend": "npm run dev --prefix Backend",
-    "dev:frontend": "npm run dev --prefix Frontend"
+    "build": "npm install --prefix Backend && npm install --prefix Frontend && npm run build --prefix Frontend && npm run prisma:generate --prefix Backend && npm run prisma:migrate --prefix Backend",
+    "start": "npm run start --prefix Backend"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "Fullstack deployment for Ritwil"
 }
+
+

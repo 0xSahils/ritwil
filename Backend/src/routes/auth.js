@@ -230,7 +230,7 @@ router.post(
               }
             : null,
           level: profile?.level,
-          yearlyTarget: profile?.yearlyTarget,
+          yearlyTarget: null,
         },
       });
   } catch (err) {

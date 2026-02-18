@@ -57,14 +57,18 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const PORT = process.env.PORT || 4000;
+// CORS: single origin or comma-separated list (e.g. "https://app.com,https://www.app.com")
+const rawOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const corsOrigin = rawOrigin.includes(",")
+  ? rawOrigin.split(",").map((o) => o.trim()).filter(Boolean)
+  : rawOrigin.trim();
 
 app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: CLIENT_ORIGIN,
+    origin: corsOrigin,
     credentials: true,
   })
 );

@@ -51,6 +51,7 @@ model User {
   email           String           @unique
   passwordHash    String
   name            String
+  /// Denormalized from EmployeeProfile; canonical unique VBID is on EmployeeProfile.
   vbid            String?
   role            Role
   isActive        Boolean          @default(true)
@@ -76,9 +77,25 @@ model User {
   placementImportBatches PlacementImportBatch[] @relation("UserPlacementImportBatches")
   personalPlacements     PersonalPlacement[]
   teamPlacements         TeamPlacement[]
+  passwordResetTokens    PasswordResetToken[]
 
   @@index([role])
   @@index([isActive])
+}
+
+/// One-time tokens for forgot-password flow. Token is stored hashed; expiry typically 1 hour.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
 }
 
 model EmployeeProfile {
@@ -89,11 +106,14 @@ model EmployeeProfile {
   managerId                    String?
   manager                      User?      @relation("LeadEmployees", fields: [managerId], references: [id])
   level                        String?
-  vbid                         String?
+  /// VBID is unique per profile (null allowed; non-null values must be unique across all users).
+  vbid                         String?    @unique
   yearlyTarget                 Decimal    @db.Decimal(14, 2)
   yearlyRevenueTarget          Decimal?   @db.Decimal(14, 2)
   yearlyPlacementTarget        Decimal?   @db.Decimal(14, 2)
   slabQualified                String?
+  /// Admin-written comment shown in L4 dashboard slab box
+  slabComment                  String?
   placementsDone               Int?
   targetAchievementStatus      String?
   totalRevenue                 Decimal?   @db.Decimal(14, 2)
@@ -164,6 +184,8 @@ model PlacementImportBatch {
   uploaderId String
   uploader   User                @relation("UserPlacementImportBatches", fields: [uploaderId], references: [id])
   createdAt  DateTime            @default(now())
+  /// Row-level validation errors: [{ rowIndex, message, field? }]
+  errors     Json?
 
   personalPlacements PersonalPlacement[]
   teamPlacements     TeamPlacement[]

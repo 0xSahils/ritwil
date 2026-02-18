@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs } from '../api/auditLogs';
+import { API_BASE_URL } from '../api/client';
 import { format } from 'date-fns';
 import { ArrowDownTrayIcon, FunnelIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
@@ -30,10 +31,10 @@ const AdminAuditLogs = () => {
   const handleExport = async (formatType) => {
     try {
         const queryParams = new URLSearchParams({ ...filters, format: formatType });
-        const response = await fetch(`/api/audit-logs/export?${queryParams.toString()}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming token is in localStorage
-            }
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${API_BASE_URL}/audit-logs/export?${queryParams.toString()}`, {
+          credentials: 'include',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         
         if (!response.ok) throw new Error('Export failed');

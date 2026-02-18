@@ -58,7 +58,7 @@ router.get("/:id", requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN), async (req, res
 router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    if (req.user.role !== Role.SUPER_ADMIN && req.user.id !== id) {
+    if (req.user.role !== Role.SUPER_ADMIN && req.user.role !== Role.S1_ADMIN && req.user.id !== id) {
       return res.status(403).json({ error: "Forbidden" });
     }
 

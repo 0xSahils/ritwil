@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import express from "express";
 import { body, validationResult } from "express-validator";
 import bcrypt from "bcryptjs";
@@ -11,6 +12,7 @@ import {
 } from "../utils/jwt.js";
 import { authenticate } from "../middleware/auth.js";
 import { createAuditLog } from "../controllers/auditLogController.js";
+import { sendPasswordResetEmail } from "../utils/email.js";
 
 const router = express.Router();
 
@@ -304,6 +306,107 @@ router.post("/refresh", async (req, res, next) => {
     next(err);
   }
 });
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+// Forgot password: create token, optionally send email
+router.post(
+  "/forgot-password",
+  [
+    body("email").isEmail().normalizeEmail().withMessage("Valid email required"),
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: "Validation failed",
+          details: errors.array().map((e) => ({ field: e.path, message: e.msg })),
+        });
+      }
+      const email = (req.body.email || "").toLowerCase();
+      const user = await prisma.user.findUnique({
+        where: { email, isActive: true },
+      });
+      // Always return same message to avoid leaking whether email exists
+      const message =
+        "You will receive reset instructions shortly on your Email ID.";
+      if (!user) {
+        return res.json({ message });
+      }
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+      await prisma.passwordResetToken.create({
+        data: { userId: user.id, tokenHash, expiresAt },
+      });
+      const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+      const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`;
+      const emailSent = await sendPasswordResetEmail(user.email, resetLink);
+      if (process.env.NODE_ENV !== "production" && !emailSent.sent) {
+        return res.json({ message, resetLink });
+      }
+      res.json({ message });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Reset password: validate token, update password
+router.post(
+  "/reset-password",
+  [
+    body("token").notEmpty().withMessage("Reset token required"),
+    body("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters"),
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: "Validation failed",
+          details: errors.array().map((e) => ({ field: e.path, message: e.msg })),
+        });
+      }
+      const { token, password } = req.body;
+      const tokenHash = hashToken(token);
+      const record = await prisma.passwordResetToken.findUnique({
+        where: { tokenHash },
+        include: { user: true },
+      });
+      if (
+        !record ||
+        record.usedAt ||
+        new Date() > record.expiresAt
+      ) {
+        return res.status(400).json({
+          error: "Invalid or expired reset link. Please request a new one.",
+        });
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: record.userId },
+          data: { passwordHash },
+        }),
+        prisma.passwordResetToken.update({
+          where: { id: record.id },
+          data: { usedAt: new Date() },
+        }),
+      ]);
+      res.json({ message: "Password reset successfully. You can now log in." });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // Generate MFA Secret
 router.post("/mfa/setup", authenticate, async (req, res, next) => {

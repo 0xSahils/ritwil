@@ -181,7 +181,7 @@ export async function updateTeam(id, payload, actorId) {
   if (targetType) {
     // 1. Fetch all members
     const members = await prisma.employeeProfile.findMany({
-      where: { teamId: id }
+      where: { teamId: id, deletedAt: null }
     });
 
     // 2. Update each member
@@ -221,7 +221,7 @@ export async function updateTeam(id, payload, actorId) {
 
 export async function deleteTeam(id, actorId) {
   const activeEmployees = await prisma.employeeProfile.count({
-    where: { teamId: id, isActive: true },
+    where: { teamId: id, isActive: true, deletedAt: null },
   });
 
   if (activeEmployees > 0) {
@@ -335,7 +335,6 @@ export async function getTeamDetails(idOrSlug) {
       include: {
         user: {
           include: {
-            placements: true,
             personalPlacements: true,
           },
         },
@@ -471,6 +470,7 @@ export async function getTeamDetails(idOrSlug) {
         target: Number(p.yearlyTarget || 0),
         targetType: p.targetType,
         slabQualified: p.slabQualified,
+        slabComment: p.slabComment || null,
         revenue: teamRevenue,
         placementsCount: teamPlacementsCount,
         joinedAt: p.createdAt,
@@ -489,6 +489,7 @@ export async function getTeamDetails(idOrSlug) {
         target: Number(p.yearlyTarget || 0),
         targetType: p.targetType,
         slabQualified: p.slabQualified,
+        slabComment: p.slabComment || null,
         managerName: p.manager?.name || null,
         managerId: p.managerId,
         revenue: combinedPlacements.reduce(

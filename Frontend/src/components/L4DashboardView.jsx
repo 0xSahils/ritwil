@@ -28,31 +28,32 @@ function StatCard({ label, value, sub, icon, highlighted }) {
   return (
     <motion.div
       variants={itemVariants}
-      whileHover={{ scale: 1.02 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-      className={`group relative overflow-hidden rounded-2xl p-6 shadow-sm transition-all duration-300 ${
+      whileHover={{ y: -2, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
+      className={`group relative flex gap-4 overflow-hidden rounded-2xl border p-6 shadow-sm transition-shadow duration-300 ${
         highlighted
-          ? 'border-2 border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-white hover:shadow-lg hover:shadow-emerald-500/15'
-          : 'border border-slate-200/80 bg-white hover:border-violet-200 hover:shadow-lg hover:shadow-violet-500/10'
+          ? 'border-emerald-200/60 bg-emerald-50/50 shadow-emerald-500/5 hover:shadow-md hover:shadow-emerald-500/10'
+          : 'border-violet-200/50 bg-violet-50/40 hover:shadow-md hover:shadow-violet-500/5'
       }`}
     >
-      <div className={`absolute right-4 top-4 rounded-xl p-2.5 transition-colors ${
-        highlighted ? 'bg-emerald-500/15 text-emerald-600 group-hover:bg-emerald-500/25' : 'bg-violet-500/10 text-violet-600 group-hover:bg-violet-500/20'
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${
+        highlighted ? 'bg-emerald-500/10 text-emerald-600' : 'bg-violet-500/10 text-violet-600 group-hover:bg-violet-500/15'
       }`}>
         {icon}
       </div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{value ?? '–'}</p>
-      {sub != null && sub !== '' && (
-        <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
-          {highlighted && (
-            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-          {sub}
-        </p>
-      )}
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{label}</p>
+        <p className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{value ?? '–'}</p>
+        {sub != null && sub !== '' && (
+          <p className="flex items-center gap-1.5 pt-0.5 text-sm font-medium text-emerald-600">
+            {highlighted && (
+              <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            {sub}
+          </p>
+        )}
+      </div>
     </motion.div>
   )
 }
@@ -65,46 +66,45 @@ function ProgressCard({ title, label, current, total, percent }) {
   return (
     <motion.div
       variants={itemVariants}
-      whileHover={{ boxShadow: exceeded ? '0 20px 40px -12px rgba(16, 185, 129, 0.12)' : '0 20px 40px -12px rgba(139, 92, 246, 0.12)' }}
-      className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:border-slate-300"
+      whileHover={{ y: -2, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
+      className={`overflow-hidden rounded-2xl border p-6 shadow-sm transition-shadow duration-300 hover:shadow-md ${exceeded ? 'border-emerald-200/50 bg-emerald-50/40' : 'border-violet-200/50 bg-violet-50/40'}`}
     >
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600">{title}</h3>
-          <p className="mt-1 text-xs font-medium text-slate-500">{label}</p>
-          <p className="mt-3 text-2xl font-bold text-slate-800">
-            {current} <span className="font-normal text-slate-400">/</span> {total}
-          </p>
+        <div className="flex gap-4">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${exceeded ? 'bg-emerald-500/15 text-emerald-600' : 'bg-violet-500/15 text-violet-600'}`}>
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{title}</h3>
+            <p className="mt-0.5 text-xs text-slate-500">{label}</p>
+            <p className="mt-2 text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">
+              {current} <span className="font-normal text-slate-300">/</span> {total}
+            </p>
+          </div>
         </div>
         {exceeded && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
+          <motion.span
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700"
+          >
             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8v8m-8 0h8" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Target exceeded
-          </span>
+            Exceeded
+          </motion.span>
         )}
       </div>
-      <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
         <motion.div
-          className={`h-full rounded-full ${exceeded ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-violet-500 to-indigo-500'}`}
+          className={`h-full rounded-full ${exceeded ? 'bg-emerald-500' : 'bg-violet-500'}`}
           initial={{ width: 0 }}
           animate={{ width: `${Math.min(100, displayPercent)}%` }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         />
       </div>
-      <p className="mt-2.5 flex items-center justify-between text-sm">
-        <span className="font-medium text-slate-600">
-          {exceeded ? (
-            <span className="font-semibold text-emerald-600">{rawPercent.toFixed(0)}% of target</span>
-          ) : (
-            `${pct.toFixed(1)}% complete`
-          )}
-        </span>
-        {exceeded && rawPercent > 100 && (
-          <span className="text-xs font-medium text-emerald-600">+{Math.round(rawPercent - 100)}% over</span>
-        )}
-      </p>
     </motion.div>
   )
 }
@@ -241,13 +241,14 @@ export default function L4DashboardView({
       : isRevenueTarget
         ? employeeData?.rawRevenueGenerated
         : employeeData?.rawPlacementsCount
-  
-  // Format as currency ($) only for:
-  // 1. Revenue targets (always show $)
-  // 2. Vantedge L4s with placement sheet data (show $)
-  // Otherwise, show plain numbers for placements
-  const shouldFormatAsCurrency = isRevenueTarget || (isVantedgeL4 && hasPlacementSheetData)
-  
+
+  // Basic logic: if placement target or placement done is more than 2 digits (>= 100), treat as revenue and show $; if 2 digits or less, treat as number of placements (no $)
+  const targetNum = Number(targetValue) || 0
+  const achievedNum = Number(achievedValue) || 0
+  const isRevenueByMagnitude = targetNum >= 100 || achievedNum >= 100
+  const shouldFormatAsCurrency = isRevenueByMagnitude
+  const showRevenueLabels = shouldFormatAsCurrency
+
   const targetDisplay =
     shouldFormatAsCurrency
       ? CalculationService.formatCurrency(targetValue || 0)
@@ -262,6 +263,24 @@ export default function L4DashboardView({
       : targetValue > 0
         ? ((achievedValue || 0) / targetValue) * 100
         : 0
+
+  // Sheet values only — no frontend calculation. Revenue generated is not used for target anywhere.
+  const revenueGeneratedFromSheet =
+    activeSummary?.totalRevenueGenerated != null
+      ? CalculationService.formatCurrency(Number(activeSummary.totalRevenueGenerated))
+      : null
+  const sheetTargetAchievedPct =
+    activeSummary?.targetAchievedPercent != null || activeSummary?.placementAchPercent != null
+      ? CalculationService.formatPercentage(Number(activeSummary.targetAchievedPercent ?? activeSummary.placementAchPercent))
+      : null
+  const sheetSlabDisplay =
+    (activeSummary?.slabQualified ?? employeeData?.slabQualified) != null
+      ? CalculationService.formatSlabAsPercentage(activeSummary?.slabQualified ?? employeeData?.slabQualified)
+      : null
+  const sheetTotalIncentiveInr =
+    activeSummary?.totalIncentiveInr != null
+      ? CalculationService.formatCurrency(Number(activeSummary.totalIncentiveInr), 'INR')
+      : null
 
   const slabInfo = employeeData?.slabQualified
     ? CalculationService.getSlabFromIncentivePercentage(
@@ -378,7 +397,7 @@ export default function L4DashboardView({
   const degPaid = (earnedPct + paidPct) * 3.6
 
   return (
-    <div className="flex min-h-screen bg-slate-100/80">
+    <div className="flex min-h-screen bg-slate-100">
       {/* Left sidebar - Financial Analytics style */}
       <motion.aside
         initial={{ opacity: 0, x: -8 }}
@@ -502,7 +521,7 @@ export default function L4DashboardView({
               {/* Welcome Message - Premium Redesign */}
               <motion.div
                 variants={itemVariants}
-                className="group relative mb-8 overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/50 to-white p-6 shadow-sm transition-all duration-500 hover:border-violet-200/60 hover:shadow-lg sm:p-8"
+                className="group relative mb-8 overflow-hidden rounded-2xl border border-violet-200/40 bg-gradient-to-br from-violet-50/60 via-slate-50/80 to-indigo-50/50 p-6 shadow-sm transition-all duration-500 hover:border-violet-200/60 hover:shadow-lg sm:p-8"
               >
                 {/* Decorative gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-indigo-500/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -594,120 +613,78 @@ export default function L4DashboardView({
                 </div>
               </motion.div>
 
-              {/* Hero performance block - Premium Redesign */}
+              {/* Hero — single accent gradient, icon bottom-right, clear hierarchy */}
               <motion.div
                 variants={itemVariants}
-                className="group relative overflow-hidden rounded-3xl p-5 shadow-2xl transition-all duration-500 sm:p-6"
-                style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)',
-                  backgroundSize: '200% 200%',
-                }}
-                whileHover={{ scale: 1.01 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 p-6 shadow-lg sm:p-8"
+                whileHover={{ y: -1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
-                {/* Animated gradient overlay */}
-                <motion.div
-                  className="absolute inset-0 opacity-90"
-                  animate={{
-                    backgroundPosition: ['0% 0%', '100% 100%'],
-                  }}
-                  transition={{
-                    duration: 8,
-                    repeat: Infinity,
-                    repeatType: 'reverse',
-                    ease: 'linear',
-                  }}
-                  style={{
-                    background: 'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(255,255,255,0.25), transparent)',
-                  }}
-                />
-                
-                {/* Floating orbs for depth */}
-                <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
-                <div className="absolute -left-12 -bottom-12 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
-                <div className="absolute right-1/4 top-1/4 h-24 w-24 rounded-full bg-white/10 blur-xl" />
-                
-                {/* Content */}
-                <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-2">
+                <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+                <div className="absolute bottom-0 left-1/2 h-24 w-48 -translate-x-1/2 rounded-full bg-indigo-500/20 blur-3xl" />
+                <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="space-y-1">
                     <motion.p
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, delay: 0.2 }}
-                      className="text-xs font-semibold uppercase tracking-[0.15em] text-white/90 sm:text-sm"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80"
                     >
-                      {isRevenueTarget ? 'Revenue' : 'Placements'} this period
+                      {showRevenueLabels ? 'Revenue' : 'Placements'} this period
                     </motion.p>
                     <motion.p
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.5, delay: 0.3, type: "spring", stiffness: 200 }}
-                      className="text-4xl font-bold tracking-tight text-white drop-shadow-lg sm:text-5xl"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, delay: 0.05 }}
+                      className="text-3xl font-bold tracking-tight text-white sm:text-4xl"
                     >
                       {achievedDisplay}
                     </motion.p>
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.5, delay: 0.4 }}
-                      className="text-lg font-medium text-white/95 sm:text-xl"
-                    >
-                      of {targetDisplay} target
-                    </motion.p>
-                    {(percent >= 100 && percent < Infinity) && (
+                    {showRevenueLabels && (
                       <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.5 }}
-                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/25 px-4 py-2 text-xs font-bold text-white backdrop-blur-md shadow-lg ring-2 ring-white/30 sm:text-sm sm:px-5 sm:py-2.5"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                        className="text-sm font-medium text-white/90"
                       >
-                        <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {percent.toFixed(0)}% of target
+                        of {targetDisplay} target
                       </motion.p>
                     )}
                   </div>
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                    transition={{ duration: 0.6, delay: 0.4, type: "spring", stiffness: 200 }}
-                    className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-xl ring-2 ring-white/30 sm:h-24 sm:w-24"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.1, type: 'spring', stiffness: 200 }}
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur sm:h-16 sm:w-16"
                   >
-                    <svg className="h-12 w-12 text-white drop-shadow-lg sm:h-14 sm:w-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {isRevenueTarget ? (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg className="h-7 w-7 text-white sm:h-8 sm:w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      {showRevenueLabels ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       ) : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
                       )}
                     </svg>
                   </motion.div>
                 </div>
               </motion.div>
 
-              {/* KPI grid */}
+              {/* KPI grid — 8px spacing, icon left */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <StatCard
-                  label={isRevenueTarget ? 'Target revenue' : 'Target placements'}
+                  label={showRevenueLabels ? 'Target revenue' : 'Target placements'}
                   value={targetDisplay}
                   icon={
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
                     </svg>
                   }
                 />
                 <StatCard
-                  highlighted={percent >= 100 && percent < Infinity}
-                  label={isRevenueTarget ? 'Revenue generated' : 'Placements done'}
+                  label={showRevenueLabels ? 'Revenue done' : 'Placements done'}
                   value={achievedDisplay}
-                  sub={
-                    isRevenueTarget
-                      ? (employeeData?.revenueGeneratedPercentage ? `${employeeData.revenueGeneratedPercentage} of target` : null)
-                      : (employeeData?.targetAchieved ? `${employeeData.targetAchieved} of target` : null)
-                  }
                   icon={
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8v8m-8 0h8" />
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   }
                 />
@@ -718,71 +695,118 @@ export default function L4DashboardView({
                     (incentiveEarnedNum > 0 ? CalculationService.formatCurrency(incentiveEarnedNum, 'INR') : '–')
                   }
                   icon={
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   }
                 />
               </div>
 
+              {/* Revenue generated — icon left, same card pattern */}
+              {revenueGeneratedFromSheet != null && (
+                <motion.div
+                  variants={itemVariants}
+                  whileHover={{ y: -2, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
+                  className="flex gap-4 rounded-2xl border border-emerald-200/50 bg-emerald-50/50 p-6 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75m15 0h.75.75a.75.75 0 01-.75.75H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15M21 9V6.75m0 0v-.75c0-.621-.504-1.125-1.125-1.125H3.75M21 9h.375c.621 0 1.125.504 1.125 1.125v.75M21 9h.75a.75.75 0 00.75-.75V6.75m0 0v-.75c0-.621-.504-1.125-1.125-1.125H3.75" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Revenue generated</p>
+                    <p className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{revenueGeneratedFromSheet}</p>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Progress & Slab */}
               <div className="grid gap-6 sm:grid-cols-2">
                 <ProgressCard
-                  title={isRevenueTarget ? 'Revenue progress' : 'Placements progress'}
-                  label={isRevenueTarget ? 'Generated' : 'Completed'}
+                  title={showRevenueLabels ? 'Revenue progress' : 'Placements progress'}
+                  label={showRevenueLabels ? 'Done' : 'Completed'}
                   current={achievedDisplay}
                   total={targetDisplay}
                   percent={percent}
                 />
-                {/* Current slab — compact card with icon */}
+                {/* Current slab — lavender/purple palette (reference) + admin comment */}
                 <motion.div
                   variants={itemVariants}
-                  className="flex self-start gap-4 rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50 to-indigo-50/80 p-4 shadow-sm"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  whileHover={{
+                    y: -2,
+                    transition: { type: 'spring', stiffness: 400, damping: 17 },
+                  }}
+                  className="flex flex-col gap-5 rounded-2xl bg-[#F8F7FA] p-6 shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-600">
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
+                  <div className="flex gap-4">
+                    <motion.div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#EAE6F3] text-[#673AB7]"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+                      </svg>
+                    </motion.div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-[11px] font-medium uppercase tracking-widest text-[#8B8B9B]">Current slab</p>
+                      <p className="text-xl font-bold tracking-tight text-[#222222]">{employeeData?.slabQualified != null ? CalculationService.formatSlabAsPercentage(employeeData.slabQualified) : '–'}</p>
+                      <p className="text-xs text-[#8B8B9B]">Incentive tier</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">Current slab</p>
-                    <p className="mt-0.5 text-xl font-bold text-violet-900">{employeeData?.slabQualified != null ? CalculationService.formatSlabAsPercentage(employeeData.slabQualified) : '–'}</p>
-                    <p className="mt-1 text-xs text-violet-600/80">Incentive tier</p>
-                  </div>
+                  {(employeeData?.slabComment != null && employeeData.slabComment !== '') && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.1, duration: 0.25 }}
+                      className="border-t border-[#EAE6F3] pt-4"
+                    >
+                      <p className="text-[11px] font-medium uppercase tracking-widest text-[#8B8B9B] mb-1.5">Admin comment</p>
+                      <p className="text-sm text-[#222222] whitespace-pre-wrap leading-relaxed">{employeeData.slabComment}</p>
+                    </motion.div>
+                  )}
                 </motion.div>
               </div>
 
-              {/* Second row: Health overview + Incentive breakdown */}
+              {/* Target achieved % — icon left, from sheet */}
+              {sheetTargetAchievedPct != null && (
+                <motion.div
+                  variants={itemVariants}
+                  whileHover={{ y: -2, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
+                  className="flex gap-4 rounded-2xl border border-indigo-200/50 bg-indigo-50/50 p-6 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-600">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Target achieved %</p>
+                    <p className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{sheetTargetAchievedPct}</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Incentive breakdown — icon left header, 8px spacing */}
               <div className="grid gap-6 lg:grid-cols-2">
                 <motion.div
                   variants={itemVariants}
-                  className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm"
+                  whileHover={{ y: -2, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
+                  className="overflow-hidden rounded-2xl border border-emerald-200/50 bg-emerald-50/40 p-6 shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600">Performance overview</h3>
-                  <p className="mt-4 text-5xl font-bold text-emerald-600">
-                    {percent < Infinity ? `${Math.round(percent)}%` : '–'}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    {isRevenueTarget ? 'Revenue' : 'Placements'} performance. {percent >= 100
-                      ? `Target achieved at ${percent.toFixed(0)}%, reflecting strong performance this period.`
-                      : `Currently at ${percent.toFixed(1)}% of target.`}
-                  </p>
-                </motion.div>
-                <motion.div
-                  variants={itemVariants}
-                  className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm"
-                >
-                  <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-600">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600">
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                       </svg>
-                    </span>
-                    Incentive breakdown
-                  </h3>
-                  <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row">
+                    </div>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Incentive breakdown</h3>
+                  </div>
+                  <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row">
                     <div className="relative h-32 w-32 shrink-0">
                       <div
                         className="absolute inset-0 rounded-full border-4 border-white shadow-inner"

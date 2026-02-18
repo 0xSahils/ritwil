@@ -1,8 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { apiRequest, storeAccessToken, clearAuthStorage } from "../api/client";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
+import { apiRequest, storeAccessToken, clearAuthStorage, API_BASE_URL } from "../api/client";
 
 const AuthContext = createContext(null);
 

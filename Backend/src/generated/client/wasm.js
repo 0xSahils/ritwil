@@ -147,6 +147,15 @@ exports.Prisma.UserScalarFieldEnum = {
   managerId: 'managerId'
 };
 
+exports.Prisma.PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.EmployeeProfileScalarFieldEnum = {
   id: 'id',
   teamId: 'teamId',
@@ -157,6 +166,7 @@ exports.Prisma.EmployeeProfileScalarFieldEnum = {
   yearlyRevenueTarget: 'yearlyRevenueTarget',
   yearlyPlacementTarget: 'yearlyPlacementTarget',
   slabQualified: 'slabQualified',
+  slabComment: 'slabComment',
   placementsDone: 'placementsDone',
   targetAchievementStatus: 'targetAchievementStatus',
   totalRevenue: 'totalRevenue',
@@ -202,7 +212,8 @@ exports.Prisma.PlacementImportBatchScalarFieldEnum = {
   id: 'id',
   type: 'type',
   uploaderId: 'uploaderId',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  errors: 'errors'
 };
 
 exports.Prisma.PersonalPlacementScalarFieldEnum = {
@@ -317,6 +328,7 @@ exports.PlacementImportType = exports.$Enums.PlacementImportType = {
 exports.Prisma.ModelName = {
   Team: 'Team',
   User: 'User',
+  PasswordResetToken: 'PasswordResetToken',
   EmployeeProfile: 'EmployeeProfile',
   RefreshToken: 'RefreshToken',
   AuditLog: 'AuditLog',

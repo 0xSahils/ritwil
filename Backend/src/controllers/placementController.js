@@ -250,7 +250,7 @@ export function validateTeamHeaders(headers) {
   return { headerMap: map, hasLeadHeader, hasSplitHeader };
 }
 
-// Lookup helpers
+// Lookup helpers (VBID is not unique; findFirst returns first match)
 async function findEmployeeByVbOrName(vbCode, recruiterName) {
   if (vbCode) {
     const profile = await prisma.employeeProfile.findFirst({
@@ -535,65 +535,71 @@ export async function createPlacement(userId, data, actorId) {
   return placement;
 }
 
+/** Parse date for placement update; returns null for empty/invalid. */
+function parseDateForUpdate(val) {
+  if (val === undefined || val === null || val === "") return undefined;
+  const d = typeof val === "string" ? new Date(val) : val;
+  return isNaN(d?.getTime()) ? undefined : d;
+}
+
+/** Update PersonalPlacement or TeamPlacement by id (used by S1 Admin / Super User edit). */
 export async function updatePlacement(id, data, actorId) {
-  const err = new Error("Legacy placements are no longer supported. Use placement import.");
-  err.statusCode = 410;
-  throw err;
-  let updates = { ...data };
-  
-  // Handle numeric conversions
-  if (updates.revenue !== undefined) updates.revenue = parseCurrency(updates.revenue);
-  if (updates.billedHours !== undefined) updates.billedHours = updates.billedHours ? Number(updates.billedHours) : null;
-  if (updates.incentiveAmountInr !== undefined) updates.incentiveAmountInr = parseCurrency(updates.incentiveAmountInr);
-  if (updates.incentivePaidInr !== undefined) updates.incentivePaidInr = parseCurrency(updates.incentivePaidInr);
-  if (updates.placementCredit !== undefined) updates.placementCredit = updates.placementCredit ? parseCurrency(updates.placementCredit) : null;
-  if (updates.totalRevenue !== undefined) updates.totalRevenue = updates.totalRevenue ? parseCurrency(updates.totalRevenue) : null;
-  if (updates.revenueAsLead !== undefined) updates.revenueAsLead = updates.revenueAsLead ? parseCurrency(updates.revenueAsLead) : null;
-  if (updates.placementYear !== undefined) updates.placementYear = updates.placementYear ? Number(updates.placementYear) : null;
-  
-  if (updates.billingStatus) updates.billingStatus = mapBillingStatus(updates.billingStatus);
-  if (updates.placementType) updates.placementType = mapPlacementType(updates.placementType);
-
-  // Handle dates
-  const parseDate = (val) => (val ? new Date(val) : null);
-
-  if (updates.doi !== undefined) updates.doi = parseDate(updates.doi);
-  if (updates.doq !== undefined) updates.doq = parseDate(updates.doq);
-  if (updates.incentivePayoutEta !== undefined) updates.incentivePayoutEta = parseDate(updates.incentivePayoutEta);
-  
-  // DOJ is mandatory, so if invalid/empty, remove from updates to retain existing
-  if (updates.doj !== undefined) {
-    if (updates.doj) {
-      updates.doj = new Date(updates.doj);
-    } else {
-      delete updates.doj;
-    }
+  const personal = await prisma.personalPlacement.findUnique({ where: { id } });
+  if (personal) {
+    const updates = {};
+    if (data.candidateName !== undefined) updates.candidateName = String(data.candidateName).trim() || personal.candidateName;
+    if (data.placementYear !== undefined) updates.placementYear = data.placementYear !== "" && data.placementYear != null ? Number(data.placementYear) : null;
+    if (data.doj !== undefined) { const d = parseDateForUpdate(data.doj); if (d) updates.doj = d; }
+    if (data.doq !== undefined) updates.doq = parseDateForUpdate(data.doq) ?? null;
+    if (data.client !== undefined) updates.client = String(data.client).trim() || personal.client;
+    if (data.plcId !== undefined) updates.plcId = String(data.plcId).trim() || personal.plcId;
+    if (data.placementType !== undefined) updates.placementType = mapPlacementType(data.placementType);
+    if (data.billingStatus !== undefined) updates.billingStatus = mapBillingStatus(data.billingStatus);
+    if (data.collectionStatus !== undefined) updates.collectionStatus = data.collectionStatus != null ? String(data.collectionStatus).trim() : null;
+    if (data.totalBilledHours !== undefined) updates.totalBilledHours = data.totalBilledHours !== "" && data.totalBilledHours != null ? Number(data.totalBilledHours) : null;
+    if (data.revenueUsd !== undefined) updates.revenueUsd = parseNum(data.revenueUsd, 0);
+    if (data.incentiveInr !== undefined) updates.incentiveInr = parseNum(data.incentiveInr, 0);
+    if (data.incentivePaidInr !== undefined) updates.incentivePaidInr = data.incentivePaidInr != null && data.incentivePaidInr !== "" ? parseNum(data.incentivePaidInr, null) : null;
+    if (data.recruiterName !== undefined) updates.recruiterName = data.recruiterName != null ? String(data.recruiterName).trim() : null;
+    if (data.teamLeadName !== undefined) updates.teamLeadName = data.teamLeadName != null ? String(data.teamLeadName).trim() : null;
+    if (Object.keys(updates).length === 0) return personal;
+    const updated = await prisma.personalPlacement.update({ where: { id }, data: updates });
+    await prisma.auditLog.create({
+      data: { actorId, action: "PLACEMENT_UPDATED", entityType: "PersonalPlacement", entityId: id, changes: updates },
+    });
+    return updated;
   }
 
-  // Remove fields that are not in schema or handled
-  delete updates.daysCompleted;
-  delete updates.qualifier;
-  delete updates.marginPercent;
-  delete updates.jpcId;
-  delete updates.clientId;
-  delete updates.incentivePaid; // Using incentivePaidInr now
+  const team = await prisma.teamPlacement.findUnique({ where: { id } });
+  if (team) {
+    const updates = {};
+    if (data.candidateName !== undefined) updates.candidateName = String(data.candidateName).trim() || team.candidateName;
+    if (data.recruiterName !== undefined) updates.recruiterName = data.recruiterName != null ? String(data.recruiterName).trim() : null;
+    if (data.leadName !== undefined) updates.leadName = data.leadName != null ? String(data.leadName).trim() : null;
+    if (data.splitWith !== undefined) updates.splitWith = data.splitWith != null ? String(data.splitWith).trim() : null;
+    if (data.placementYear !== undefined) updates.placementYear = data.placementYear !== "" && data.placementYear != null ? Number(data.placementYear) : null;
+    if (data.doj !== undefined) { const d = parseDateForUpdate(data.doj); if (d) updates.doj = d; }
+    if (data.doq !== undefined) updates.doq = parseDateForUpdate(data.doq) ?? null;
+    if (data.client !== undefined) updates.client = String(data.client).trim() || team.client;
+    if (data.plcId !== undefined) updates.plcId = String(data.plcId).trim() || team.plcId;
+    if (data.placementType !== undefined) updates.placementType = mapPlacementType(data.placementType);
+    if (data.billingStatus !== undefined) updates.billingStatus = mapBillingStatus(data.billingStatus);
+    if (data.collectionStatus !== undefined) updates.collectionStatus = data.collectionStatus != null ? String(data.collectionStatus).trim() : null;
+    if (data.totalBilledHours !== undefined) updates.totalBilledHours = data.totalBilledHours !== "" && data.totalBilledHours != null ? Number(data.totalBilledHours) : null;
+    if (data.revenueUsd !== undefined) updates.revenueLeadUsd = parseNum(data.revenueUsd, 0);
+    if (data.incentiveInr !== undefined) updates.incentiveInr = parseNum(data.incentiveInr, 0);
+    if (data.incentivePaidInr !== undefined) updates.incentivePaidInr = data.incentivePaidInr != null && data.incentivePaidInr !== "" ? parseNum(data.incentivePaidInr, null) : null;
+    if (Object.keys(updates).length === 0) return team;
+    const updated = await prisma.teamPlacement.update({ where: { id }, data: updates });
+    await prisma.auditLog.create({
+      data: { actorId, action: "PLACEMENT_UPDATED", entityType: "TeamPlacement", entityId: id, changes: updates },
+    });
+    return updated;
+  }
 
-  const placement = await prisma.placement.update({
-    where: { id },
-    data: updates,
-  });
-
-  await prisma.auditLog.create({
-    data: {
-      actorId,
-      action: "PLACEMENT_UPDATED",
-      entityType: "Placement",
-      entityId: id,
-      changes: updates,
-    },
-  });
-
-  return placement;
+  const err = new Error("Placement not found");
+  err.statusCode = 404;
+  throw err;
 }
 
 export async function updatePlacementBilling(id, billingData, actorId) {
@@ -1349,6 +1355,7 @@ export async function importPersonalPlacements(payload, actorId) {
   // Pre-fetch all users and profiles to avoid DB queries in loop
   console.log("Pre-fetching users and profiles...");
   const allProfiles = await prisma.employeeProfile.findMany({
+    where: { deletedAt: null },
     include: { user: true },
   });
   const profileByVb = new Map();
@@ -1385,7 +1392,8 @@ export async function importPersonalPlacements(payload, actorId) {
 
   const plcIds = [];
   const preparedRows = [];
-  
+  const batchErrors = []; // Row-level validation errors for import failure tracking
+
   // Store summary data per employee (extracted from summary rows)
   const employeeSummaryData = new Map(); // employeeId -> summary object
 
@@ -1544,7 +1552,7 @@ export async function importPersonalPlacements(payload, actorId) {
           // Try to find employee immediately
           currentEmployee = findEmployeeCached(metricsVbCode, metricsRecruiterName);
           if (!currentEmployee && (metricsVbCode || metricsRecruiterName)) {
-            // Skip if we can't find the employee - don't fail entire import
+            batchErrors.push({ rowIndex, message: "Employee not found for VB code / recruiter name" });
             continue;
           }
           
@@ -1972,6 +1980,7 @@ export async function importPersonalPlacements(payload, actorId) {
       data: {
         type: "PERSONAL",
         uploaderId: actorId,
+        errors: batchErrors.length ? batchErrors : undefined,
       },
     });
 
@@ -2135,6 +2144,7 @@ export async function importPersonalPlacements(payload, actorId) {
         employeesUpdated: employeeUpdates.size,
       },
       batchId: batch.id,
+      errors: batchErrors,
     };
   }, {
     timeout: 60000, // 60 seconds timeout for large imports
@@ -2144,7 +2154,7 @@ export async function importPersonalPlacements(payload, actorId) {
   return {
     ...result,
     insertedCount: result.summary?.placementsCreated ?? 0,
-    errors: [],
+    errors: result.errors ?? [],
   };
 }
 
@@ -2217,6 +2227,7 @@ export async function importTeamPlacements(payload, actorId) {
   // Pre-fetching users and profiles for caching (include team so we can filter by sheet team name)
   console.log("Pre-fetching users and profiles for team import...");
   const allProfiles = await prisma.employeeProfile.findMany({
+    where: { deletedAt: null },
     include: { user: true, team: { select: { name: true } } }
   });
 
@@ -2262,7 +2273,8 @@ export async function importTeamPlacements(payload, actorId) {
 
   const plcIds = [];
   const preparedRows = [];
-  
+  const batchErrors = []; // Row-level validation errors for import failure tracking
+
   // Store summary data per lead (extracted from summary rows)
   const leadSummaryData = new Map(); // leadId -> summary object
 
@@ -2460,7 +2472,7 @@ export async function importTeamPlacements(payload, actorId) {
           
           currentLeadUser = findLeadCached(metricsVbCode, metricsLeadName, metricsTeamName);
           if (!currentLeadUser && (metricsVbCode || metricsLeadName)) {
-            // Skip if we can't find the lead - don't fail entire import
+            batchErrors.push({ rowIndex: rowIndex + lookAhead, message: "Lead not found for VB code / lead name" });
             continue;
           }
           
@@ -2837,6 +2849,7 @@ export async function importTeamPlacements(payload, actorId) {
       data: {
         type: "TEAM",
         uploaderId: actorId,
+        errors: batchErrors.length ? batchErrors : undefined,
       },
     });
 
@@ -2903,6 +2916,7 @@ export async function importTeamPlacements(payload, actorId) {
         employeesUpdated: 0,
       },
       batchId: batch.id,
+      errors: batchErrors,
     };
   }, {
     timeout: 60000,
@@ -2914,7 +2928,7 @@ export async function importTeamPlacements(payload, actorId) {
   return {
     ...result,
     insertedCount: result.summary?.placementsCreated ?? 0,
-    errors: [],
+    errors: result.errors ?? [],
     report,
   };
 }

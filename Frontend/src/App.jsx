@@ -4,6 +4,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 
 // Lazy load components
 const LoginForm = lazy(() => import('./components/LoginForm'))
+const ForgotPassword = lazy(() => import('./components/ForgotPassword'))
+const ResetPassword = lazy(() => import('./components/ResetPassword'))
 const TeamPage = lazy(() => import('./components/TeamPage'))
 const TeamLeadPage = lazy(() => import('./components/TeamLeadPage'))
 const EmployeeDetails = lazy(() => import('./components/EmployeeDetails'))
@@ -28,6 +30,8 @@ function App() {
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route path="/" element={<LoginForm />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/admin/dashboard"
             element={

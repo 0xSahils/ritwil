@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const LoginForm = () => {
@@ -11,7 +11,9 @@ const LoginForm = () => {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
+  const successMessage = location.state?.message
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -125,6 +127,12 @@ const LoginForm = () => {
           <div className="w-16 h-1 bg-blue-500 mb-8"></div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Success message (e.g. after password reset) */}
+            {successMessage && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-sm">
+                {successMessage}
+              </div>
+            )}
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -189,9 +197,9 @@ const LoginForm = () => {
                 />
                 <span className="ml-2 text-gray-600 group-hover:text-gray-800">Keep me signed in</span>
               </label>
-              <a href="#" className="text-blue-500 hover:text-blue-600 transition-colors">
-                Already a member?
-              </a>
+              <Link to="/forgot-password" className="text-blue-500 hover:text-blue-600 transition-colors">
+                Forgot password?
+              </Link>
             </div>
 
             {/* Submit Button */}

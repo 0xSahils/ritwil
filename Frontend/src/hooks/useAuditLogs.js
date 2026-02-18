@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { API_BASE_URL } from '../api/client';
 
 const fetchAuditLogs = async (params) => {
   const queryParams = new URLSearchParams();
@@ -6,7 +7,7 @@ const fetchAuditLogs = async (params) => {
     if (params[key]) queryParams.append(key, params[key]);
   });
 
-  const response = await fetch(`/api/audit-logs?${queryParams.toString()}`);
+  const response = await fetch(`${API_BASE_URL}/audit-logs?${queryParams.toString()}`, { credentials: 'include' });
   if (!response.ok) {
     throw new Error('Failed to fetch audit logs');
   }

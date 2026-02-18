@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "../api/client"; // Keep for import functionality if not refactored yet
 import CalculationService from "../utils/calculationService";
 import UserCreationModal from "./UserCreationModal";
@@ -45,6 +46,9 @@ const AdminTeamDetails = () => {
   const [importError, setImportError] = useState("");
   const [importResult, setImportResult] = useState(null); // { summary, report } after successful team import
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [slabCommentModal, setSlabCommentModal] = useState({ open: false, userId: null, name: "", slabComment: "" });
+  const [slabCommentDraft, setSlabCommentDraft] = useState("");
+  const [slabCommentSaving, setSlabCommentSaving] = useState(false);
 
   const handleUpdateTeam = (data) => {
     updateTeam(data, {
@@ -73,6 +77,39 @@ const AdminTeamDetails = () => {
         alert(err.message);
       }
     });
+  };
+
+  const openSlabCommentModal = (user) => {
+    setSlabCommentModal({ open: true, userId: user.userId, name: user.name, slabComment: user.slabComment || "" });
+    setSlabCommentDraft(user.slabComment || "");
+  };
+
+  const closeSlabCommentModal = () => {
+    setSlabCommentModal({ open: false, userId: null, name: "", slabComment: "" });
+    setSlabCommentDraft("");
+  };
+
+  const handleSaveSlabComment = async () => {
+    if (!slabCommentModal.userId) return;
+    setSlabCommentSaving(true);
+    try {
+      const res = await apiRequest(`/users/${slabCommentModal.userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slabComment: slabCommentDraft.trim() || "" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update slab comment");
+      }
+      refetch();
+      closeSlabCommentModal();
+      showNotification("success", "Slab comment updated");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSlabCommentSaving(false);
+    }
   };
 
   const handleCreateSuccess = () => {
@@ -168,10 +205,9 @@ const AdminTeamDetails = () => {
       if (!response.ok) {
         throw new Error(result.error || "Import failed");
       }
-      const totalRows = (result.summary?.placementsCreated ?? result.insertedCount ?? 0) + (result.summary?.placementsUpdated ?? 0);
-      alert(`Personal placements imported (${totalRows} rows: ${result.summary?.placementsCreated ?? 0} created, ${result.summary?.placementsUpdated ?? 0} updated).`);
       setShowPersonalImportModal(false);
       setPersonalFile(null);
+      setImportResult(result);
       refetch();
     } catch (e) {
       setImportError(e.message || "Import failed");
@@ -377,6 +413,7 @@ const AdminTeamDetails = () => {
                     <th className="pb-3 font-medium pl-4">Name</th>
                     <th className="pb-3 font-medium">Email</th>
                     <th className="pb-3 font-medium">Achievement</th>
+                    {canEditTarget && <th className="pb-3 font-medium">Slab comment</th>}
                     {activeTab === "members" && <th className="pb-3 font-medium">Manager</th>}
                     <th className="pb-3 font-medium text-right pr-4">Actions</th>
                   </tr>
@@ -399,6 +436,18 @@ const AdminTeamDetails = () => {
                           : CalculationService.formatCurrency(user.revenue)
                         }
                       </td>
+                      {canEditTarget && (
+                        <td className="py-4 text-slate-600 max-w-[200px]">
+                          <span className="line-clamp-2 block">{user.slabComment || "—"}</span>
+                          <button
+                            type="button"
+                            onClick={() => openSlabCommentModal(user)}
+                            className="text-violet-600 hover:text-violet-800 text-xs font-medium mt-1"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      )}
                       {activeTab === "members" && (
                         <td className="py-4 text-slate-600">{user.managerName || "-"}</td>
                       )}
@@ -414,7 +463,7 @@ const AdminTeamDetails = () => {
                   ))}
                   {(activeTab === "leads" ? team.leads : team.members).length === 0 && (
                     <tr>
-                      <td colSpan={activeTab === "members" ? 5 : 4} className="py-8 text-center text-slate-400">
+                      <td colSpan={activeTab === "members" ? (canEditTarget ? 6 : 5) : (canEditTarget ? 5 : 4)} className="py-8 text-center text-slate-400">
                         No {activeTab === "leads" ? "leads" : "members"} found.
                       </td>
                     </tr>
@@ -516,6 +565,40 @@ const AdminTeamDetails = () => {
         </div>
       )}
 
+      {slabCommentModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn">
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Slab comment (L4 dashboard)</h2>
+            <p className="text-sm text-slate-500 mb-4">{slabCommentModal.name}</p>
+            <textarea
+              value={slabCommentDraft}
+              onChange={(e) => setSlabCommentDraft(e.target.value)}
+              rows={4}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 outline-none resize-y"
+              placeholder="Comment shown in L4 dashboard slab box"
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                type="button"
+                onClick={closeSlabCommentModal}
+                disabled={slabCommentSaving}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSlabComment}
+                disabled={slabCommentSaving}
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium disabled:opacity-50"
+              >
+                {slabCommentSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPersonalImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 animate-fadeIn">
@@ -612,42 +695,97 @@ const AdminTeamDetails = () => {
         </div>
       )}
 
-      {importResult && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setImportResult(null)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fadeIn" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-slate-800 mb-4">Import Result</h2>
-            <div className="space-y-3 text-sm">
-              <p className="text-slate-600 font-medium">Validation</p>
-              <ul className="list-none space-y-1 pl-0">
-                <li className="flex justify-between"><span>Summary headers</span><span className="text-emerald-600 font-medium">OK</span></li>
-                <li className="flex justify-between"><span>Placement headers</span><span className={importResult.report?.placementHeaderValid ? "text-emerald-600 font-medium" : "text-amber-600"}>{importResult.report?.placementHeaderValid ? "OK" : "N/A"}</span></li>
-              </ul>
-              <p className="text-slate-600 font-medium pt-2">Summary rows</p>
-              <ul className="list-none space-y-1 pl-0">
-                <li className="flex justify-between"><span>Checked</span><span>{importResult.report?.summaryRowsChecked ?? 0}</span></li>
-                <li className="flex justify-between"><span>Accepted</span><span className="text-emerald-600">{importResult.report?.summaryRowsAccepted ?? 0}</span></li>
-                <li className="flex justify-between"><span>Rejected (wrong team)</span><span className="text-amber-600">{importResult.report?.summaryRowsRejectedWrongTeam ?? 0}</span></li>
-              </ul>
-              <p className="text-slate-600 font-medium pt-2">Placement rows</p>
-              <ul className="list-none space-y-1 pl-0">
-                <li className="flex justify-between"><span>Checked</span><span>{importResult.report?.placementRowsChecked ?? 0}</span></li>
-                <li className="flex justify-between"><span>Uploaded (created)</span><span className="text-emerald-600">{importResult.report?.placementsCreated ?? importResult.summary?.placementsCreated ?? 0}</span></li>
-                <li className="flex justify-between"><span>Updated</span><span className="text-emerald-600">{importResult.report?.placementsUpdated ?? importResult.summary?.placementsUpdated ?? 0}</span></li>
-                <li className="flex justify-between"><span>Rejected (wrong team)</span><span className="text-amber-600">{importResult.report?.placementsRejectedWrongTeam ?? 0}</span></li>
-                <li className="flex justify-between"><span>Rejected (lead not found)</span><span className="text-red-600">{importResult.report?.placementsRejectedLeadNotFound ?? 0}</span></li>
-              </ul>
-            </div>
-            <div className="flex justify-end mt-6">
-              <button 
-                onClick={() => setImportResult(null)} 
-                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {importResult && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setImportResult(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-200/80"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-bold text-slate-800 mb-4">Import Result</h2>
+              <div className="space-y-4 text-sm">
+                <div>
+                  <p className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-2">Summary</p>
+                  <ul className="list-none space-y-1 pl-0">
+                    <li className="flex justify-between py-0.5"><span>Created</span><span className="text-emerald-600 font-medium">{importResult.summary?.placementsCreated ?? importResult.report?.placementsCreated ?? importResult.insertedCount ?? 0}</span></li>
+                    <li className="flex justify-between py-0.5"><span>Updated</span><span className="text-emerald-600 font-medium">{importResult.summary?.placementsUpdated ?? importResult.report?.placementsUpdated ?? 0}</span></li>
+                  </ul>
+                </div>
+                {importResult.report != null && (
+                  <>
+                    <div>
+                      <p className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-2">Validation</p>
+                      <ul className="list-none space-y-1 pl-0">
+                        <li className="flex justify-between py-0.5"><span>Placement headers</span><span className={importResult.report?.placementHeaderValid ? "text-emerald-600 font-medium" : "text-amber-600"}>{importResult.report?.placementHeaderValid ? "OK" : "N/A"}</span></li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-2">Summary rows</p>
+                      <ul className="list-none space-y-1 pl-0">
+                        <li className="flex justify-between py-0.5"><span>Checked</span><span>{importResult.report?.summaryRowsChecked ?? 0}</span></li>
+                        <li className="flex justify-between py-0.5"><span>Accepted</span><span className="text-emerald-600">{importResult.report?.summaryRowsAccepted ?? 0}</span></li>
+                        <li className="flex justify-between py-0.5"><span>Rejected (wrong team)</span><span className="text-amber-600">{importResult.report?.summaryRowsRejectedWrongTeam ?? 0}</span></li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-2">Placement rows</p>
+                      <ul className="list-none space-y-1 pl-0">
+                        <li className="flex justify-between py-0.5"><span>Checked</span><span>{importResult.report?.placementRowsChecked ?? 0}</span></li>
+                        <li className="flex justify-between py-0.5"><span>Rejected (wrong team)</span><span className="text-amber-600">{importResult.report?.placementsRejectedWrongTeam ?? 0}</span></li>
+                        <li className="flex justify-between py-0.5"><span>Rejected (lead not found)</span><span className="text-red-600">{importResult.report?.placementsRejectedLeadNotFound ?? 0}</span></li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+                {Array.isArray(importResult.errors) && importResult.errors.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <p className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      Row errors ({importResult.errors.length})
+                    </p>
+                    <ul className="list-none pl-0 space-y-1 max-h-40 overflow-y-auto pr-1">
+                      {importResult.errors.map((err, i) => (
+                        <motion.li
+                          key={i}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.06, duration: 0.25 }}
+                          className="flex items-start gap-2 py-2 px-3 rounded-lg bg-amber-50/80 border border-amber-200/60 text-slate-700 text-xs"
+                        >
+                          <span className="shrink-0 font-semibold text-amber-700">Row {err.rowIndex ?? i + 1}</span>
+                          <span className="min-w-0">{err.message ?? "Validation error"}</span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end mt-6">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  onClick={() => setImportResult(null)}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-medium shadow-sm"
+                >
+                  Done
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <UserCreationModal 
         isOpen={showCreateModal}

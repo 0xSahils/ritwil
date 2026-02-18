@@ -36,8 +36,8 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
     const teamId = fullActor?.employeeProfile?.teamId;
 
     if (teamId) {
-       // Scope to users in the same team
-       where.employeeProfile = { teamId, isActive: true };
+       // Scope to users in the same team (exclude soft-deleted)
+       where.employeeProfile = { teamId, isActive: true, deletedAt: null };
     } else {
        // Fallback: Restrict to hierarchy if no team found
        where.OR = [
@@ -45,6 +45,7 @@ export async function listUsersWithRelations({ page = 1, pageSize = 25, actor, r
         { manager: { managerId: actor.id } },
         { manager: { manager: { managerId: actor.id } } }
       ];
+       where.employeeProfile = { deletedAt: null };
     }
   }
 
@@ -221,6 +222,7 @@ export async function updateUserWithProfile(id, body, actor) {
     yearlyTarget: rawYearlyTarget,
     targetType,
     isActive,
+    slabComment,
   } = body;
 
   const teamId = rawTeamId === "" ? null : rawTeamId;
@@ -236,7 +238,8 @@ export async function updateUserWithProfile(id, body, actor) {
       rawLevel !== undefined ||
       rawYearlyTarget !== undefined ||
       targetType !== undefined ||
-      typeof isActive === "boolean"
+      typeof isActive === "boolean" ||
+      slabComment !== undefined
     ) {
       const error = new Error("Unauthorized to change sensitive fields");
       error.statusCode = 403;
@@ -309,6 +312,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 vbid: vbid || null,
                 yearlyTarget: yearlyTarget || 0,
                 targetType: targetType || "REVENUE",
+                slabComment: slabComment !== undefined ? (slabComment === "" ? null : slabComment) : null,
                 isActive:
                   typeof isActive === "boolean"
                     ? isActive
@@ -325,6 +329,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 vbid: vbid !== undefined ? vbid : (user.employeeProfile?.vbid ?? null),
                 yearlyTarget: yearlyTarget !== undefined ? yearlyTarget : (user.employeeProfile?.yearlyTarget ?? 0),
                 targetType: targetType !== undefined ? targetType : (user.employeeProfile?.targetType ?? "REVENUE"),
+                slabComment: slabComment !== undefined ? (slabComment === "" ? null : slabComment) : (user.employeeProfile?.slabComment ?? null),
                 isActive:
                   typeof isActive === "boolean"
                     ? isActive
@@ -336,6 +341,14 @@ export async function updateUserWithProfile(id, body, actor) {
               },
             },
           };
+  }
+
+  if (actor.role === Role.S1_ADMIN && employeeProfileUpdate === undefined && user.employeeProfile && slabComment !== undefined) {
+    employeeProfileUpdate = {
+      update: {
+        slabComment: slabComment === "" ? null : slabComment,
+      },
+    };
   }
 
   const before = {

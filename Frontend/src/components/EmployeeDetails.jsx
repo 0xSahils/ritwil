@@ -241,6 +241,7 @@ const EmployeeDetails = () => {
       totalRevenue: rawData.targetType === 'PLACEMENTS' ? String(placementTarget) : CalculationService.formatCurrency(revenueTarget),
       targetPlacements: String(placementTarget),
       slabQualified: slab,
+      slabComment: rawData.slabComment ?? null,
       incentiveUSD: incentiveInr != null ? CalculationService.formatCurrency(incentiveInrNum / 80) : null,
       incentiveINR: incentiveInr != null ? CalculationService.formatCurrency(incentiveInrNum, 'INR') : null,
       placements,
@@ -393,6 +394,7 @@ const EmployeeDetails = () => {
       alert(err.message);
     }
   }
+
 
   // Get current month's billing hours (or most recent if current month not found)
   const getCurrentMonthHours = (monthlyBilling) => {

@@ -95,6 +95,7 @@ export const useHeadPlacements = (filters = {}) => {
   if (filters.year != null && filters.year !== '' && filters.year !== 'all') params.set('year', String(filters.year))
   if (filters.placementType) params.set('placementType', filters.placementType)
   if (filters.source) params.set('source', filters.source)
+  if (filters.plcId) params.set('plcId', filters.plcId)
   const queryString = params.toString()
 
   return useQuery({

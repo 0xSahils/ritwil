@@ -21,7 +21,7 @@ function toEmployeeSlug(name) {
 export async function resolveEmployeeId(idOrSlug) {
   if (looksLikeCuid(idOrSlug)) {
     const u = await prisma.user.findFirst({
-      where: { id: idOrSlug, employeeProfile: { isNot: null } },
+      where: { id: idOrSlug, employeeProfile: { is: { deletedAt: null } } },
       select: { id: true },
     });
     if (!u) {
@@ -33,7 +33,7 @@ export async function resolveEmployeeId(idOrSlug) {
   }
   const slug = String(idOrSlug).toLowerCase().replace(/[^a-z0-9-]/g, "");
   const users = await prisma.user.findMany({
-    where: { isActive: true, employeeProfile: { isNot: null } },
+    where: { isActive: true, employeeProfile: { is: { deletedAt: null } } },
     select: { id: true, name: true },
     orderBy: { id: "asc" },
   });
@@ -63,11 +63,11 @@ export async function getSuperAdminOverview(currentUser, year) {
     if (currentUser.role === Role.SUPER_ADMIN) {
       // Find teams managed by this L1 (User -> subordinates -> teamId)
       const subordinates = await prisma.user.findMany({
-        where: { managerId: currentUser.id },
-        select: { 
-          employeeProfile: { 
-            select: { teamId: true } 
-          } 
+        where: { managerId: currentUser.id, employeeProfile: { is: { deletedAt: null } } },
+        select: {
+          employeeProfile: {
+            select: { teamId: true }
+          }
         }
       });
       
@@ -119,6 +119,7 @@ export async function getSuperAdminOverview(currentUser, year) {
     where: {
       role: { in: [Role.EMPLOYEE, Role.TEAM_LEAD, Role.LIMITED_ACCESS] },
       isActive: true,
+      employeeProfile: { is: { deletedAt: null } },
     },
     include: {
       employeeProfile: true,
@@ -522,7 +523,7 @@ export async function getTeamLeadOverview(currentUser, year) {
   // This is necessary because L3's reports (L4s) are not direct reports of L2
   const teamEmployees = await prisma.user.findMany({
     where: {
-      employeeProfile: { teamId: leadProfile.teamId },
+      employeeProfile: { is: { teamId: leadProfile.teamId, deletedAt: null } },
       isActive: true,
       role: Role.EMPLOYEE,
     },
@@ -536,7 +537,7 @@ export async function getTeamLeadOverview(currentUser, year) {
 
   const teamLeads = await prisma.user.findMany({
     where: {
-      employeeProfile: { teamId: leadProfile.teamId },
+      employeeProfile: { is: { teamId: leadProfile.teamId, deletedAt: null } },
       isActive: true,
       role: Role.TEAM_LEAD,
     },
@@ -1016,18 +1017,29 @@ export async function getTeamPlacementOverview(currentUser, leadId) {
   }
 }
 
-/** Head (SUPER_ADMIN): all placements across all teams under this head, with optional filters. */
+/** Head (SUPER_ADMIN) or S1 Admin: all placements across teams. SUPER_ADMIN sees only subordinate teams; S1_ADMIN sees all. */
 export async function getL1Placements(currentUser, filters = {}) {
-  if (currentUser.role !== Role.SUPER_ADMIN) {
-    throw new Error("Only Super User can access head placements");
+  if (currentUser.role !== Role.SUPER_ADMIN && currentUser.role !== Role.S1_ADMIN) {
+    throw new Error("Only Super User or S1 Admin can access head placements");
   }
 
   let teamWhere = { isActive: true };
-  const subordinates = await prisma.user.findMany({
-    where: { managerId: currentUser.id },
-    select: { employeeProfile: { select: { teamId: true } } },
-  });
-  const teamIds = subordinates.map((s) => s.employeeProfile?.teamId).filter(Boolean);
+  let teamIds = [];
+
+  if (currentUser.role === Role.S1_ADMIN) {
+    const allTeams = await prisma.team.findMany({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    teamIds = allTeams.map((t) => t.id);
+  } else {
+    const subordinates = await prisma.user.findMany({
+      where: { managerId: currentUser.id },
+      select: { employeeProfile: { select: { teamId: true } } },
+    });
+    teamIds = subordinates.map((s) => s.employeeProfile?.teamId).filter(Boolean);
+  }
+
   if (teamIds.length === 0) {
     return { placements: [], teams: [], availablePlacementTypes: [], availableLeads: [] };
   }
@@ -1041,7 +1053,7 @@ export async function getL1Placements(currentUser, filters = {}) {
 
   const teamIdSet = new Set(teams.map((t) => t.id));
   const profilesInTeams = await prisma.employeeProfile.findMany({
-    where: { teamId: { in: teamIds } },
+    where: { teamId: { in: teamIds }, deletedAt: null },
     include: { user: { select: { id: true, name: true, role: true } }, team: { select: { id: true, name: true } } },
   });
 
@@ -1096,6 +1108,8 @@ export async function getL1Placements(currentUser, filters = {}) {
     personalWhere.placementType = { equals: t, mode: "insensitive" };
     teamPlaceWhere.placementType = { equals: t, mode: "insensitive" };
   }
+  const plcSearch =
+    filters.plcId && String(filters.plcId).trim() ? String(filters.plcId).trim() : null;
   const sourceFilter = filters.source && String(filters.source).toLowerCase();
   const wantPersonal = sourceFilter !== "team";
   const wantTeam = sourceFilter !== "personal";
@@ -1118,16 +1132,25 @@ export async function getL1Placements(currentUser, filters = {}) {
       : {}),
   };
 
+  const personalWhereFinal =
+    plcSearch
+      ? { AND: [personalWhere, { plcId: { contains: plcSearch, mode: "insensitive" } }] }
+      : personalWhere;
+  const teamPlaceWhereFinal =
+    plcSearch
+      ? { AND: [teamPlaceWhere, { plcId: { contains: plcSearch, mode: "insensitive" } }] }
+      : teamPlaceWhere;
+
   const [personalRows, teamRows, personalTypesRows, teamTypesRows] = await Promise.all([
     wantPersonal
       ? prisma.personalPlacement.findMany({
-          where: personalWhere,
+          where: personalWhereFinal,
           orderBy: [{ placementYear: "desc" }, { doj: "desc" }],
         })
       : [],
     wantTeam
       ? prisma.teamPlacement.findMany({
-          where: teamPlaceWhere,
+          where: teamPlaceWhereFinal,
           orderBy: [{ placementYear: "desc" }, { doj: "desc" }],
         })
       : [],

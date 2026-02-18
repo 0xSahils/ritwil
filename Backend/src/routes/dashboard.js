@@ -154,6 +154,7 @@ const processEmployeeData = async (employee) => {
     yearlyPlacementTarget,
     targetType,
     slabQualified,
+    slabComment: employee.employeeProfile.slabComment || null,
     revenueGenerated,
     placementsCount,
     percentage,
@@ -328,7 +329,7 @@ router.get(
 
 router.get(
   "/head-placements",
-  requireRole(Role.SUPER_ADMIN),
+  requireRole(Role.SUPER_ADMIN, Role.S1_ADMIN),
   async (req, res, next) => {
     try {
       const filters = {
@@ -337,6 +338,7 @@ router.get(
         year: req.query.year ?? undefined,
         placementType: req.query.placementType || undefined,
         source: req.query.source || undefined,
+        plcId: req.query.plcId || undefined,
       };
       const data = await getL1Placements(req.user, filters);
       res.json(data);

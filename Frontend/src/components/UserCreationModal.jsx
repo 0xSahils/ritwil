@@ -12,6 +12,7 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
     level: "",
     yearlyTarget: "",
     targetType: "REVENUE",
+    vbid: "",
   });
 
   const [error, setError] = useState("");
@@ -35,6 +36,7 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
         level: editingUser.employeeProfile?.level || editingUser.level || "",
         yearlyTarget: editingUser.employeeProfile?.yearlyTarget || editingUser.yearlyTarget || "",
         targetType: editingUser.employeeProfile?.targetType || editingUser.targetType || "REVENUE",
+        vbid: editingUser.employeeProfile?.vbid || editingUser.vbid || "",
       });
     } else {
       // Determine default level based on defaultRole
@@ -50,6 +52,7 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
         level: defaultLevel,
         yearlyTarget: "",
         targetType: teams.length === 1 ? (teams[0].targetType || "REVENUE") : "REVENUE",
+        vbid: "",
       });
     }
     setError("");
@@ -176,6 +179,17 @@ const UserCreationModal = ({ isOpen, onClose, editingUser, onSuccess, teams = []
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               placeholder="••••••••"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1 uppercase tracking-wide">VB ID</label>
+            <input
+              type="text"
+              required
+              value={formData.vbid}
+              onChange={(e) => setFormData({ ...formData, vbid: e.target.value.trim() })}
+              className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              placeholder="Enter VB ID"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">

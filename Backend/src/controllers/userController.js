@@ -136,6 +136,7 @@ export async function createUserWithProfile(payload, actorId) {
     managerId,
     level,
     targetType,
+    vbid,
   } = payload;
 
   if (!email || !password || !name || !role) {
@@ -144,9 +145,36 @@ export async function createUserWithProfile(payload, actorId) {
     throw error;
   }
 
+  // Require vbid for ALL roles
+  if (!vbid || !vbid.trim()) {
+    const error = new Error("VB ID is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (![Role.S1_ADMIN, Role.SUPER_ADMIN, Role.TEAM_LEAD, Role.LIMITED_ACCESS, Role.EMPLOYEE].includes(role)) {
     const error = new Error("Invalid role");
     error.statusCode = 400;
+    throw error;
+  }
+
+  // Validate vbid uniqueness - check both User.vbid and EmployeeProfile.vbid
+  const trimmedVbid = vbid.trim();
+  const existingUser = await prisma.user.findFirst({
+    where: { vbid: trimmedVbid },
+  });
+  if (existingUser) {
+    const error = new Error("VB ID already in use");
+    error.statusCode = 409;
+    throw error;
+  }
+  
+  const existingProfile = await prisma.employeeProfile.findUnique({
+    where: { vbid: trimmedVbid },
+  });
+  if (existingProfile) {
+    const error = new Error("VB ID already in use");
+    error.statusCode = 409;
     throw error;
   }
 
@@ -160,6 +188,7 @@ export async function createUserWithProfile(payload, actorId) {
         name,
         role,
         managerId: managerId || null,
+        vbid: trimmedVbid, // vbid stored on User for all roles (including SUPER_ADMIN and S1_ADMIN)
         employeeProfile:
           role === Role.S1_ADMIN || role === Role.SUPER_ADMIN
             ? undefined
@@ -169,6 +198,7 @@ export async function createUserWithProfile(payload, actorId) {
                   managerId: managerId || null,
                   level: level || null,
                   targetType: targetType || "REVENUE",
+                  vbid: trimmedVbid, // Canonical vbid on EmployeeProfile for non-admin roles
                 },
               },
       },
@@ -189,6 +219,7 @@ export async function createUserWithProfile(payload, actorId) {
           email: user.email,
           name: user.name,
           role: user.role,
+          vbid: trimmedVbid,
           teamId: user.employeeProfile?.teamId || null,
           managerId: user.employeeProfile?.managerId || null,
           level: user.employeeProfile?.level || null,
@@ -200,6 +231,11 @@ export async function createUserWithProfile(payload, actorId) {
     return user;
   } catch (err) {
     if (err.code === "P2002") {
+      if (err.meta?.target?.includes("vbid")) {
+        const error = new Error("VB ID already in use");
+        error.statusCode = 409;
+        throw error;
+      }
       const error = new Error("Email already in use");
       error.statusCode = 409;
       throw error;
@@ -293,6 +329,52 @@ export async function updateUserWithProfile(id, body, actor) {
   }
 
   if (actor.role === Role.SUPER_ADMIN) {
+    // Validate vbid uniqueness if being updated - check both User.vbid and EmployeeProfile.vbid
+    let finalVbid = vbid !== undefined ? (vbid === "" ? null : vbid.trim()) : (user.employeeProfile?.vbid ?? user.vbid ?? null);
+    
+    // Require vbid if not already set on the user
+    if (!finalVbid || !finalVbid.trim()) {
+      // Check if user already has a vbid
+      const existingVbid = user.vbid || user.employeeProfile?.vbid;
+      if (!existingVbid) {
+        const error = new Error("VB ID is required");
+        error.statusCode = 400;
+        throw error;
+      }
+      // Use existing vbid if not being updated
+      finalVbid = existingVbid;
+    } else {
+      const trimmedVbid = finalVbid.trim();
+      
+      // Check User.vbid uniqueness
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          vbid: trimmedVbid,
+          id: { not: user.id },
+        },
+      });
+      if (existingUser) {
+        const error = new Error("VB ID already in use");
+        error.statusCode = 409;
+        throw error;
+      }
+      
+      // Check EmployeeProfile.vbid uniqueness
+      const existingProfile = await prisma.employeeProfile.findFirst({
+        where: {
+          vbid: trimmedVbid,
+          id: { not: user.id },
+        },
+      });
+      if (existingProfile) {
+        const error = new Error("VB ID already in use");
+        error.statusCode = 409;
+        throw error;
+      }
+      
+      finalVbid = trimmedVbid;
+    }
+
     employeeProfileUpdate =
       role === Role.SUPER_ADMIN
         ? user.employeeProfile
@@ -315,7 +397,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 teamId: teamId || null,
                 managerId: managerId || null,
                 level: level || null,
-                vbid: vbid || null,
+                vbid: finalVbid,
                 targetType: targetType || "REVENUE",
                 comment: user.employeeProfile?.comment ?? null,
                 isActive:
@@ -331,7 +413,7 @@ export async function updateUserWithProfile(id, body, actor) {
                 teamId: teamId !== undefined ? teamId : (user.employeeProfile?.teamId ?? null),
                 managerId: managerId !== undefined ? managerId : (user.employeeProfile?.managerId ?? null),
                 level: level !== undefined ? level : (user.employeeProfile?.level ?? null),
-                vbid: vbid !== undefined ? vbid : (user.employeeProfile?.vbid ?? null),
+                vbid: finalVbid,
                 targetType: targetType !== undefined ? targetType : (user.employeeProfile?.targetType ?? "REVENUE"),
                 comment: user.employeeProfile?.comment ?? null,
                 isActive:
@@ -345,6 +427,11 @@ export async function updateUserWithProfile(id, body, actor) {
               },
             },
           };
+    
+    // Sync vbid to User model (denormalized)
+    if (vbid !== undefined) {
+      data.vbid = finalVbid;
+    }
   }
 
   if (actor.role === Role.S1_ADMIN && user.employeeProfile && comment !== undefined) {

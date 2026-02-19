@@ -119,6 +119,7 @@ export default function L4DashboardView({
   onLogout,
 }) {
   const [activeTab, setActiveTab] = useState('overview')
+  const [viewMode, setViewMode] = useState('personal') // 'personal' or 'team'
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
   const [passwordError, setPasswordError] = useState('')
@@ -131,6 +132,22 @@ export default function L4DashboardView({
   const [placementFilterYear, setPlacementFilterYear] = useState('')
   const [placementSortBy, setPlacementSortBy] = useState('')
   const [placementSortDir, setPlacementSortDir] = useState('asc')
+
+  // Determine which placements to show based on viewMode
+  const hasPersonalData = !!(personalSheetData?.placements?.length || personalSheetData?.summary)
+  const hasTeamData = !!(teamSheetData?.placements?.length || teamSheetData?.summary)
+  
+  // Use placements based on viewMode: personal view shows personal placements, team view shows team placements
+  const placementsToDisplay = useMemo(() => {
+    if (viewMode === 'team' && hasTeamData) {
+      return teamSheetData?.placements || []
+    }
+    if (viewMode === 'personal' && hasPersonalData) {
+      return personalSheetData?.placements || []
+    }
+    // Fallback to currentPlacements prop if no sheet data
+    return currentPlacements || []
+  }, [viewMode, hasTeamData, hasPersonalData, teamSheetData, personalSheetData, currentPlacements])
 
   const togglePlacementSort = (column) => {
     if (placementSortBy === column) {
@@ -197,8 +214,21 @@ export default function L4DashboardView({
     }
   }
 
-  // L4 only has personal placements; always use personal summary
-  const activeSummary = personalSheetData?.summary
+  // Determine active summary based on viewMode: personal view uses personal summary, team view uses team summary
+  const isL2OrL3 = employeeData?.level && ['L2', 'L3'].includes(employeeData.level.toUpperCase())
+  const isL4 = employeeData?.level?.toUpperCase() === 'L4'
+  
+  // For L4: always use personal summary. For L2/L3: use summary based on viewMode
+  const activeSummary = isL4
+    ? personalSheetData?.summary
+    : (viewMode === 'team' && teamSheetData?.summary
+        ? teamSheetData.summary
+        : personalSheetData?.summary)
+  
+  // Check if team view has dual targets (revenue + placement)
+  const isDualTargetTeamView = viewMode === 'team' && isL2OrL3 && 
+    teamSheetData?.summary?.yearlyRevenueTarget != null && 
+    teamSheetData?.summary?.yearlyPlacementTarget != null
   const incentivePaidInr =
     activeSummary?.totalIncentivePaidInr != null
       ? Number(activeSummary.totalIncentivePaidInr)
@@ -229,19 +259,60 @@ export default function L4DashboardView({
     employeeData.teamName.toLowerCase().includes('vantedge') && 
     employeeData?.level === 'L4'
 
+  // For personal view: use placement target/done from personal summary
+  // For team view: use revenue target/achieved from team summary (or placement if no revenue)
   const isRevenueTarget = employeeData?.targetType === 'REVENUE'
-  const targetValue =
-    hasPlacementSheetData && (sheetPlacementTarget > 0 || sheetPlacementDone != null)
+  
+  // Determine target and achieved values based on viewMode
+  let targetValue, achievedValue
+  if (viewMode === 'personal' && personalSheetData?.summary) {
+    // Personal view: prioritize placement data
+    targetValue = personalSheetData.summary.yearlyPlacementTarget != null
+      ? Number(personalSheetData.summary.yearlyPlacementTarget)
+      : (isRevenueTarget ? employeeData?.yearlyRevenueTarget : employeeData?.yearlyPlacementTarget)
+    achievedValue = personalSheetData.summary.placementDone != null
+      ? Number(personalSheetData.summary.placementDone)
+      : (isRevenueTarget ? employeeData?.rawRevenueGenerated : employeeData?.rawPlacementsCount)
+  } else if (viewMode === 'team' && teamSheetData?.summary) {
+    // Team view: use revenue if available, otherwise placement
+    if (isDualTargetTeamView) {
+      // Dual target: for hero card, use revenue (primary target)
+      targetValue = teamSheetData.summary.yearlyRevenueTarget != null
+        ? Number(teamSheetData.summary.yearlyRevenueTarget)
+        : employeeData?.yearlyRevenueTarget
+      achievedValue = teamSheetData.summary.revenueAch != null
+        ? Number(teamSheetData.summary.revenueAch)
+        : (teamSheetData.summary.totalRevenueGenerated != null
+            ? Number(teamSheetData.summary.totalRevenueGenerated)
+            : employeeData?.rawRevenueGenerated)
+    } else {
+      // Single target team view
+      targetValue = isRevenueTarget
+        ? (teamSheetData.summary.yearlyRevenueTarget != null
+            ? Number(teamSheetData.summary.yearlyRevenueTarget)
+            : employeeData?.yearlyRevenueTarget)
+        : (teamSheetData.summary.yearlyPlacementTarget != null
+            ? Number(teamSheetData.summary.yearlyPlacementTarget)
+            : employeeData?.yearlyPlacementTarget)
+      achievedValue = isRevenueTarget
+        ? (teamSheetData.summary.revenueAch != null
+            ? Number(teamSheetData.summary.revenueAch)
+            : (teamSheetData.summary.totalRevenueGenerated != null
+                ? Number(teamSheetData.summary.totalRevenueGenerated)
+                : employeeData?.rawRevenueGenerated))
+        : (teamSheetData.summary.placementDone != null
+            ? Number(teamSheetData.summary.placementDone)
+            : employeeData?.rawPlacementsCount)
+    }
+  } else {
+    // Fallback: use employeeData
+    targetValue = hasPlacementSheetData && (sheetPlacementTarget > 0 || sheetPlacementDone != null)
       ? sheetPlacementTarget
-      : isRevenueTarget
-        ? employeeData?.yearlyRevenueTarget
-        : employeeData?.yearlyPlacementTarget
-  const achievedValue =
-    hasPlacementSheetData && sheetPlacementDone != null
+      : (isRevenueTarget ? employeeData?.yearlyRevenueTarget : employeeData?.yearlyPlacementTarget)
+    achievedValue = hasPlacementSheetData && sheetPlacementDone != null
       ? sheetPlacementDone
-      : isRevenueTarget
-        ? employeeData?.rawRevenueGenerated
-        : employeeData?.rawPlacementsCount
+      : (isRevenueTarget ? employeeData?.rawRevenueGenerated : employeeData?.rawPlacementsCount)
+  }
 
   // Basic logic: if placement target or placement done is more than 2 digits (>= 100), treat as revenue and show $; if 2 digits or less, treat as number of placements (no $)
   const targetNum = Number(targetValue) || 0
@@ -265,15 +336,21 @@ export default function L4DashboardView({
         ? ((achievedValue || 0) / targetValue) * 100
         : 0
 
-  // Sheet values only — no frontend calculation. Revenue generated is not used for target anywhere.
+  // Sheet values only — use revenueAch (Revenue Achieved) from sheet, fallback to totalRevenueGenerated
   const revenueGeneratedFromSheet =
-    activeSummary?.totalRevenueGenerated != null
-      ? CalculationService.formatCurrency(Number(activeSummary.totalRevenueGenerated))
-      : null
+    activeSummary?.revenueAch != null
+      ? CalculationService.formatCurrency(Number(activeSummary.revenueAch))
+      : (activeSummary?.totalRevenueGenerated != null
+          ? CalculationService.formatCurrency(Number(activeSummary.totalRevenueGenerated))
+          : null)
+  // Target Achieved %: use sheet value if available, otherwise calculate from target/achieved
+  // For L2/L3: use revenueTargetAchievedPercent from team summary; for L4: use targetAchievedPercent from personal summary
   const sheetTargetAchievedPct =
-    activeSummary?.targetAchievedPercent != null || activeSummary?.placementAchPercent != null
-      ? CalculationService.formatPercentage(Number(activeSummary.targetAchievedPercent ?? activeSummary.placementAchPercent))
-      : null
+    activeSummary?.targetAchievedPercent != null || activeSummary?.placementAchPercent != null || activeSummary?.revenueTargetAchievedPercent != null
+      ? CalculationService.formatPercentage(Number(activeSummary.revenueTargetAchievedPercent ?? activeSummary.targetAchievedPercent ?? activeSummary.placementAchPercent))
+      : (targetValue != null && targetValue > 0 && achievedValue != null && achievedValue >= 0
+          ? CalculationService.formatPercentage((achievedValue / targetValue) * 100)
+          : null)
   const sheetSlabDisplay =
     (activeSummary?.slabQualified ?? employeeData?.slabQualified) != null
       ? CalculationService.formatSlabAsPercentage(activeSummary?.slabQualified ?? employeeData?.slabQualified)
@@ -281,6 +358,10 @@ export default function L4DashboardView({
   const sheetTotalIncentiveInr =
     activeSummary?.totalIncentiveInr != null
       ? CalculationService.formatCurrency(Number(activeSummary.totalIncentiveInr), 'INR')
+      : null
+  const sheetIncentivePaidInr =
+    activeSummary?.totalIncentivePaidInr != null
+      ? CalculationService.formatCurrency(Number(activeSummary.totalIncentivePaidInr), 'INR')
       : null
 
   const slabInfo = employeeData?.slabQualified
@@ -300,12 +381,12 @@ export default function L4DashboardView({
     { value: 'HOLD', label: 'Hold' },
   ]
   const placementUniqueValues = useMemo(() => {
-    const list = currentPlacements || []
+    const list = placementsToDisplay || []
     const collection = [...new Set(list.map((p) => String(p.collectionStatus || '').trim()).filter(Boolean))].sort()
     const years = [...new Set(list.map((p) => (p.placementYear != null ? String(p.placementYear) : p.doj ? String(new Date(p.doj).getFullYear()) : '')).filter(Boolean))].sort((a, b) => Number(b) - Number(a))
     const placementTypes = [...new Set(list.map((p) => String(p.placementType || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
     return { collection, years, placementTypes }
-  }, [currentPlacements])
+  }, [placementsToDisplay])
 
   const PLACEMENT_TYPE_OPTIONS = useMemo(() => {
     const options = [{ value: '', label: 'All' }]
@@ -314,7 +395,7 @@ export default function L4DashboardView({
   }, [placementUniqueValues])
 
   const filteredPlacements = useMemo(() => {
-    let list = currentPlacements || []
+    let list = placementsToDisplay || []
     const q = (placementSearch || '').toLowerCase().trim()
     if (q) {
       list = list.filter(
@@ -348,7 +429,7 @@ export default function L4DashboardView({
       )
     }
     return list
-  }, [currentPlacements, placementSearch, placementFilterBilling, placementFilterCollection, placementFilterType, placementFilterYear])
+  }, [placementsToDisplay, placementSearch, placementFilterBilling, placementFilterCollection, placementFilterType, placementFilterYear])
 
   const sortedPlacements = useMemo(() => {
     const list = [...filteredPlacements]
@@ -385,7 +466,7 @@ export default function L4DashboardView({
     { id: 'placements', label: 'Placements', icon: 'list' },
     { id: 'profile', label: 'Profile', icon: 'user' },
   ]
-  const recentPlacements = (currentPlacements || []).slice(0, 5)
+  const recentPlacements = (placementsToDisplay || []).slice(0, 5)
   const totalIncentive = incentiveEarnedNum || 1
   const earnedPct = Math.min(100, totalIncentive > 0 ? (incentiveEarnedNum / totalIncentive) * 100 : 0)
   const paidPct = Math.min(100 - earnedPct, totalIncentive > 0 ? (incentivePaidNum / totalIncentive) * 100 : 0)
@@ -475,6 +556,27 @@ export default function L4DashboardView({
             {activeTab === 'profile' && 'Profile'}
           </h1>
           <div className="flex items-center gap-3">
+            {/* Personal/Team toggle for L2/L3 employees */}
+            {isL2OrL3 && (personalSheetData?.summary || teamSheetData?.summary) && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-1 flex items-center gap-0.5">
+                <button
+                  onClick={() => setViewMode('personal')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    viewMode === 'personal' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Personal
+                </button>
+                <button
+                  onClick={() => setViewMode('team')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    viewMode === 'team' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Team
+                </button>
+              </div>
+            )}
             {/* {activeTab === 'placements' && (
               <button
                 type="button"
@@ -665,6 +767,160 @@ export default function L4DashboardView({
                 </div>
               </motion.div>
 
+              {/* Summary Section - Personal or Team View */}
+              {activeSummary && (
+                <motion.div
+                  variants={itemVariants}
+                  className="mb-6 rounded-xl border border-slate-200/80 bg-slate-50/80 p-5"
+                >
+                  <p className="mb-4 text-sm font-semibold text-slate-700">
+                    {viewMode === 'team' ? 'My Team Placements (Sheet)' : 'My Personal Placements (Sheet)'}
+                  </p>
+                  <p className="mb-4 text-xs text-slate-500 italic">
+                    Data below is read directly from the uploaded Excel sheet. No additional calculations are done in the app.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3 md:grid-cols-4">
+                    {/* Team view with dual targets (revenue + placement) */}
+                    {isDualTargetTeamView ? (
+                      <>
+                        <div>
+                          <span className="text-slate-500 block">Revenue Target</span>
+                          <span className="font-semibold text-slate-800">
+                            {activeSummary.yearlyRevenueTarget != null
+                              ? CalculationService.formatCurrency(Number(activeSummary.yearlyRevenueTarget))
+                              : '–'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Revenue Achieved</span>
+                          <span className="font-semibold text-slate-800">
+                            {activeSummary.revenueAch != null
+                              ? CalculationService.formatCurrency(Number(activeSummary.revenueAch))
+                              : (activeSummary.totalRevenueGenerated != null
+                                  ? CalculationService.formatCurrency(Number(activeSummary.totalRevenueGenerated))
+                                  : '–')}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Revenue Target Achieved %</span>
+                          <span className="font-semibold text-slate-800">
+                            {activeSummary.revenueTargetAchievedPercent != null
+                              ? `${activeSummary.revenueTargetAchievedPercent}%`
+                              : '–'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Placement Target</span>
+                          <span className="font-semibold text-slate-800">
+                            {activeSummary.yearlyPlacementTarget != null
+                              ? String(activeSummary.yearlyPlacementTarget)
+                              : '–'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Placements Done</span>
+                          <span className="font-semibold text-slate-800">
+                            {activeSummary.placementDone != null ? String(activeSummary.placementDone) : '–'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Placement Target Achieved %</span>
+                          <span className="font-semibold text-slate-800">
+                            {activeSummary.placementAchPercent != null
+                              ? `${activeSummary.placementAchPercent}%`
+                              : '–'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      /* Personal view or single-target team view */
+                      <>
+                        {viewMode === 'personal' ? (
+                          /* Personal view: placement-focused */
+                          <>
+                            <div>
+                              <span className="text-slate-500 block">Placement Target</span>
+                              <span className="font-semibold text-slate-800">
+                                {activeSummary.yearlyPlacementTarget != null
+                                  ? String(activeSummary.yearlyPlacementTarget)
+                                  : '–'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block">Placements Done</span>
+                              <span className="font-semibold text-slate-800">
+                                {activeSummary.placementDone != null ? String(activeSummary.placementDone) : '–'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block">Target Achieved %</span>
+                              <span className="font-semibold text-slate-800">
+                                {sheetTargetAchievedPct ?? '–'}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          /* Team view: revenue-focused */
+                          <>
+                            <div>
+                              <span className="text-slate-500 block">Revenue Target</span>
+                              <span className="font-semibold text-slate-800">
+                                {activeSummary.yearlyRevenueTarget != null
+                                  ? CalculationService.formatCurrency(Number(activeSummary.yearlyRevenueTarget))
+                                  : '–'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block">Revenue Achieved</span>
+                              <span className="font-semibold text-slate-800">
+                                {revenueGeneratedFromSheet ?? '–'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block">Revenue Target Achieved %</span>
+                              <span className="font-semibold text-slate-800">
+                                {activeSummary.revenueTargetAchievedPercent != null
+                                  ? `${activeSummary.revenueTargetAchievedPercent}%`
+                                  : (sheetTargetAchievedPct ?? '–')}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+                    <div>
+                      <span className="text-slate-500 block">Total Revenue Generated (USD)</span>
+                      <span className="font-semibold text-slate-800">
+                        {activeSummary.totalRevenueGenerated != null
+                          ? CalculationService.formatCurrency(Number(activeSummary.totalRevenueGenerated))
+                          : '–'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 flex items-center gap-2">
+                        Slab Qualified
+                        <SlabInfoButton />
+                      </span>
+                      <span className="font-semibold text-slate-800">
+                        {sheetSlabDisplay ?? '–'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Total Incentive (INR)</span>
+                      <span className="font-semibold text-slate-800">
+                        {sheetTotalIncentiveInr ?? '–'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Incentive Paid (INR)</span>
+                      <span className="font-semibold text-slate-800">
+                        {sheetIncentivePaidInr ?? '–'}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* KPI grid — 8px spacing, icon left */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <StatCard
@@ -699,7 +955,7 @@ export default function L4DashboardView({
                 />
               </div>
 
-              {/* Revenue generated — icon left, same card pattern */}
+              {/* Revenue Achieved — icon left, same card pattern */}
               {revenueGeneratedFromSheet != null && (
                 <motion.div
                   variants={itemVariants}
@@ -712,7 +968,7 @@ export default function L4DashboardView({
                     </svg>
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Revenue generated</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Revenue Achieved</p>
                     <p className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{revenueGeneratedFromSheet}</p>
                   </div>
                 </motion.div>
@@ -791,7 +1047,7 @@ export default function L4DashboardView({
                 </motion.div>
               )}
 
-              {/* Incentive breakdown — icon left header, 8px spacing */}
+              {/* Incentive breakdown & Comment — side by side */}
               <div className="grid gap-6 lg:grid-cols-2">
                 <motion.div
                   variants={itemVariants}
@@ -854,6 +1110,48 @@ export default function L4DashboardView({
                       </div>
                     </div>
                   </div>
+                </motion.div>
+
+                {/* Comment Card */}
+                <motion.div
+                  variants={itemVariants}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 30 }}
+                  whileHover={{ y: -2, transition: { type: 'spring', stiffness: 400, damping: 17 } }}
+                  className="overflow-hidden rounded-2xl border border-indigo-200/50 bg-indigo-50/40 p-6 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-600"
+                      whileHover={{ scale: 1.05, rotate: 5 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                      </svg>
+                    </motion.div>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Comment</h3>
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.15, duration: 0.3 }}
+                    className="mt-6 min-h-[120px]"
+                  >
+                    {employeeData?.comment && employeeData.comment.trim() !== '' ? (
+                      <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
+                        {employeeData.comment}
+                      </p>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full min-h-[120px] text-slate-400">
+                        <svg className="h-8 w-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                        </svg>
+                        <p className="text-xs font-medium italic">No comment added</p>
+                      </div>
+                    )}
+                  </motion.div>
                 </motion.div>
               </div>
 
@@ -922,7 +1220,7 @@ export default function L4DashboardView({
                 <div>
                   <h2 className="text-xl font-bold text-slate-800">Placements</h2>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    {sortedPlacements.length === (currentPlacements?.length ?? 0) &&
+                    {sortedPlacements.length === (placementsToDisplay?.length ?? 0) &&
                     !placementSearch &&
                     !placementFilterBilling &&
                     !placementFilterCollection &&
@@ -1211,7 +1509,7 @@ export default function L4DashboardView({
                       />
                     </svg>
                     <p className="font-medium">
-                      {(currentPlacements?.length ?? 0) === 0 ? 'No placements yet' : 'No placements match filters'}
+                      {(placementsToDisplay?.length ?? 0) === 0 ? 'No placements yet' : 'No placements match filters'}
                     </p>
                   </div>
                 )}

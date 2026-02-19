@@ -1276,7 +1276,7 @@ const EmployeeDetails = () => {
                               {(() => {
                                 const dbSlab = employeeData.slabQualified;
                                 const fromSnapshot = (viewMode === 'personal' && employeeData.personalSummary) || (viewMode === 'team' && employeeData.teamSummary);
-                                if (dbSlab) {
+                                if (dbSlab != null) {
                                   const slabInfo = CalculationService.getSlabFromIncentivePercentage(dbSlab, employeeData.teamName, employeeData.level);
                                   return (
                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${slabInfo.color}`}>
@@ -1284,13 +1284,8 @@ const EmployeeDetails = () => {
                                     </span>
                                   );
                                 }
-                                if (fromSnapshot) return '-';
-                                const slabInfo = CalculationService.calculateSlab(employeeData.targetAchieved, employeeData.teamName, employeeData.level);
-                                return (
-                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${slabInfo.color}`}>
-                                    {slabInfo.label}
-                                  </span>
-                                );
+                                // When there's no slab data in sheet/DB, don't infer a standard slab – just show blank/placeholder.
+                                return '-';
                               })()}
                             </td>
                           </tr>

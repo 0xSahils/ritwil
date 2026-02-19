@@ -42,7 +42,10 @@ const processEmployeeData = async (employee) => {
     (p.candidateName && String(p.candidateName).trim() === "(Summary only)");
   const personalSummary = personalPlacements.find(isSummaryRow);
   const teamSummary = teamPlacements.find(isSummaryRow);
-  const summary = personalSummary || teamSummary || null;
+  // For L2/L3 team leads, prioritize team summary over personal summary
+  // L4 employees only have personal placements, so use personal summary for them
+  const isL2OrL3 = employee.employeeProfile.level && ["L2", "L3"].includes(employee.employeeProfile.level.toUpperCase());
+  const summary = (isL2OrL3 && teamSummary) ? teamSummary : (personalSummary || teamSummary || null);
 
   const yearlyRevenueTarget = summary?.yearlyRevenueTarget != null ? Number(summary.yearlyRevenueTarget) : null;
   const yearlyPlacementTarget = summary?.yearlyPlacementTarget != null ? Number(summary.yearlyPlacementTarget) : null;

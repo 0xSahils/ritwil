@@ -275,10 +275,6 @@ const TeamLeadPage = () => {
   const members = teamLeadData.members || []
   const isPlacementTeam = teamLeadData.targetType === 'PLACEMENTS'
 
-  // Same labels as Super Admin / Super User outside card: Placement Target / Placements Done or Revenue Target / Revenue Achieved
-  const targetLabel = isPlacementTeam ? 'Placement Target' : 'Revenue Target'
-  const achievedLabel = isPlacementTeam ? 'Placements Done' : 'Revenue Achieved'
-
   // Prefer sheet summary for header when viewing that tab (so summary matches the table)
   const sheetSummary = viewMode === 'team' ? teamSheetData?.summary : personalSheetData?.summary
   const hasSheetSummary = !!sheetSummary
@@ -292,26 +288,46 @@ const TeamLeadPage = () => {
   // When Personal is selected but there's no personal sheet data, show 0 in header (don't use team totals)
   const usePersonalHeader = viewMode === 'personal' && !personalSheetData?.summary
 
+  // Personal view: Always show placement-focused fields (personal sheets are placement-focused)
+  // Team view: Show fields based on team target type
+  const isPersonalView = viewMode === 'personal'
+  const showPlacementFields = isPersonalView || isPlacementTeam
+  
+  const targetLabel = showPlacementFields ? 'Placement Target' : 'Revenue Target'
+  const achievedLabel = showPlacementFields ? 'Placements Done' : 'Revenue Achieved'
+
   const displayTarget = usePersonalHeader
     ? 0
     : hasSheetSummary
-      ? (isPlacementTeam ? (sheetSummary.yearlyPlacementTarget ?? leadTarget) : (sheetSummary.yearlyRevenueTarget ?? leadTarget))
+      ? (showPlacementFields 
+          ? (sheetSummary.yearlyPlacementTarget ?? leadTarget)
+          : (sheetSummary.yearlyRevenueTarget ?? leadTarget))
       : leadTarget
-  const formattedTeamTarget = isPlacementTeam
+  const formattedTeamTarget = showPlacementFields
     ? String(displayTarget)
     : CalculationService.formatCurrency(Number(displayTarget) || 0)
 
   const achievedValue = usePersonalHeader
     ? 0
     : hasSheetSummary
-      ? (isPlacementTeam ? (sheetSummary.placementDone ?? currentLeadData.totalPlacements ?? 0) : (Number(sheetSummary.totalRevenueGenerated) ?? currentLeadData.totalRevenue ?? 0))
-      : (isPlacementTeam ? (currentLeadData.totalPlacements || 0) : (currentLeadData.totalRevenue || 0))
+      ? (
+          showPlacementFields
+            ? (sheetSummary.placementDone ?? currentLeadData.totalPlacements ?? 0)
+            : (
+                sheetSummary.revenueAch != null
+                  ? Number(sheetSummary.revenueAch)
+                  : (Number(sheetSummary.totalRevenueGenerated) ?? currentLeadData.totalRevenue ?? 0)
+              )
+        )
+      : (showPlacementFields ? (currentLeadData.totalPlacements || 0) : (currentLeadData.totalRevenue || 0))
   const totalTarget = Number(displayTarget) || 1
   const sheetPct = sheetSummary && (sheetSummary.revenueTargetAchievedPercent != null || sheetSummary.placementAchPercent != null || sheetSummary.targetAchievedPercent != null)
   const achievementPercentage = usePersonalHeader
     ? 0
     : hasSheetSummary && sheetPct
-      ? Math.round(Number(isPlacementTeam ? (sheetSummary.placementAchPercent ?? sheetSummary.targetAchievedPercent) : (sheetSummary.revenueTargetAchievedPercent ?? sheetSummary.targetAchievedPercent)) || 0)
+      ? Math.round(Number(showPlacementFields 
+          ? (sheetSummary.placementAchPercent ?? sheetSummary.targetAchievedPercent)
+          : (sheetSummary.revenueTargetAchievedPercent ?? sheetSummary.targetAchievedPercent)) || 0)
       : Math.min(Math.round((achievedValue / totalTarget) * 100), 100)
  
    // Helper for Circular Progress
@@ -478,26 +494,11 @@ const TeamLeadPage = () => {
               variants={itemVariants}
               className="mb-6 p-5 bg-slate-50/80 rounded-xl border border-slate-200/80 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm"
             >
-              {!isPlacementTeam && (
+              {/* Personal view: Always show placement-focused fields (personal sheets are placement-focused) */}
+              {viewMode === 'personal' ? (
                 <>
                   <div>
-                    <span className="text-slate-500 block">Yearly Revenue Target</span>
-                    <span className="font-semibold text-slate-800">{sheetSummary.yearlyRevenueTarget != null ? CalculationService.formatCurrency(Number(sheetSummary.yearlyRevenueTarget)) : '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Revenue Generated</span>
-                    <span className="font-semibold text-slate-800">{sheetSummary.totalRevenueGenerated != null ? CalculationService.formatCurrency(Number(sheetSummary.totalRevenueGenerated)) : '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">Target Achieved %</span>
-                    <span className="font-semibold text-slate-800">{sheetSummary.revenueTargetAchievedPercent != null ? `${sheetSummary.revenueTargetAchievedPercent}%` : '-'}</span>
-                  </div>
-                </>
-              )}
-              {isPlacementTeam && (
-                <>
-                  <div>
-                    <span className="text-slate-500 block">Yearly Placement Target</span>
+                    <span className="text-slate-500 block">Placement Target</span>
                     <span className="font-semibold text-slate-800">{sheetSummary.yearlyPlacementTarget != null ? String(sheetSummary.yearlyPlacementTarget) : '-'}</span>
                   </div>
                   <div>
@@ -506,8 +507,73 @@ const TeamLeadPage = () => {
                   </div>
                   <div>
                     <span className="text-slate-500 block">Target Achieved %</span>
-                    <span className="font-semibold text-slate-800">{sheetSummary.placementAchPercent != null ? `${sheetSummary.placementAchPercent}%` : '-'}</span>
+                    <span className="font-semibold text-slate-800">
+                      {sheetSummary.targetAchievedPercent != null
+                        ? `${sheetSummary.targetAchievedPercent}%`
+                        : (sheetSummary.placementAchPercent != null
+                            ? `${sheetSummary.placementAchPercent}%`
+                            : '-')}
+                    </span>
                   </div>
+                </>
+              ) : (
+                /* Team view: Show fields based on team target type */
+                <>
+                  {!isPlacementTeam ? (
+                    /* Revenue team: Show dual targets (revenue + placement) */
+                    <>
+                      <div>
+                        <span className="text-slate-500 block">Revenue Target</span>
+                        <span className="font-semibold text-slate-800">{sheetSummary.yearlyRevenueTarget != null ? CalculationService.formatCurrency(Number(sheetSummary.yearlyRevenueTarget)) : '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Revenue Achieved</span>
+                        <span className="font-semibold text-slate-800">
+                          {sheetSummary.revenueAch != null
+                            ? CalculationService.formatCurrency(Number(sheetSummary.revenueAch))
+                            : (sheetSummary.totalRevenueGenerated != null
+                                ? CalculationService.formatCurrency(Number(sheetSummary.totalRevenueGenerated))
+                                : '-')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Revenue Target Achieved %</span>
+                        <span className="font-semibold text-slate-800">
+                          {sheetSummary.revenueTargetAchievedPercent != null
+                            ? `${sheetSummary.revenueTargetAchievedPercent}%`
+                            : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Placement Target</span>
+                        <span className="font-semibold text-slate-800">{sheetSummary.yearlyPlacementTarget != null ? String(sheetSummary.yearlyPlacementTarget) : '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Placements Done</span>
+                        <span className="font-semibold text-slate-800">{sheetSummary.placementDone != null ? String(sheetSummary.placementDone) : '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Placement Target Achieved %</span>
+                        <span className="font-semibold text-slate-800">{sheetSummary.placementAchPercent != null ? `${sheetSummary.placementAchPercent}%` : '-'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    /* Placement team: Show placement fields only */
+                    <>
+                      <div>
+                        <span className="text-slate-500 block">Yearly Placement Target</span>
+                        <span className="font-semibold text-slate-800">{sheetSummary.yearlyPlacementTarget != null ? String(sheetSummary.yearlyPlacementTarget) : '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Placements Done</span>
+                        <span className="font-semibold text-slate-800">{sheetSummary.placementDone != null ? String(sheetSummary.placementDone) : '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Target Achieved %</span>
+                        <span className="font-semibold text-slate-800">{sheetSummary.placementAchPercent != null ? `${sheetSummary.placementAchPercent}%` : '-'}</span>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
               <div>
@@ -652,13 +718,13 @@ const TeamLeadPage = () => {
                 const memberAchieved = memberIsPlacement
                   ? (isL4 ? (member.placements ?? 0) : (member.totalPlacements ?? member.placements ?? 0))
                   : (isL4 ? (member.revenue ?? 0) : (member.totalRevenue ?? member.revenue ?? 0));
-                // Use backend-calculated targetAchieved when available (especially for L2/L3 with team sheet summary)
-                // Otherwise recalculate from achieved/target
-                const memberPercentage = (member.targetAchieved != null && member.targetAchieved !== undefined)
-                  ? Math.round(Number(member.targetAchieved))
-                  : (memberTarget > 0
-                      ? Math.round((Number(memberAchieved) / memberTarget) * 100)
-                      : 0);
+                // Calculate percentage: always calculate from achieved/target if we have valid values
+                // Only use backend targetAchieved if calculation is not possible (target is 0 or missing)
+                const memberPercentage = memberTarget > 0 && memberAchieved != null && !isNaN(Number(memberAchieved))
+                  ? Math.round((Number(memberAchieved) / memberTarget) * 100)
+                  : (member.targetAchieved != null && member.targetAchieved !== undefined && !isNaN(Number(member.targetAchieved)))
+                    ? Math.round(Number(member.targetAchieved))
+                    : 0;
                 
                 // Dynamic color based on percentage
                let progressColor = "text-red-500";

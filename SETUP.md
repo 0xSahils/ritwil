@@ -63,4 +63,8 @@ Done. No manual SQL or migration files required when using `db push`.
 
 - **Frontend:** Login page has a “Forgot password?” link → `/forgot-password` (enter email) → user receives reset link → `/reset-password?token=...` (set new password).
 - **Backend:** Set `FRONTEND_URL` in `Backend/.env` (e.g. `http://localhost:5173`) so reset links point to your app.
-- **Email (optional):** To send reset links by email, set in `Backend/.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and optionally `SMTP_SECURE`, `MAIL_FROM`. Without SMTP, in non-production the API may return the reset link in the response for testing.
+- **Email (optional):** To send reset links by email, configure Resend in `Backend/.env`:
+  - `RESEND_API_KEY`: Your Resend API key (get from https://resend.com/api-keys)
+  - `RESEND_FROM_EMAIL`: Verified sender email (e.g. `"Ritwil <noreply@yourdomain.com>"`)
+  - **Important:** Domain must be verified in Resend Dashboard (https://resend.com/domains)
+  - Without Resend configured, in non-production the API may return the reset link in the response for testing.

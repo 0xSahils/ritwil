@@ -246,12 +246,12 @@ export default function L4DashboardView({
   // When sheet has placement target/done (e.g. Vantedge), use them and display as revenue/dollars
   const hasPlacementSheetData =
     activeSummary &&
-    (activeSummary.yearlyPlacementTarget != null || activeSummary.placementDone != null)
+    (activeSummary.yearlyTarget != null || activeSummary.yearlyPlacementTarget != null || activeSummary.achieved != null || activeSummary.placementDone != null)
   const sheetPlacementTarget = hasPlacementSheetData
-    ? Number(activeSummary.yearlyPlacementTarget) || 0
+    ? Number(activeSummary.yearlyTarget ?? activeSummary.yearlyPlacementTarget) || 0
     : null
-  const sheetPlacementDone = hasPlacementSheetData && activeSummary.placementDone != null
-    ? Number(activeSummary.placementDone)
+  const sheetPlacementDone = hasPlacementSheetData && (activeSummary.achieved != null || activeSummary.placementDone != null)
+    ? Number(activeSummary.achieved ?? activeSummary.placementDone)
     : null
 
   // Check if this is Vantedge team L4 - only these should show dollar signs for placements
@@ -266,13 +266,21 @@ export default function L4DashboardView({
   // Determine target and achieved values based on viewMode
   let targetValue, achievedValue
   if (viewMode === 'personal' && personalSheetData?.summary) {
-    // Personal view: prioritize placement data
-    targetValue = personalSheetData.summary.yearlyPlacementTarget != null
-      ? Number(personalSheetData.summary.yearlyPlacementTarget)
+    // Personal view: use yearlyTarget/achieved first (personal API), then yearlyPlacementTarget/placementDone, then employeeData
+    const summaryTarget = personalSheetData.summary.yearlyTarget ?? personalSheetData.summary.yearlyPlacementTarget
+    const summaryAchieved = personalSheetData.summary.achieved ?? personalSheetData.summary.placementDone
+    targetValue = (summaryTarget != null && summaryTarget !== '')
+      ? Number(summaryTarget)
       : (isRevenueTarget ? employeeData?.yearlyRevenueTarget : employeeData?.yearlyPlacementTarget)
-    achievedValue = personalSheetData.summary.placementDone != null
-      ? Number(personalSheetData.summary.placementDone)
-      : (isRevenueTarget ? employeeData?.rawRevenueGenerated : employeeData?.rawPlacementsCount)
+    achievedValue = (summaryAchieved != null && summaryAchieved !== '')
+      ? Number(summaryAchieved)
+      : (personalSheetData?.placements?.length != null && personalSheetData.placements.length > 0)
+        ? personalSheetData.placements.length
+        : (isRevenueTarget ? employeeData?.rawRevenueGenerated : employeeData?.rawPlacementsCount)
+  } else if (viewMode === 'personal' && personalSheetData?.placements?.length != null) {
+    // Personal view but no summary (e.g. API returned summary: null): use placement count and employeeData
+    targetValue = isRevenueTarget ? employeeData?.yearlyRevenueTarget : employeeData?.yearlyPlacementTarget
+    achievedValue = personalSheetData.placements.length
   } else if (viewMode === 'team' && teamSheetData?.summary) {
     // Team view: use revenue if available, otherwise placement
     if (isDualTargetTeamView) {
@@ -767,8 +775,8 @@ export default function L4DashboardView({
                 </div>
               </motion.div>
 
-              {/* Summary Section - Personal or Team View */}
-              {activeSummary && (
+              {/* Summary Section - Team View only; L4 personal view does not show "My Personal Placements (Sheet)" */}
+              {activeSummary && !(isL4 && viewMode === 'personal') && (
                 <motion.div
                   variants={itemVariants}
                   className="mb-6 rounded-xl border border-slate-200/80 bg-slate-50/80 p-5"
@@ -812,15 +820,15 @@ export default function L4DashboardView({
                         <div>
                           <span className="text-slate-500 block">Placement Target</span>
                           <span className="font-semibold text-slate-800">
-                            {activeSummary.yearlyPlacementTarget != null
-                              ? String(activeSummary.yearlyPlacementTarget)
+                            {(activeSummary.yearlyTarget ?? activeSummary.yearlyPlacementTarget) != null
+                              ? String(activeSummary.yearlyTarget ?? activeSummary.yearlyPlacementTarget)
                               : '–'}
                           </span>
                         </div>
                         <div>
                           <span className="text-slate-500 block">Placements Done</span>
                           <span className="font-semibold text-slate-800">
-                            {activeSummary.placementDone != null ? String(activeSummary.placementDone) : '–'}
+                            {(activeSummary.achieved ?? activeSummary.placementDone) != null ? String(activeSummary.achieved ?? activeSummary.placementDone) : '–'}
                           </span>
                         </div>
                         <div>
@@ -836,20 +844,20 @@ export default function L4DashboardView({
                       /* Personal view or single-target team view */
                       <>
                         {viewMode === 'personal' ? (
-                          /* Personal view: placement-focused */
+                          /* Personal view: use "Yearly target" and "Achieved" per spec */
                           <>
                             <div>
-                              <span className="text-slate-500 block">Placement Target</span>
+                              <span className="text-slate-500 block">Yearly target</span>
                               <span className="font-semibold text-slate-800">
-                                {activeSummary.yearlyPlacementTarget != null
-                                  ? String(activeSummary.yearlyPlacementTarget)
+                                {(activeSummary.yearlyTarget ?? activeSummary.yearlyPlacementTarget) != null
+                                  ? String(activeSummary.yearlyTarget ?? activeSummary.yearlyPlacementTarget)
                                   : '–'}
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block">Placements Done</span>
+                              <span className="text-slate-500 block">Achieved</span>
                               <span className="font-semibold text-slate-800">
-                                {activeSummary.placementDone != null ? String(activeSummary.placementDone) : '–'}
+                                {(activeSummary.achieved ?? activeSummary.placementDone) != null ? String(activeSummary.achieved ?? activeSummary.placementDone) : '–'}
                               </span>
                             </div>
                             <div>

@@ -156,7 +156,7 @@ const EmployeeDetails = () => {
       : (isTeamView
           ? (activeSummary?.yearlyPlacementTarget || 0)
           : (isPersonalView
-              ? (activeSummary?.yearlyPlacementTarget ?? 0)
+              ? (activeSummary?.yearlyTarget ?? activeSummary?.yearlyPlacementTarget ?? 0)
               : (rawData.targetType === 'PLACEMENTS' ? yearlyTarget : 0)));
 
     // Achieved values: when in personal/team view with no sheet data, show 0 (do not use merged dashboard totals)
@@ -174,7 +174,7 @@ const EmployeeDetails = () => {
       : (isTeamView
           ? (activeSummary?.placementDone ?? 0)
           : (isPersonalView
-              ? (activeSummary?.placementDone ?? personalSheetData?.placements?.length ?? 0)
+              ? (activeSummary?.achieved ?? activeSummary?.placementDone ?? personalSheetData?.placements?.length ?? 0)
               : (rawData.placementsCount ?? placements.length)));
 
     // Achievement percentages: 0 when no sheet data for this view; otherwise from summary or calculated
@@ -337,15 +337,24 @@ const EmployeeDetails = () => {
     return [];
   }, [viewMode, hasTeamData, hasPersonalData, teamSheetData, personalSheetData]);
 
+  // When L4 (EMPLOYEE) views the page they can only see their own data; fetch personal-placements without userId so backend uses current user (no dependency on resolvedEmployeeId).
+  // When admin/team-lead views an employee, use resolvedEmployeeId so we get that employee's data.
   useEffect(() => {
-    if (!resolvedEmployeeId) return;
+    const isL4Self = user?.role === 'EMPLOYEE';
+    const shouldFetchPersonal = isL4Self ? !!user?.id : !!resolvedEmployeeId;
+    if (!shouldFetchPersonal) return;
     let cancelled = false;
     const load = async () => {
       try {
-        const [personalRes, teamRes] = await Promise.all([
-          apiRequest(`/dashboard/personal-placements?userId=${resolvedEmployeeId}`),
-          apiRequest(`/dashboard/team-placements?leadId=${resolvedEmployeeId}`),
-        ]);
+        const personalUrl = isL4Self
+          ? '/dashboard/personal-placements'
+          : `/dashboard/personal-placements?userId=${resolvedEmployeeId}`;
+        const [personalRes, teamRes] = isL4Self
+          ? [await apiRequest(personalUrl), { ok: false }]
+          : await Promise.all([
+              apiRequest(personalUrl),
+              apiRequest(`/dashboard/team-placements?leadId=${resolvedEmployeeId}`),
+            ]);
         if (!cancelled) {
           if (personalRes.ok) {
             const p = await personalRes.json();
@@ -353,10 +362,10 @@ const EmployeeDetails = () => {
           } else {
             setPersonalSheetData(null);
           }
-          if (teamRes.ok) {
+          if (!isL4Self && teamRes.ok) {
             const t = await teamRes.json();
             setTeamSheetData(t);
-          } else {
+          } else if (!isL4Self) {
             setTeamSheetData(null);
           }
         }
@@ -371,7 +380,7 @@ const EmployeeDetails = () => {
     return () => {
       cancelled = true;
     };
-  }, [resolvedEmployeeId]);
+  }, [user?.role, user?.id, employeeIdToFetch, rawData?.id, resolvedEmployeeId]);
 
   const handleBack = () => {
     if (user?.role === 'SUPER_ADMIN') {
@@ -1145,19 +1154,19 @@ const EmployeeDetails = () => {
                           </tr>
                           <tr className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50/50">
-                              Placement Target
+                              Yearly target
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-600">
-                              {employeeData.personalSummary.yearlyPlacementTarget ?? '-'}
+                              {employeeData.personalSummary.yearlyTarget ?? '-'}
                             </td>
                           </tr>
                           <tr className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 text-sm font-semibold text-slate-700 bg-blue-50/50">
-                              Placements Done
+                              Achieved
                             </td>
                             <td className="px-6 py-4 text-sm font-bold text-blue-600">
-                              {employeeData.personalSummary.placementDone != null
-                                ? (CalculationService.formatPlacementCount(employeeData.personalSummary.placementDone) ?? employeeData.personalSummary.placementDone)
+                              {employeeData.personalSummary.achieved != null
+                                ? (CalculationService.formatPlacementCount(employeeData.personalSummary.achieved) ?? employeeData.personalSummary.achieved)
                                 : '-'}
                             </td>
                           </tr>

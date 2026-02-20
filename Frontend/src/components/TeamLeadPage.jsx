@@ -300,7 +300,7 @@ const TeamLeadPage = () => {
     ? 0
     : hasSheetSummary
       ? (showPlacementFields 
-          ? (sheetSummary.yearlyPlacementTarget ?? leadTarget)
+          ? (sheetSummary.yearlyTarget ?? sheetSummary.yearlyPlacementTarget ?? leadTarget)
           : (sheetSummary.yearlyRevenueTarget ?? leadTarget))
       : leadTarget
   const formattedTeamTarget = showPlacementFields
@@ -312,7 +312,7 @@ const TeamLeadPage = () => {
     : hasSheetSummary
       ? (
           showPlacementFields
-            ? (sheetSummary.placementDone ?? currentLeadData.totalPlacements ?? 0)
+            ? (sheetSummary.achieved ?? sheetSummary.placementDone ?? currentLeadData.totalPlacements ?? 0)
             : (
                 sheetSummary.revenueAch != null
                   ? Number(sheetSummary.revenueAch)
@@ -546,11 +546,11 @@ const TeamLeadPage = () => {
                       </div>
                       <div>
                         <span className="text-slate-500 block">Placement Target</span>
-                        <span className="font-semibold text-slate-800">{sheetSummary.yearlyPlacementTarget != null ? String(sheetSummary.yearlyPlacementTarget) : '-'}</span>
+                        <span className="font-semibold text-slate-800">{(sheetSummary.yearlyTarget ?? sheetSummary.yearlyPlacementTarget) != null ? String(sheetSummary.yearlyTarget ?? sheetSummary.yearlyPlacementTarget) : '-'}</span>
                       </div>
                       <div>
                         <span className="text-slate-500 block">Placements Done</span>
-                        <span className="font-semibold text-slate-800">{sheetSummary.placementDone != null ? String(sheetSummary.placementDone) : '-'}</span>
+                        <span className="font-semibold text-slate-800">{(sheetSummary.achieved ?? sheetSummary.placementDone) != null ? String(sheetSummary.achieved ?? sheetSummary.placementDone) : '-'}</span>
                       </div>
                       <div>
                         <span className="text-slate-500 block">Placement Target Achieved %</span>
@@ -562,11 +562,11 @@ const TeamLeadPage = () => {
                     <>
                       <div>
                         <span className="text-slate-500 block">Yearly Placement Target</span>
-                        <span className="font-semibold text-slate-800">{sheetSummary.yearlyPlacementTarget != null ? String(sheetSummary.yearlyPlacementTarget) : '-'}</span>
+                        <span className="font-semibold text-slate-800">{(sheetSummary.yearlyTarget ?? sheetSummary.yearlyPlacementTarget) != null ? String(sheetSummary.yearlyTarget ?? sheetSummary.yearlyPlacementTarget) : '-'}</span>
                       </div>
                       <div>
                         <span className="text-slate-500 block">Placements Done</span>
-                        <span className="font-semibold text-slate-800">{sheetSummary.placementDone != null ? String(sheetSummary.placementDone) : '-'}</span>
+                        <span className="font-semibold text-slate-800">{(sheetSummary.achieved ?? sheetSummary.placementDone) != null ? String(sheetSummary.achieved ?? sheetSummary.placementDone) : '-'}</span>
                       </div>
                       <div>
                         <span className="text-slate-500 block">Target Achieved %</span>

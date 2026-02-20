@@ -67,12 +67,12 @@ export async function listTeamsWithMembers(currentUser) {
             { candidateName: "(Summary only)" },
           ],
         },
-        select: { employeeId: true, yearlyPlacementTarget: true },
+        select: { employeeId: true, yearlyTarget: true },
       })
     : [];
   const targetByEmployeeId = new Map();
   summaryRows.forEach((row) => {
-    const pt = row.yearlyPlacementTarget != null ? Number(row.yearlyPlacementTarget) : null;
+    const pt = row.yearlyTarget != null ? Number(row.yearlyTarget) : null;
     targetByEmployeeId.set(row.employeeId, {
       yearlyPlacementTarget: pt,
       yearlyRevenueTarget: pt, // PersonalPlacement has no revenue column; Vantage shows same value as $
@@ -417,12 +417,12 @@ export async function getTeamDetails(idOrSlug) {
             { candidateName: "(Summary only)" },
           ],
         },
-        select: { employeeId: true, yearlyPlacementTarget: true, slabQualified: true },
+        select: { employeeId: true, yearlyTarget: true, slabQualified: true },
       })
     : [];
   const summaryByEmployeeId = new Map();
   personalSummaryRows.forEach((row) => {
-    const pt = row.yearlyPlacementTarget != null ? Number(row.yearlyPlacementTarget) : null;
+    const pt = row.yearlyTarget != null ? Number(row.yearlyTarget) : null;
     summaryByEmployeeId.set(row.employeeId, {
       yearlyPlacementTarget: pt,
       yearlyRevenueTarget: pt, // PersonalPlacement has no revenue column; Vantage shows same as $

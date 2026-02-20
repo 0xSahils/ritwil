@@ -209,12 +209,12 @@ model PersonalPlacement {
   incentiveInr     Decimal  @db.Decimal(14, 2)
   incentivePaidInr Decimal? @db.Decimal(14, 2)
 
-  // Summary snapshot fields from sheet (copied as-is)
+  // Summary snapshot fields from sheet (copied as-is) — headers: "Yearly target", "achieved"
   vbCode                 String?
   recruiterName          String?
   teamLeadName          String?
-  yearlyPlacementTarget  Decimal? @db.Decimal(14, 2)
-  placementDone          Decimal? @db.Decimal(14, 2)
+  yearlyTarget           Decimal? @db.Decimal(14, 2)
+  achieved               Decimal? @db.Decimal(14, 2)
   targetAchievedPercent  Decimal? @db.Decimal(5, 2)
   totalRevenueGenerated  Decimal? @db.Decimal(14, 2)
   slabQualified          String?

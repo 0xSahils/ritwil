@@ -180,20 +180,6 @@
                   "email": "yamini@vantedgesearch.com",
                   "level": "L4",
                   "vbid": "VB2255"
-                }
-              ]
-            },
-            {
-              "name": "Rashmi Bhatnagar",
-              "email": "rashmi.bhatnagar@vbeyond.com",
-              "level": "L2",
-              "vbid": "",
-              "members": [
-                {
-                  "name": "Shivanshu Mishra",
-                  "email": "shivanshum@vantedgesearch.com",
-                  "level": "L4",
-                  "vbid": "VB1860"
                 },
                 {
                   "name": "Devashish Sinha",
@@ -212,6 +198,20 @@
                   "email": "tanyam@vantedgesearch.com",
                   "level": "L4",
                   "vbid": "VB1080"
+                }
+              ]
+            },
+            {
+              "name": "Rashmi Bhatnagar",
+              "email": "rashmi.bhatnagar@vbeyond.com",
+              "level": "L2",
+              "vbid": "",
+              "members": [
+                {
+                  "name": "Shivanshu Mishra",
+                  "email": "shivanshum@vantedgesearch.com",
+                  "level": "L4",
+                  "vbid": "VB1860"
                 }
               ]
             }

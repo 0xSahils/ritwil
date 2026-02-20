@@ -147,9 +147,9 @@ const REQUIRED_TEAM_PLACEMENT_HEADERS = [
 ];
 
 // Recruiter/personal sheet: summary block (fewer columns than team sheet)
-// Team, VB Code, Recruiter Name, Team Lead, Yearly Placement Target, Placement Done, Target Achieved %, Total Revenue Generated (USD), Slab qualified, Total Incentive in INR, Total Incentive in INR (Paid)
+// Required: "yearly target" and "achieved" (legacy "yearly placement target" / "placement done" are not accepted)
 const REQUIRED_PERSONAL_SUMMARY_HEADERS = [
-  "team", "vb code", "recruiter name", "team lead", "yearly placement target", "placement done",
+  "team", "vb code", "recruiter name", "team lead", "yearly target", "achieved",
   "target achieved %", "total revenue generated (usd)", "slab qualified", "total incentive in inr", "total incentive in inr (paid)"
 ];
 // Aliases: person column (at least one); ach column can be "target achieved %" or "placement ach %"
@@ -172,8 +172,26 @@ function validateRequiredHeaders(normalizedHeaderList, required) {
   return { valid: missing.length === 0, missing };
 }
 
+// Reject legacy headers on personal sheet; require "yearly target" and "achieved"
+const PERSONAL_LEGACY_HEADERS = ["yearly placement target", "placement done"];
+const PERSONAL_REQUIRED_NEW_HEADERS = ["yearly target", "achieved"];
+function rejectLegacyPersonalSummaryHeaders(normalizedHeaderList) {
+  const set = new Set(normalizedHeaderList);
+  const has = (key) => set.has(normalizeHeader(key));
+  const hasBothNew = PERSONAL_REQUIRED_NEW_HEADERS.every((h) => has(h));
+  const hasAnyLegacy = PERSONAL_LEGACY_HEADERS.some((h) => has(h));
+  if (!hasBothNew && hasAnyLegacy) {
+    throw new Error(
+      "Personal placement sheet must use headers \"yearly target\" and \"achieved\". " +
+      "The headers \"yearly placement target\" and \"placement done\" are no longer accepted. " +
+      "Please rename them in your sheet and re-import."
+    );
+  }
+}
+
 // Personal sheet: summary block must have required summary columns + at least one person column
 function validatePersonalSummaryHeaders(normalizedHeaderList) {
+  rejectLegacyPersonalSummaryHeaders(normalizedHeaderList);
   const set = new Set(normalizedHeaderList);
   const hasPerson = PERSONAL_SUMMARY_PERSON_ALIASES.some((h) => set.has(h));
   const requiredCore = REQUIRED_PERSONAL_SUMMARY_HEADERS.filter((h) => !PERSONAL_SUMMARY_PERSON_ALIASES.includes(h));
@@ -1223,8 +1241,8 @@ const extractSummaryFields = (row, getVal) => {
     vbCode: getVal(row, "vb code") ? String(getVal(row, "vb code")).trim() : null,
     recruiterName: getVal(row, "recruiter name") || getVal(row, "lead name") || getVal(row, "lead") || getVal(row, "recruiter") ? String(getVal(row, "recruiter name") || getVal(row, "lead name") || getVal(row, "lead") || getVal(row, "recruiter")).trim() : null,
     teamLeadName: getVal(row, "team lead") || getVal(row, "team lead name") || getVal(row, "lead name") || getVal(row, "lead") ? String(getVal(row, "team lead") || getVal(row, "team lead name") || getVal(row, "lead name") || getVal(row, "lead")).trim() : null,
-    yearlyPlacementTarget: parseNum(getVal(row, "yearly placement target") || getVal(row, "target") || getVal(row, "placement target") || getVal(row, "yearly target")),
-    placementDone: parseNum(getVal(row, "placement done") || getVal(row, "total placements") || getVal(row, "placements done")),
+    yearlyTarget: parseNum(getVal(row, "yearly target")),
+    achieved: parseNum(getVal(row, "achieved")),
     targetAchievedPercent: sanitizePercent(getVal(row, "target achieved %") || getVal(row, "placement ach %") || getVal(row, "achieved %") || getVal(row, "ach %")),
     yearlyRevenueTarget: parseNum(getVal(row, "yearly revenue target") || getVal(row, "revenue target") || getVal(row, "rev target")),
     revenueAch: parseNum(getVal(row, "revenue ach") || getVal(row, "total revenue") || getVal(row, "rev ach")),
@@ -1262,8 +1280,8 @@ const extractSummaryFromTeamNameRow = (row, isTeamImport = false) => {
     vbCode: row[1] ? String(row[1]).trim() : null,
     recruiterName: row[2] ? String(row[2]).trim() : null,
     teamLeadName: row[3] ? String(row[3]).trim() : null,
-    yearlyPlacementTarget: parseNum(row[4]),
-    placementDone: parseNum(row[5]),
+    yearlyTarget: parseNum(row[4]),
+    achieved: parseNum(row[5]),
     targetAchievedPercent: sanitizePercent(row[6]),
     totalRevenueGenerated: parseNum(row[7]),
     slabQualified: sanitizeSlabQualified(slabRaw),
@@ -1320,6 +1338,15 @@ export async function importPersonalPlacements(payload, actorId) {
     return row[idx];
   };
 
+  // Summary header map: kept when we see a summary block so we can parse summary rows even after a placement block overwrote headerMap
+  const summaryHeaderMap = {};
+  const getValForSummary = (row, key) => {
+    const k = normalizeHeader(key);
+    const idx = summaryHeaderMap[k];
+    if (idx !== undefined) return row[idx];
+    return getVal(row, key);
+  };
+
   // Pre-fetch team names to filter out team names being used as recruiter names
   const teams = await prisma.team.findMany({ select: { name: true } });
   const teamNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
@@ -1354,6 +1381,8 @@ export async function importPersonalPlacements(payload, actorId) {
         `Required (summary block): ${REQUIRED_PERSONAL_SUMMARY_HEADERS.join(", ")} and recruiter name or lead name.`
       );
     }
+    // Initialize summary header map from first row so summary rows are parsed correctly even after placement block
+    normalizedFirstHeaders.forEach((h, idx) => { if (h) summaryHeaderMap[h] = idx; });
   } else if (firstHasPlacement) {
     const placementCheck = validatePersonalPlacementHeaders(normalizedFirstHeaders);
     if (!placementCheck.valid) {
@@ -1400,6 +1429,10 @@ export async function importPersonalPlacements(payload, actorId) {
       });
       for (const key in headerMap) delete headerMap[key];
       Object.assign(headerMap, newMap);
+      if (!isPlacementBlock) {
+        for (const key in summaryHeaderMap) delete summaryHeaderMap[key];
+        Object.assign(summaryHeaderMap, newMap);
+      }
       continue; // Skip the header row itself
     }
 
@@ -1475,10 +1508,10 @@ export async function importPersonalPlacements(payload, actorId) {
             continue; // Not a metrics row
           }
           
-          // EXTRACT ALL SUMMARY FIELDS FROM THIS ROW
-          currentSummaryRow = extractSummaryFields(nextRow, getVal);
+          // EXTRACT ALL SUMMARY FIELDS FROM THIS ROW (use summary header map so "yearly target"/"achieved" resolve)
+          currentSummaryRow = extractSummaryFields(nextRow, getValForSummary);
         }
-        
+
         if (metricsVbCode || metricsRecruiterName) {
           currentVbCode = metricsVbCode;
           currentRecruiterName = metricsRecruiterName;
@@ -1513,10 +1546,10 @@ export async function importPersonalPlacements(payload, actorId) {
     
     const isSummaryRow = (vbCodeInRow || recruiterNameInRow) && !candidateNameRaw;
 
-    // If this is a summary row, extract ALL summary fields
+    // If this is a summary row, extract ALL summary fields (use summary header map so "yearly target"/"achieved" resolve)
     if (isSummaryRow) {
-      const summaryData = extractSummaryFields(row, getVal);
-      
+      const summaryData = extractSummaryFields(row, getValForSummary);
+
       // Try to identify employee from this summary row
       let emp = currentEmployee;
       if (!emp && (summaryData.vbCode || summaryData.recruiterName)) {
@@ -1675,10 +1708,8 @@ export async function importPersonalPlacements(payload, actorId) {
     const incentiveInr = parseCurrency(getVal(row, "incentive amount (inr)"));
     const incentivePaidInr = parseCurrency(getVal(row, "incentive paid (inr)"));
 
-    const yearlyPlacementTarget = parseCurrency(
-      getVal(row, "yearly placement target")
-    );
-    const placementDone = parseNum(getVal(row, "placement done"));
+    const yearlyTarget = parseCurrency(getVal(row, "yearly target"));
+    const achieved = parseNum(getVal(row, "achieved"));
 
     const targetAchievedPercent = sanitizePercent(getVal(row, "target achieved %"));
 
@@ -1699,16 +1730,16 @@ export async function importPersonalPlacements(payload, actorId) {
 
     // Merge fields: prefer placement row values if they exist, then this employee's summary only
     // This ensures we preserve data from both sources without overwriting placement-specific data
-    const finalYearlyPlacementTarget = (yearlyPlacementTarget !== null && yearlyPlacementTarget !== undefined)
-      ? yearlyPlacementTarget
-      : (summaryData.yearlyPlacementTarget !== null && summaryData.yearlyPlacementTarget !== undefined
-          ? summaryData.yearlyPlacementTarget
+    const finalYearlyTarget = (yearlyTarget !== null && yearlyTarget !== undefined)
+      ? yearlyTarget
+      : (summaryData.yearlyTarget !== null && summaryData.yearlyTarget !== undefined
+          ? summaryData.yearlyTarget
           : null);
-    
-    const finalPlacementDone = (placementDone !== null && placementDone !== undefined)
-      ? placementDone
-      : (summaryData.placementDone !== null && summaryData.placementDone !== undefined
-          ? summaryData.placementDone
+
+    const finalAchieved = (achieved !== null && achieved !== undefined)
+      ? achieved
+      : (summaryData.achieved !== null && summaryData.achieved !== undefined
+          ? summaryData.achieved
           : null);
     
     const finalTargetAchievedPercent = (targetAchievedPercent !== null && targetAchievedPercent !== undefined)
@@ -1764,8 +1795,8 @@ export async function importPersonalPlacements(payload, actorId) {
       incentivePaidInr,
       vbCode: summaryData.vbCode || (currentVbCode ? String(currentVbCode).trim() : null),
       recruiterName: summaryData.recruiterName || (currentRecruiterName ? String(currentRecruiterName).trim() : null),
-      yearlyPlacementTarget: finalYearlyPlacementTarget,
-      placementDone: capPlacementDone(finalPlacementDone),
+      yearlyTarget: finalYearlyTarget,
+      achieved: capPlacementDone(finalAchieved),
       targetAchievedPercent: finalTargetAchievedPercent,
       totalRevenueGenerated: finalTotalRevenueGenerated,
       slabQualified: finalSlabQualified,
@@ -1802,8 +1833,8 @@ export async function importPersonalPlacements(payload, actorId) {
       vbCode: summaryData.vbCode ?? null,
       recruiterName: summaryData.recruiterName ?? profile.user?.name ?? null,
       teamLeadName: summaryData.teamLeadName ?? null,
-      yearlyPlacementTarget: summaryData.yearlyPlacementTarget ?? null,
-      placementDone: capPlacementDone(summaryData.placementDone ?? null),
+      yearlyTarget: summaryData.yearlyTarget ?? null,
+      achieved: capPlacementDone(summaryData.achieved ?? null),
       targetAchievedPercent: summaryData.targetAchievedPercent ?? null,
       totalRevenueGenerated: summaryData.totalRevenueGenerated ?? null,
       slabQualified: summaryData.slabQualified != null && String(summaryData.slabQualified).trim() ? String(summaryData.slabQualified).trim() : null,
@@ -1846,8 +1877,8 @@ export async function importPersonalPlacements(payload, actorId) {
   for (const [employeeId, summaryData] of employeeSummaryData) {
     employeeUpdates.set(employeeId, {
       employeeId,
-      yearlyPlacementTarget: summaryData.yearlyPlacementTarget,
-      placementDone: summaryData.placementDone,
+      yearlyTarget: summaryData.yearlyTarget,
+      achieved: summaryData.achieved,
       targetAchievedPercent: summaryData.targetAchievedPercent,
       totalRevenue: summaryData.totalRevenueGenerated,
       slabQualified: summaryData.slabQualified,
@@ -1964,8 +1995,8 @@ export async function importPersonalPlacements(payload, actorId) {
       if (!employeeUpdates.has(row.employeeId)) {
         employeeUpdates.set(row.employeeId, {
           employeeId: row.employeeId,
-          yearlyPlacementTarget: null,
-          placementDone: null,
+          yearlyTarget: null,
+          achieved: null,
           targetAchievedPercent: null,
           totalRevenue: null,
           slabQualified: null,
@@ -1975,11 +2006,11 @@ export async function importPersonalPlacements(payload, actorId) {
       }
       const update = employeeUpdates.get(row.employeeId);
       // Only use placement row data if it exists and summary data didn't already provide it
-      if (update.yearlyPlacementTarget === null && row.yearlyPlacementTarget !== null && row.yearlyPlacementTarget !== undefined) {
-        update.yearlyPlacementTarget = row.yearlyPlacementTarget;
+      if (update.yearlyTarget === null && row.yearlyTarget !== null && row.yearlyTarget !== undefined) {
+        update.yearlyTarget = row.yearlyTarget;
       }
-      if (update.placementDone === null && row.placementDone !== null && row.placementDone !== undefined) {
-        update.placementDone = row.placementDone;
+      if (update.achieved === null && row.achieved !== null && row.achieved !== undefined) {
+        update.achieved = row.achieved;
       }
       if (update.targetAchievedPercent === null && row.targetAchievedPercent !== null && row.targetAchievedPercent !== undefined) {
         update.targetAchievedPercent = row.targetAchievedPercent;
@@ -2284,7 +2315,7 @@ export async function importTeamPlacements(payload, actorId) {
     const firstCell = row[teamColIdx];
     const firstCellLower = firstCell ? String(firstCell).trim().toLowerCase() : "";
     const isTeamHeader = firstCellLower === "team";
-    const hasSummaryHeaders = rowStrings.includes("vb code") && (rowStrings.includes("yearly revenue target") || rowStrings.includes("yearly placement target"));
+    const hasSummaryHeaders = rowStrings.includes("vb code") && (rowStrings.includes("yearly revenue target") || rowStrings.includes("yearly placement target") || rowStrings.includes("yearly target"));
     if (isTeamHeader && hasSummaryHeaders) {
       currentSummaryHeaderRow = row;
       continue;

@@ -129,7 +129,7 @@ export async function getSuperAdminOverview(currentUser, year) {
           doj: true,
           plcId: true,
           candidateName: true,
-          placementDone: true,
+          achieved: true,
         },
       },
       teamPlacements: {
@@ -154,7 +154,7 @@ export async function getSuperAdminOverview(currentUser, year) {
             { candidateName: "(Summary only)" },
           ],
         },
-        select: { employeeId: true, placementDone: true, yearlyPlacementTarget: true },
+        select: { employeeId: true, achieved: true, yearlyTarget: true },
       })
     : [];
   const placementDoneByUserId = new Map();
@@ -181,9 +181,9 @@ export async function getSuperAdminOverview(currentUser, year) {
     return Number.isFinite(n) && n >= 0 ? n : null;
   };
   summaryRows.forEach((row) => {
-    const done = toNum(row.placementDone);
+    const done = toNum(row.achieved);
     if (done != null) placementDoneByUserId.set(row.employeeId, done);
-    const placementTarget = toNum(row.yearlyPlacementTarget);
+    const placementTarget = toNum(row.yearlyTarget);
     personalSummaryByUserId.set(row.employeeId, {
       yearlyPlacementTarget: placementTarget,
       // PersonalPlacement has no yearlyRevenueTarget; for Vantage use same column (revenue target often stored there)
@@ -191,25 +191,25 @@ export async function getSuperAdminOverview(currentUser, year) {
     });
   });
 
-  // L4 fallback: recruiters with placement rows (plc id) but no explicit SUMMARY row may have yearlyPlacementTarget/placementDone on a placement row
+  // L4 fallback: recruiters with placement rows (plc id) but no explicit SUMMARY row may have yearlyTarget/achieved on a placement row
   const missingSummaryIds = userIds.filter((id) => !personalSummaryByUserId.has(id));
   if (missingSummaryIds.length > 0) {
     const fallbackRows = await prisma.personalPlacement.findMany({
       where: {
         employeeId: { in: missingSummaryIds },
         OR: [
-          { yearlyPlacementTarget: { not: null } },
-          { placementDone: { not: null } },
+          { yearlyTarget: { not: null } },
+          { achieved: { not: null } },
         ],
       },
-      select: { employeeId: true, placementDone: true, yearlyPlacementTarget: true },
+      select: { employeeId: true, achieved: true, yearlyTarget: true },
       orderBy: { createdAt: "desc" },
     });
     fallbackRows.forEach((row) => {
       if (!personalSummaryByUserId.has(row.employeeId)) {
-        const done = toNum(row.placementDone);
+        const done = toNum(row.achieved);
         if (done != null) placementDoneByUserId.set(row.employeeId, done);
-        const pt = toNum(row.yearlyPlacementTarget);
+        const pt = toNum(row.yearlyTarget);
         personalSummaryByUserId.set(row.employeeId, {
           yearlyPlacementTarget: pt,
           yearlyRevenueTarget: pt, // Vantage: use same column for revenue target
@@ -255,10 +255,10 @@ export async function getSuperAdminOverview(currentUser, year) {
       let summaryDone = placementDoneByUserId.get(emp.id);
       if (summaryDone == null && (emp.personalPlacements || []).length > 0) {
         const summaryRow = emp.personalPlacements.find(isSummaryRow);
-        if (summaryRow) summaryDone = toNum(summaryRow.placementDone);
+        if (summaryRow) summaryDone = toNum(summaryRow.achieved);
         if (summaryDone == null) {
-          const fromAny = emp.personalPlacements.find((r) => r.placementDone != null && r.placementDone !== "");
-          if (fromAny) summaryDone = toNum(fromAny.placementDone);
+          const fromAny = emp.personalPlacements.find((r) => r.achieved != null && r.achieved !== "");
+          if (fromAny) summaryDone = toNum(fromAny.achieved);
         }
       }
       const personalCount =
@@ -602,7 +602,7 @@ export async function getTeamLeadOverview(currentUser, year) {
             { candidateName: "(Summary only)" },
           ],
         },
-        select: { employeeId: true, placementDone: true, yearlyPlacementTarget: true },
+        select: { employeeId: true, achieved: true, yearlyTarget: true },
       })
     : [];
   const placementDoneByUserId = new Map();
@@ -629,34 +629,34 @@ export async function getTeamLeadOverview(currentUser, year) {
     return Number.isFinite(n) && n >= 0 ? n : null;
   };
   summaryRows.forEach((row) => {
-    const done = toNum(row.placementDone);
+    const done = toNum(row.achieved);
     if (done != null) placementDoneByUserId.set(row.employeeId, done);
-    const placementTarget = toNum(row.yearlyPlacementTarget);
+    const placementTarget = toNum(row.yearlyTarget);
     personalSummaryByUserId.set(row.employeeId, {
       yearlyPlacementTarget: placementTarget,
       yearlyRevenueTarget: placementTarget, // Vantage: PersonalPlacement has no revenue column; use same
     });
   });
 
-  // L4 fallback: recruiters with placement rows (plc id) but no explicit SUMMARY row may have target/done on a placement row
+  // L4 fallback: recruiters with placement rows (plc id) but no explicit SUMMARY row may have yearlyTarget/achieved on a placement row
   const missingSummaryIds = teamUserIds.filter((id) => !personalSummaryByUserId.has(id));
   if (missingSummaryIds.length > 0) {
     const fallbackRows = await prisma.personalPlacement.findMany({
       where: {
         employeeId: { in: missingSummaryIds },
         OR: [
-          { yearlyPlacementTarget: { not: null } },
-          { placementDone: { not: null } },
+          { yearlyTarget: { not: null } },
+          { achieved: { not: null } },
         ],
       },
-      select: { employeeId: true, placementDone: true, yearlyPlacementTarget: true },
+      select: { employeeId: true, achieved: true, yearlyTarget: true },
       orderBy: { createdAt: "desc" },
     });
     fallbackRows.forEach((row) => {
       if (!personalSummaryByUserId.has(row.employeeId)) {
-        const done = toNum(row.placementDone);
+        const done = toNum(row.achieved);
         if (done != null) placementDoneByUserId.set(row.employeeId, done);
-        const pt = toNum(row.yearlyPlacementTarget);
+        const pt = toNum(row.yearlyTarget);
         personalSummaryByUserId.set(row.employeeId, {
           yearlyPlacementTarget: pt,
           yearlyRevenueTarget: pt, // Vantage: use same column
@@ -748,10 +748,10 @@ export async function getTeamLeadOverview(currentUser, year) {
     let summaryDone = placementDoneByUserId.get(emp.id);
     if (summaryDone == null && allPersonal.length > 0) {
       const summaryRow = allPersonal.find(isSummaryRow);
-      if (summaryRow) summaryDone = toNum(summaryRow.placementDone);
+      if (summaryRow) summaryDone = toNum(summaryRow.achieved);
       if (summaryDone == null) {
-        const fromAny = allPersonal.find((r) => r.placementDone != null && r.placementDone !== "");
-        if (fromAny) summaryDone = toNum(fromAny.placementDone);
+        const fromAny = allPersonal.find((r) => r.achieved != null && r.achieved !== "");
+        if (fromAny) summaryDone = toNum(fromAny.achieved);
       }
     }
     let personalPlacementsFiltered = allPersonal.filter((p) => !isSummaryRow(p));
@@ -970,7 +970,7 @@ export async function getPersonalPlacementOverview(currentUser, userId) {
       const fromAny = allRows.find((r) => r[field] != null && r[field] !== "");
       return fromAny?.[field] ?? null;
     };
-    const placementDoneFallback = pick("placementDone");
+    const achievedFallback = pick("achieved");
     const toNum = (v) => {
       if (v == null || v === "") return null;
       if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -978,12 +978,12 @@ export async function getPersonalPlacementOverview(currentUser, userId) {
       const n = parseFloat(String(v).trim());
       return Number.isFinite(n) ? n : null;
     };
-    // Sheet data only; no profile fallback
-    const yearlyRevenueTarget = toNum(pick("yearlyRevenueTarget")) ?? toNum(pick("yearlyPlacementTarget")) ?? null;
+    // Sheet data only; no profile fallback. Personal placement uses yearlyTarget and achieved.
+    const yearlyRevenueTarget = toNum(pick("yearlyRevenueTarget")) ?? toNum(pick("yearlyTarget")) ?? null;
     const summary = (summaryRow || allRows[0]) ? {
-      yearlyPlacementTarget: pick("yearlyPlacementTarget"),
+      yearlyTarget: pick("yearlyTarget"),
       yearlyRevenueTarget,
-      placementDone: placementDoneFallback != null ? placementDoneFallback : (placementList.length > 0 ? placementList.length : null),
+      achieved: achievedFallback != null ? achievedFallback : (placementList.length > 0 ? placementList.length : null),
       targetAchievedPercent: pick("targetAchievedPercent"),
       revenueTargetAchievedPercent: pick("revenueTargetAchievedPercent"),
       totalRevenueGenerated: pick("totalRevenueGenerated"),

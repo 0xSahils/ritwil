@@ -154,7 +154,7 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
             <span className="text-slate-500 font-medium">Target:</span>
             <span className="font-semibold text-slate-700">
               {isPlacementTeam 
-                ? (hasPersonalSummary ? personalSummary.yearlyPlacementTarget : (member.target || 0)) 
+                ? (hasPersonalSummary ? (personalSummary.yearlyTarget ?? personalSummary.yearlyPlacementTarget) : (member.target || 0)) 
                 : CalculationService.formatCurrency(hasPersonalSummary ? (personalSummary.yearlyRevenueTarget || member.target || 0) : (member.target || 0))}
             </span>
           </div>
@@ -162,7 +162,7 @@ const RecursiveMemberNode = memo(({ member, expandedMembers, toggleMember, handl
              <span className="text-slate-500 font-medium">Achieved:</span>
              <span className="font-semibold text-green-600">
                 {isPlacementTeam 
-                  ? (hasPersonalSummary ? personalSummary.placementDone : (member.totalPlacements || member.placements || 0)) 
+                  ? (hasPersonalSummary ? (personalSummary.achieved ?? personalSummary.placementDone) : (member.totalPlacements || member.placements || 0)) 
                   : CalculationService.formatCurrency(hasPersonalSummary ? (personalSummary.totalRevenueGenerated || 0) : (member.totalRevenue || member.revenue || 0))}
              </span>
           </div>

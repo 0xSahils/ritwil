@@ -48,7 +48,8 @@ const processEmployeeData = async (employee) => {
   const summary = (isL2OrL3 && teamSummary) ? teamSummary : (personalSummary || teamSummary || null);
 
   const yearlyRevenueTarget = summary?.yearlyRevenueTarget != null ? Number(summary.yearlyRevenueTarget) : null;
-  const yearlyPlacementTarget = summary?.yearlyPlacementTarget != null ? Number(summary.yearlyPlacementTarget) : null;
+  // Personal placement uses yearlyTarget; team placement uses yearlyPlacementTarget
+  const yearlyPlacementTarget = summary?.yearlyPlacementTarget != null ? Number(summary.yearlyPlacementTarget) : (summary?.yearlyTarget != null ? Number(summary.yearlyTarget) : null);
   const targetType = employee.employeeProfile.targetType || (employee.employeeProfile.level === "L4" ? "PLACEMENTS" : "REVENUE");
   const yearlyTarget = targetType === "PLACEMENTS" ? yearlyPlacementTarget : yearlyRevenueTarget;
   const slabQualified = summary?.slabQualified != null ? String(summary.slabQualified) : null;
